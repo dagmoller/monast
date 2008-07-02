@@ -53,19 +53,17 @@ function Process(o)
 	
 	if (o['Action'] == 'PeerStatus')
 	{
-		td                       = $('peerStatus-' + o['Peer']);
+		var td = $('peerStatus-' + o['Peer']);
 		if (td.innerHTML != o['Status'])
 		{
 			td.style.backgroundColor = color(o['Status']);
-			//blink('peerStatus-' + o['Peer'], color(o['Status']));
 			td.innerHTML             = o['Status'];
 		}
 		
-		td                       = $('peerCalls-' + o['Peer']);
+		var td = $('peerCalls-' + o['Peer']);
 		if (td.innerHTML != (o['Calls'] + ' call(s)'))
 		{
 			td.style.backgroundColor = (o['Calls'] > 0 ? '#ffffb0' : '#b0ffb0');
-			//blink('peerCalls-' + o['Peer'], (o['Calls'] > 0 ? '#ffffb0' : '#b0ffb0'));
 			td.innerHTML             = o['Calls'] + ' call(s)';
 		}
 		
@@ -74,78 +72,77 @@ function Process(o)
 	
 	if (o['Action'] == 'NewChannel')
 	{
-		tr = $(o['Uniqueid']);
-		if (!tr)
+		var div = $(o['Uniqueid']);
+		if (!div)
 		{
-			tr    = document.createElement('tr');
-			tr.id = o['Uniqueid'];
+			div           = document.createElement('div');
+			div.id        = o['Uniqueid'];
+			div.className = 'channelDiv';
+			 
+			var template = "<table width='350'><tr>";
+			template    += "<td id='channel-{Uniqueid}' class='status' width='270'>{Channel}</td>";
+			template    += "<td id='channelStatus-{Uniqueid}' bgcolor='{color}' class='status' width='80'>{State}</td>";
+			template    += "</tr></table>";
+			template     = template.replace(/\{Uniqueid\}/g, o['Uniqueid']);
+			template     = template.replace(/\{Channel\}/g, o['Channel']);
+			template     = template.replace(/\{State\}/g, o['State']);
+			template     = template.replace(/\{color\}/g, color(o['State']));
 			
-			// TD Channel
-			td           = document.createElement('td');
-			td.id        = 'channel-' + o['Uniqueid'];
-			td.className = 'status';
-			td.innerHTML = o['Channel'];// + '<br>' + o['CallerIDName'] + ' <' + o['CallerIDNum'] + '>';
-			tr.appendChild(td);
+			div.innerHTML = template;
 			
-			// TD Status
-			td                       = document.createElement('td');
-			td.id                    = 'channelStatus-' + o['Uniqueid'];
-			td.className             = 'status';
-			td.align                 = 'center';
-			td.style.backgroundColor = color(o['State']);
-			td.innerHTML             = o['State'];
-			tr.appendChild(td);
+			$('channelsDiv').appendChild(div);
 			
-			$('channelTable').appendChild(tr);			
+			ddDiv[o['Uniqueid']]               = new YAHOO.util.DD(o['Uniqueid']);
+			ddDiv[o['Uniqueid']].startPos      = YAHOO.util.Dom.getXY(YAHOO.util.Dom.get(o['Uniqueid']));
+			ddDiv[o['Uniqueid']].onDragDrop    = peerIDrop;
+			ddDiv[o['Uniqueid']].onInvalidDrop = peerIDrop;
 		}
+		
 		return;
 	}
 	
 	if (o['Action'] == 'Call')
 	{
-		tr    = document.createElement('tr');
-		tr.id = 'call-' + o['SrcUniqueID'] + '-' + o['DestUniqueID'];
+		var template = "<table width='600'><tr>";
+		template    += "<td class='status' width='260' id='callChannel-{SrcUniqueID}'>{Source}</td>";
+		template    += "<td class='status' width='80' bgcolor='{color}' id='callStatus-{SrcUniqueID}-{DestUniqueID}'>{Status}</td>";
+		template    += "<td class='status' width='260' id='callChannel-{DestUniqueID}'>{Destination}</td>";
+		template    += "</tr></table>";
 		
-		// TD Source
-		td           = document.createElement('td');
-		td.id        = 'callChannel-' + o['SrcUniqueID'];
-		td.className = 'status';
-		td.innerHTML = o['Source'] + '<br>' + o['CallerIDName'] + ' <' + o['CallerID'] + '>';
-		tr.appendChild(td);
+		template = template.replace(/\{SrcUniqueID\}/g, o['SrcUniqueID']);
+		template = template.replace(/\{DestUniqueID\}/g, o['DestUniqueID']);
+		template = template.replace(/\{Source\}/g, o['Source'] + '<br>' + o['CallerIDName'] + ' <' + o['CallerID'] + '>');
+		template = template.replace(/\{Destination\}/g, o['Destination'] + (o['CallerID2'] ? '<br> <' + o['CallerID2'] + '>' : ''));
+		template = template.replace(/\{Status\}/g, o['Status']);
+		template = template.replace(/\{color\}/g, color(o['Status']));
 		
-		// TD Status
-		td                       = document.createElement('td');
-		td.id                    = 'callStatus-' + o['SrcUniqueID'] + '-' + o['DestUniqueID'];
-		td.className             = 'status';
-		td.style.backgroundColor = color(o['Status']);
-		td.align                 = 'center';
-		td.innerHTML             = o['Status'];
-		tr.appendChild(td);
+		var div       = document.createElement('div');
+		div.id        = 'call-' + o['SrcUniqueID'] + '-' + o['DestUniqueID'];
+		div.className = 'callDiv'; 
+		div.innerHTML = template;
 		
-		// TD Destination
-		td           = document.createElement('td');
-		td.id        = 'callChannel-' + o['DestUniqueID'];
-		td.className = 'status';
-		td.innerHTML = o['Destination'] + (o['CallerID2'] ? '<br> <' + o['CallerID2'] + '>' : '');
-		tr.appendChild(td);
+		$('callsDiv').appendChild(div);
 		
-		$('callTable').appendChild(tr);
+		ddDiv[div.id]               = new YAHOO.util.DD(div.id);
+		ddDiv[div.id].startPos      = YAHOO.util.Dom.getXY(YAHOO.util.Dom.get(div.id));
+		ddDiv[div.id].onDragDrop    = peerIDrop;
+		ddDiv[div.id].onInvalidDrop = peerIDrop;
 		
 		return;
 	}
 	
 	if (o['Action'] == 'Hangup')
 	{
-		tr = $(o['Uniqueid']);
-		if (tr)
-			$('channelTable').removeChild(tr);
+		var div = $(o['Uniqueid']);
+		if (div)
+			$('channelsDiv').removeChild(div);
 		
 		return;
 	}
 	
 	if (o['Action'] == 'NewState')
 	{
-		td = $('channelStatus-' + o['Uniqueid']);
+		var td = $('channelStatus-' + o['Uniqueid']);
 		if (td)
 		{
 			td.innerHTML             = o['State'];
@@ -156,8 +153,8 @@ function Process(o)
 	
 	if (o['Action'] == 'Dial')
 	{
-		tr = $('call-' + o['SrcUniqueID'] + '-' + o['DestUniqueID']);
-		if (!tr)
+		var div = $('call-' + o['SrcUniqueID'] + '-' + o['DestUniqueID']);
+		if (!div)
 		{
 			o['Action'] = 'Call';
 			o['Status'] = 'Dial';
@@ -192,7 +189,7 @@ function Process(o)
 	
 	if (o['Action'] == 'Unlink')
 	{
-		$('callTable').removeChild($('call-' + o['Uniqueid1'] + '-' + o['Uniqueid2']));
+		$('callsDiv').removeChild($('call-' + o['Uniqueid1'] + '-' + o['Uniqueid2']));
 		return;
 	}
 	
@@ -220,7 +217,7 @@ function startIFrame()
 
 function showDiv(div)
 {
-	var divs = new Array('peersDiv', 'channelsDiv', 'debugMsg');
+	var divs = new Array('peersDiv', 'chanCallDiv', 'debugMsg');
 	for (i = 0; i < divs.length; i++)
 	{
 		if (divs[i] == div)
