@@ -470,7 +470,7 @@ class AstMon():
 			
 	def start(self):
 		cp = MyConfigParser()
-		cp.read('astmon.conf')
+		cp.read('monast.conf')
 		
 		self.HOSTNAME = cp.get('global', 'hostname')
 		self.HOSTPORT = int(cp.get('global', 'hostport'))
