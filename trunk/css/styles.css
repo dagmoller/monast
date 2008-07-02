@@ -1,0 +1,104 @@
+
+#menu {
+	width: 600px;
+	/*border: 1px solid black;*/
+	align: center; 
+	margin: 0 auto;
+	text-align: center;
+}
+#menu table {
+	width: 100%;
+	text-align: center;
+	font-family: Verdana;
+	font-size: 14px;
+}
+#menu a {
+	font-family: Verdana;
+	font-size: 14px;
+	font-weight: bold;
+	text-decoration: none;
+	text-align: center;
+	color: black;
+}
+
+#peersDiv {
+	width: 1115px;
+	padding: 5px; 
+	align: center; 
+	margin: 0 auto;
+	display: block;
+}
+
+#channelsDiv {
+	width: 1115px;
+	padding: 5px; 
+	/*align: center;*/ 
+	margin: 0 auto;
+	display: none;
+}
+
+#debugMsg {
+	border: black 1px solid; 
+	width: 1115px; 
+	height: 300px; 
+	overflow: auto; 
+	font-family: 'courier new'; 
+	font-size: 10px;
+	align: center; 
+	margin: 0 auto;
+	display: none;
+}
+
+.peerTable {
+	float: left; 
+	margin: 5px;
+	background-color: #ffffff;
+}
+
+.peerOptions {
+	position: absolute;
+	display: none;
+	font-family: Verdana;
+	font-size: 10px;
+	width: 400px;
+	padding: 10px;
+	left: 50%;
+	margin-left: -210px;
+	background-color: #ffffff;
+	border: 1px solid #000000;
+}
+.peerOptions a {
+	color: black;
+	text-decoration: none;
+}
+
+.tableTitle {
+	font-family: Verdana;
+	font-size: 10px;
+	font-weight: bold;
+	background-color: #999999;
+}
+.statusHeader {
+	font-family: Verdana;
+	font-size: 10px;
+	font-weight: bold;
+	background-color: #CCCCCC;
+}
+
+.status {
+	font-family: Verdana;
+	font-size: 10px;
+	text-align: center;
+	border: 1px solid #aaaaaa;
+}
+
+.status a {
+	color: black;
+	text-decoration: none;
+}
+
+.campo {
+	border: 1px solid #dddddd;
+	font-family: Verdana;
+	font-size: 10px;
+}
