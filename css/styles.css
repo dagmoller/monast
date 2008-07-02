@@ -29,12 +29,37 @@
 	display: block;
 }
 
-#channelsDiv {
-	width: 1115px;
-	padding: 5px; 
+#chanCallDiv {
+	width: 1020px;
+	padding: 10px; 
 	/*align: center;*/ 
 	margin: 0 auto;
 	display: none;
+}
+
+#channelsDiv {
+	width: 350px;
+	/*border: 1px solid #aaaaaa;*/
+	float: left;
+}
+.channelDiv {
+	width: 350px;
+	border: 1px solid #aaaaaa;
+	margin-bottom: 2px;
+	background-color: #ffffff;
+}
+
+#callsDiv {
+	width: 600px;
+	/*border: 1px solid #aaaaaa;*/
+	float: left;
+	margin-left: 50px;
+}
+.callDiv {
+	width: 600px;
+	border: 1px solid #aaaaaa;
+	margin-bottom: 2px;
+	background-color: #ffffff;
 }
 
 #debugMsg {
@@ -76,13 +101,13 @@
 	font-family: Verdana;
 	font-size: 10px;
 	font-weight: bold;
-	background-color: #999999;
+	background-color: #bbbbbb;
 }
 .statusHeader {
 	font-family: Verdana;
 	font-size: 10px;
 	font-weight: bold;
-	background-color: #CCCCCC;
+	background-color: #dddddd;
 }
 
 .status {

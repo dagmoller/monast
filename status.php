@@ -137,8 +137,6 @@ session_start();
 $sessid = session_id();
 session_write_close();
 
-$timeout = 20;
-$refresh = 60 * 10;
 $inicio  = time();
 
 $errno  = null;
@@ -215,12 +213,12 @@ while (!feof($fp))
 	session_write_close();
 	
 	$now = time();
-	if ($now >= ($inicio + $timeout) && !$isStatus && $isOK)
+	if ($now >= ($inicio + MONAST_SOCKET_DURATION) && !$isStatus && $isOK)
 	{
 		$isOK = false;
 		fwrite($fp, "BYE\r\n");
 		
-		if ($now >= (getValor('started', 'session') + $refresh))
+		if ($now >= (getValor('started', 'session') + MONAST_BROWSER_REFRESH))
 			print "<script>parent.location.reload();</script>";
 		else		
 			print "<script>parent.startIFrame();</script>\r\n";
