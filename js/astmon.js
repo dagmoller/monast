@@ -281,7 +281,7 @@ function hangupCall(chanId)
 	var msg = "Hangup this Channel?";
 	if (chanId.indexOf('call') != -1)
 	{
-		msg = "hangup this Call?";
+		msg = "Hangup this Call?";
 		chanId = chanId.substring(5, chanId.lastIndexOf('-'));
 	}
 		

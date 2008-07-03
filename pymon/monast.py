@@ -13,6 +13,8 @@ import Queue
 import log
 from ConfigParser import SafeConfigParser
 
+MONAST_CALLERID = "MonAst WEB"
+
 rePeerEntry   = re.compile('Event: PeerEntry|Channeltype: ([^\r^\n^\s]*)|ObjectName: ([^\r^\n^\s]*)|IPaddress: ([^\r^\n^\s]*)|IPport: ([^\r^\n^\s]*)|Status: ([^\r^\n]*)')
 rePeerStatus  = re.compile('Event: PeerStatus|Peer: ([^\r^\n^\s]*)|PeerStatus: ([^\r^\n^\s]*)')
 reNewChannel  = re.compile('Event: Newchannel|Channel: ([^\r^\n^\s]*)|State: ([^\r^\n^\s]*)|CallerIDNum: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|Uniqueid: ([^\r^\n^\s]*)')
@@ -35,7 +37,7 @@ class MyConfigParser(SafeConfigParser):
     def optionxform(self, optionstr):
         return optionstr
 
-class AstMon():
+class MonAst():
 
 	HOSTNAME = None
 	HOSTPORT = None
@@ -420,7 +422,7 @@ class AstMon():
 						command.append('Exten: %s' % dst)
 						command.append('Context: %s' % self.monitoredUsers[src]['Context'])
 						command.append('Priority: 1')
-						command.append('CallerID: AstMon WEB')
+						command.append('CallerID: %s' % MONAST_CALLERID)
 						for var in self.monitoredUsers[src]['Variables']:
 							command.append('Variable: %s' % var)
 						self.send(command)
@@ -432,7 +434,7 @@ class AstMon():
 						command.append('Channel: %s' % src)
 						command.append('Application: Dial')
 						command.append('Data: %s|30|rTt' % dst)
-						command.append('CallerID: AstMon WEB')
+						command.append('CallerID: %s' % MONAST_CALLERID)
 						self.send(command)
 					elif msg.startswith('HangupChannel'):
 						self.channelsLock.acquire()
@@ -516,5 +518,5 @@ class AstMon():
 
 if __name__ == '__main__':
 
-	astmon = AstMon()
-	astmon.start()
+	monast = MonAst()
+	monast.start()
