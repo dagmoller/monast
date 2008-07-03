@@ -7,6 +7,11 @@ hostport = 5038
 username = username
 password = password
 
+# Bind client connetions on port
+bind_port = 5039
+
+# Context to use in transfer calls
+transfer_context = default
 
 [users]
 # defualt show/hide

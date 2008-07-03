@@ -24,6 +24,7 @@ reDial        = re.compile('Event: Dial|Source: ([^\r^\n^\s]*)|Destination: ([^\
 reLink        = re.compile('Event: Link|Channel1: ([^\r^\n^\s]*)|Channel2: ([^\r^\n^\s]*)|Uniqueid1: ([^\r^\n^\s]*)|Uniqueid2: ([^\r^\n^\s]*)|CallerID1: ([^\r^\n^\s]*)|CallerID2: ([^\r^\n^\s]*)')
 reUnlink      = re.compile('Event: Unlink|Channel1: ([^\r^\n^\s]*)|Channel2: ([^\r^\n^\s]*)|Uniqueid1: ([^\r^\n^\s]*)|Uniqueid2: ([^\r^\n^\s]*)|CallerID1: ([^\r^\n^\s]*)|CallerID2: ([^\r^\n^\s]*)')
 reNewcallerid = re.compile('Event: Newcallerid|Channel: ([^\r^\n^\s]*)|CallerID: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|Uniqueid: ([^\r^\n^\s]*)|CID-CallingPres: ([^\r^\n]*)')
+reRename      = re.compile('Event: Rename|Oldname: ([^\r^\n^\s]*)|Newname: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)')
 
 def merge(l):
 	out = [None for x in l[0]]
@@ -43,6 +44,9 @@ class MonAst():
 	HOSTPORT = None
 	USERNAME = None
 	PASSWORD = None
+	
+	bindPort       = None
+	tranferContext = None
 	
 	userDisplay = {} 
 	
@@ -78,6 +82,7 @@ class MonAst():
 	
 	def send(self, lines):
 		if self.connected:
+			log.show('Enviando Comando: %s' % '\r\n'.join(lines))
 			try:
 				self.socketAMI.send('%s\r\n\r\n' % '\r\n'.join(lines))
 			except socket.error, e:
@@ -311,6 +316,34 @@ class MonAst():
 					log.info('Evento Newcallerid detectado')
 					
 					enqueue.append('NewCallerid: %s:::%s:::%s:::%s:::%s' % (Channel, CallerID, CallerIDName, Uniqueid, CIDCallingPres))
+					
+				if block.startswith('Event: Rename\r\n'):
+					Oldname, Newname, Uniqueid = merge(reRename.findall(block))
+					CallerIDName = ''
+					CallerID     = ''
+					
+					log.info('Evento Rename Detectado')
+					
+					self.channelsLock.acquire()
+					self.channels[Uniqueid]['Channel'] = Newname
+					self.channelsLock.release()
+					
+					self.callsLock.acquire()
+					for call in self.calls:
+						SrcUniqueID, DestUniqueID = call.split('-')
+						key = None
+						if (SrcUniqueID == Uniqueid):
+							key = 'Source'
+						if (DestUniqueID == Uniqueid):
+							key = 'Destination'
+						if key:
+							self.calls[call][key] = Newname
+							CallerIDName = self.calls[call]['CallerIDName']
+							CallerID     = self.calls[call]['CallerID']
+							break							
+					self.callsLock.release()
+					
+					enqueue.append('Rename: %s:::%s:::%s:::%s:::%s' % (Oldname, Newname, Uniqueid, CallerIDName, CallerID))					
 			
 			self.clientQueuelock.acquire()
 			for msg in enqueue:
@@ -365,6 +398,7 @@ class MonAst():
 	
 	def clientThread(self, id, sock, addr):
 		session = None
+		count   = 0
 		log.info('Iniciando %s' % id)
 		try:
 			while True:
@@ -444,12 +478,38 @@ class MonAst():
 						command.append('Channel: %s' % self.channels[Uniqueid]['Channel'])
 						self.send(command)
 						self.channelsLock.release()
+					elif msg.startswith('TransferCall'):
+						action, SrcUniqueID, dst, isPeer = msg.split(':::')
+						if isPeer == 'true':
+							tech, exten = dst.split('/')
+							try:
+								exten = int(exten)
+							except:
+								self.monitoredUsersLock.acquire()
+								exten = self.monitoredUsers[dst]['CallerID']
+								exten = exten[exten.find('<')+1:exten.find('>')]
+								self.monitoredUsersLock.release()
+						self.channelsLock.acquire()
+						srcChannel = self.channels[SrcUniqueID]['Channel']
+						command = []
+						command.append('Action: Redirect')
+						command.append('Channel: %s' % srcChannel)
+						command.append('Exten: %s' % exten)
+						command.append('Context: %s' % self.tranferContext)
+						command.append('Priority: 1')
+						self.send(command)
+						self.channelsLock.release()
 					else:
 						sock.send('NO SESSION\r\n')	
 					self.clientQueuelock.release()
 					if msg.upper() == 'BYE':
 						break
-			sock.close()
+				else:
+					# POG para encerrar a tread caso o socket do cliente fique louco (acontece)
+					count += 1
+					if count == 5:
+						log.error('clientThread() 5 pools without messages, dropping client...')
+						break
 		except socket.error, e:
 			log.error('Socket ERROR %s: %s' % (id, e))
 			for lock in (self.clientQueuelock, self.monitoredUsersLock, self.channelsLock, self.callsLock):
@@ -457,6 +517,10 @@ class MonAst():
 					lock.release()
 				except:
 					pass
+		try:
+			sock.close()
+		except:
+			pass
 		log.info('Encerrando %s' % id)
 		self.clientSockLock.acquire()
 		del self.clientSocks[id]
@@ -486,6 +550,9 @@ class MonAst():
 		self.HOSTPORT = int(cp.get('global', 'hostport'))
 		self.USERNAME = cp.get('global', 'username')
 		self.PASSWORD = cp.get('global', 'password')	
+		
+		self.bindPort       = cp.get('global', 'bind_port')
+		self.tranferContext = cp.get('global', 'transfer_context')
 		
 		self.userDisplay['DEFAULT'] = True if cp.get('users', 'default') == 'show' else False
 		
