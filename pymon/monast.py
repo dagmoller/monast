@@ -434,6 +434,14 @@ class AstMon():
 						command.append('Data: %s|30|rTt' % dst)
 						command.append('CallerID: AstMon WEB')
 						self.send(command)
+					elif msg.startswith('HangupChannel'):
+						self.channelsLock.acquire()
+						action, Uniqueid = msg.split(':::')
+						command = []
+						command.append('Action: Hangup')
+						command.append('Channel: %s' % self.channels[Uniqueid]['Channel'])
+						self.send(command)
+						self.channelsLock.release()
 					else:
 						sock.send('NO SESSION\r\n')	
 					self.clientQueuelock.release()

@@ -1,5 +1,6 @@
 
-var json = new JSON();
+var json   = new JSON();
+var ddDivs = new Array();
 
 String.prototype.trim = function() { return this.replace(/^\s*/, "").replace(/\s*$/, ""); }
 function $(id) { return document.getElementById(id); }
@@ -92,10 +93,10 @@ function Process(o)
 			
 			$('channelsDiv').appendChild(div);
 			
-			ddDiv[o['Uniqueid']]               = new YAHOO.util.DD(o['Uniqueid']);
-			ddDiv[o['Uniqueid']].startPos      = YAHOO.util.Dom.getXY(YAHOO.util.Dom.get(o['Uniqueid']));
-			ddDiv[o['Uniqueid']].onDragDrop    = peerIDrop;
-			ddDiv[o['Uniqueid']].onInvalidDrop = peerIDrop;
+			ddDivs[o['Uniqueid']]               = new YAHOO.util.DD(o['Uniqueid']);
+			ddDivs[o['Uniqueid']].onMouseDown   = setStartPosition;
+			ddDivs[o['Uniqueid']].onDragDrop    = channelCallDrop;
+			ddDivs[o['Uniqueid']].onInvalidDrop = invalidDrop;
 		}
 		
 		return;
@@ -123,11 +124,11 @@ function Process(o)
 		
 		$('callsDiv').appendChild(div);
 		
-		ddDiv[div.id]               = new YAHOO.util.DD(div.id);
-		ddDiv[div.id].startPos      = YAHOO.util.Dom.getXY(YAHOO.util.Dom.get(div.id));
-		ddDiv[div.id].onDragDrop    = peerIDrop;
-		ddDiv[div.id].onInvalidDrop = peerIDrop;
-		
+		ddDivs[div.id]               = new YAHOO.util.DD(div.id);
+		ddDivs[div.id].onMouseDown   = setStartPosition;
+		ddDivs[div.id].onDragDrop    = channelCallDrop;
+		ddDivs[div.id].onInvalidDrop = invalidDrop;
+
 		return;
 	}
 	
@@ -217,7 +218,7 @@ function startIFrame()
 
 function showDiv(div)
 {
-	var divs = new Array('peersDiv', 'chanCallDiv', 'debugMsg');
+	var divs = new Array('peersDiv', 'chanCallDiv', 'trash', 'debugMsg');
 	for (i = 0; i < divs.length; i++)
 	{
 		if (divs[i] == div)
@@ -225,6 +226,8 @@ function showDiv(div)
 		else
 			$(divs[i]).style.display = 'none';
 	}
+	if (div == 'chanCallDiv')
+		$('trash').style.display = 'block';
 }
 
 function showOptions(div, state)
@@ -272,13 +275,37 @@ function originateDial(src, dst)
 	ajaxCall.doCall(id);
 }
 
+//Hangup Call
+function hangupCall(chanId)
+{
+	var msg = "Hangup this Channel?";
+	if (chanId.indexOf('call') != -1)
+	{
+		msg = "hangup this Call?";
+		chanId = chanId.substring(5, chanId.lastIndexOf('-'));
+	}
+		
+	var c = confirm(msg);
+	if (c)
+	{
+		var id = ajaxCall.init(false);
+		ajaxCall.setURL(id, 'action.php');
+		ajaxCall.addParam(id, 'action', 'HangupChannel:::' + chanId);
+		ajaxCall.doCall(id);
+	}
+}
+
 // Yahoo
+function setStartPosition(e)
+{
+	ddDivs[this.id].startPos = YAHOO.util.Dom.getXY(YAHOO.util.Dom.get(this.id));
+}
 function backToStartPosition(id)
 {
 	new YAHOO.util.Motion(  
 		id, {  
 			points: {
-				to: ddDiv[id].startPos
+				to: ddDivs[id].startPos
 			}
 		},
 		0.3,
@@ -297,8 +324,16 @@ function peerDrop(e, id)
 		
 	backToStartPosition(this.id);
 }
-function peerIDrop(e)
+
+function channelCallDrop(e, id)
 {
+	if (id == 'trash')
+		hangupCall(this.id);
+		
 	backToStartPosition(this.id);
 }
 
+function invalidDrop(e)
+{
+	backToStartPosition(this.id);
+}

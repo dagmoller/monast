@@ -90,23 +90,27 @@
   </div>
 </div>
 
+<div id="trash">
+  <img src="image/trash-2.png" width="96" height="96" title="Drag channels or calls to Hangup">
+</div>
+
 <div id="debugMsg">
 </div>
 
 <script type="text/javascript">
 YAHOO.util.DDM.mode = YAHOO.util.DDM.POINT;
 
-var ddDiv = new Array();
+var dTrash = new YAHOO.util.DDTarget("trash");
 
 <!-- START BLOCK : process -->
 Process('{json}');
 <!-- END BLOCK : process -->
 
 <!-- START BLOCK : peerDragDrop -->
-ddDiv['peerDiv-{peer}']               = new YAHOO.util.DD("peerDiv-{peer}");
-ddDiv['peerDiv-{peer}'].startPos      = YAHOO.util.Dom.getXY(YAHOO.util.Dom.get('peerDiv-{peer}'));
-ddDiv['peerDiv-{peer}'].onDragDrop    = peerDrop; 
-ddDiv['peerDiv-{peer}'].onInvalidDrop = peerIDrop;
+ddDivs['peerDiv-{peer}']               = new YAHOO.util.DD("peerDiv-{peer}");
+ddDivs['peerDiv-{peer}'].startPos      = YAHOO.util.Dom.getXY(YAHOO.util.Dom.get('peerDiv-{peer}'));
+ddDivs['peerDiv-{peer}'].onDragDrop    = peerDrop; 
+ddDivs['peerDiv-{peer}'].onInvalidDrop = invalidDrop;
 <!-- END BLOCK : peerDragDrop -->
 
 startIFrame();
