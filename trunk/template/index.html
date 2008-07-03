@@ -7,6 +7,7 @@
 <script type="text/javascript" src="js/json.js"></script>
 <script type="text/javascript" src="js/ajax.js"></script>
 <script type="text/javascript" src="js/astmon.js"></script>
+<script type="text/javascript" src="js/shortcut.js"></script>
 
 <!-- Dependencies -->  
 <script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/yahoo-dom-event/yahoo-dom-event.js" ></script> 
@@ -94,6 +95,22 @@
   <img src="image/trash-2.png" width="96" height="96" title="Drag channels or calls to Hangup">
 </div>
 
+<div id="selectTransferChannel" class="peerOptions">
+  <table width="100%" border="0">
+    <tr>
+      <td align="left"><b>Select Channel to transfer to "<span id="transferDestination"></span>".</b></td>
+      <td align="center" width="50px"><a href="#" onClick="$('selectTransferChannel').style.display='none'"><b>Close</b></a></td>
+    </tr>
+  </table>
+  <hr>
+  <table width="100%" border="0">
+   <tr>
+      <td align="center" id="transferSourceA"></td>
+      <td align="center" id="transferSourceB"></td>
+    </tr>
+  </table>
+</div>
+
 <div id="debugMsg">
 </div>
 
@@ -114,6 +131,34 @@ ddDivs['peerDiv-{peer}'].onInvalidDrop = invalidDrop;
 <!-- END BLOCK : peerDragDrop -->
 
 startIFrame();
+
+shortcut.add('F5', function(){ location.reload(); });
+shortcut.add('P', function(){ showDiv('peersDiv'); });
+shortcut.add('C', function(){ showDiv('chanCallDiv'); });
+shortcut.add('D', function(){ showDiv('debugMsg'); });
+
+shortcut.add('T', function()
+{
+	if ($('chanCallDiv').style.display == 'block')
+	{
+		if ($('trash').style.display == 'block')
+			$('trash').style.display = 'none';
+		else
+			$('trash').style.display = 'block';
+		
+		if ($('peersDiv').style.display == 'none')
+		{
+			$('peersDiv').style.display   = 'block';
+			$('chanCallDiv').style.margin = '0 auto';
+		}
+		else
+		{
+			$('peersDiv').style.display   = 'none';
+			$('chanCallDiv').style.margin = null;
+		}
+	}
+});
+
 </script>
 
 </body>

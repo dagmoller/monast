@@ -130,6 +130,21 @@ function parseMsg($msg)
 		return $json->encode($saida);
 	}
 	
+    if (strpos($msg, 'Rename: ') !== false)
+	{	
+		list($Oldname, $Newname, $Uniqueid, $CallerIDName, $CallerID) = explode(':::', substr($msg, 8));
+		$saida = array
+		(
+			'Action'       => 'Rename',
+			'Oldname'      => $Oldname, 
+			'Newname'      => $Newname, 
+			'Uniqueid'     => $Uniqueid,
+		    'CallerIDName' => $CallerIDName,
+			'CallerID'     => $CallerID, 
+		);
+		return $json->encode($saida);
+	}
+	
 	return $json->encode(array('Action' => 'None'));
 }
 

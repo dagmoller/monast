@@ -202,6 +202,17 @@ function Process(o)
 		
 		return;
 	}
+	
+	if (o['Action'] == 'Rename')
+	{
+		td = $('channel-' + o['Uniqueid']);
+		if (td)
+			td.innerHTML = o['Newname'];
+			
+		td = $('callChannel-' + o['Uniqueid']);
+		if (td)
+			td.innerHTML = o['Newname'] + '<br>' + o['CallerIDName'] + ' <' + o['CallerID'] + '>';
+	}
 }
 
 function initIFrame()
@@ -227,7 +238,10 @@ function showDiv(div)
 			$(divs[i]).style.display = 'none';
 	}
 	if (div == 'chanCallDiv')
-		$('trash').style.display = 'block';
+	{
+		$('trash').style.display      = 'block';
+		$('chanCallDiv').style.margin = null;
+	}
 }
 
 function showOptions(div, state)
@@ -243,6 +257,13 @@ function showOptions(div, state)
 				divs[i].style.display = 'none';
 		}
 	}
+}
+function showSelectTransferChannel(idA, srcA, idB, srcB, dst)
+{
+	$('transferDestination').innerHTML       = dst;
+	$('transferSourceA').innerHTML           = '<a href="#" onCLick="transferCall(\'' + idA + '\', \'' + dst + '\', true); $(\'selectTransferChannel\').style.display = \'none\';">' + srcA + '</a>';
+	$('transferSourceB').innerHTML           = '<a href="#" onCLick="transferCall(\'' + idB + '\', \'' + dst + '\', true); $(\'selectTransferChannel\').style.display = \'none\';">' + srcB + '</a>';
+	$('selectTransferChannel').style.display = 'block';
 }
 
 // Originate a Call
@@ -295,6 +316,21 @@ function hangupCall(chanId)
 	}
 }
 
+// Transfer
+function transferCall(src, dst, isPeer)
+{
+	if (isPeer)
+	{
+		var c = confirm("Transfer call to " + dst + '?');
+		if (!c)
+			return;
+	}
+	var id = ajaxCall.init(false);
+	ajaxCall.setURL(id, 'action.php');
+	ajaxCall.addParam(id, 'action', 'TransferCall:::' + src + ':::' + dst + ':::' + (isPeer ? 'true' : 'false'));
+	ajaxCall.doCall(id);
+}
+
 // Yahoo
 function setStartPosition(e)
 {
@@ -329,6 +365,17 @@ function channelCallDrop(e, id)
 {
 	if (id == 'trash')
 		hangupCall(this.id);
+		
+	if (id.indexOf('peerDiv-') != -1 && this.id.indexOf('call-') == -1)
+		transferCall(this.id, id.substring(8), true);
+		
+	if (id.indexOf('peerDiv-') != -1 && this.id.indexOf('call-') != -1)
+	{
+		var ids  = this.id.substring(5).split('-');
+		var srcA = $('channel-' + ids[0]).innerHTML;
+		var srcB = $('channel-' + ids[1]).innerHTML;
+		showSelectTransferChannel(ids[0], srcA, ids[1], srcB, id.substring(8));
+	}
 		
 	backToStartPosition(this.id);
 }
