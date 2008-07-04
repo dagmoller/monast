@@ -423,7 +423,7 @@ class MonAst():
 						users.sort()
 						for user in users:
 							mu = self.monitoredUsers[user]
-							sock.send('PeerStatus: %s:::%s:::%s\r\n' % (user, mu['Status'], mu['Calls']))
+							sock.send('PeerStatus: %s:::%s:::%s:::%s\r\n' % (user, mu['Status'], mu['Calls'], mu['CallerID'] if mu['CallerID'] != '--' else user))
 						self.monitoredUsersLock.release()
 						self.channelsLock.acquire()
 						for Uniqueid in self.channels:

@@ -16,6 +16,10 @@
 <!-- Animation -->  
 <script src="http://yui.yahooapis.com/2.5.2/build/animation/animation-min.js" type="text/javascript"></script> 
 
+<script type="text/javascript">
+var callerIDs = new Array();
+</script>
+
 </head>
 <body>
 <iframe id="__frame" width="1024" height="350" style="display: none"></iframe>
@@ -34,7 +38,7 @@
   <div id="peerDiv-{peer}" class="peerTable">
     <table class="status" width="175px">
       <tr>
-        <td colspan="2" bgcolor="#DDDDDD" nowrap="nowrap"><b><a href="#" title="Options" onClick="showOptions('peerOptions-{peer}', 1)">{peer}</a></b></td>
+        <td colspan="2" bgcolor="#DDDDDD" nowrap="nowrap"><b><a href="#" title="Options" onClick="showOptions('peerOptions-{peer}', 1)">{CallerID}</a></b></td>
       </tr>
       <tr>
         <td id="peerStatus-{peer}" bgcolor="{status-color}" width="115px">{status}</td>
@@ -42,12 +46,13 @@
       </tr>
     </table>
   </div>
+  <script type="text/javascript">callerIDs['{peer}'] = '{CallerID}';</script>
   <!-- END BLOCK : peer -->
   <!-- START BLOCK : peerOptions -->
   <div id="peerOptions-{peer}" class="peerOptions">
     <table width="100%" border="0">
       <tr>
-        <td align="left"><b>Options for "{peer}"</b></td>
+        <td align="left"><b>Options for "{CallerID}"</b></td>
         <td align="center" width="50px"><a href="#" onClick="showOptions('peerOptions-{peer}', 0)"><b>Close</b></a></td>
       </tr>
     </table>
