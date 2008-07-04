@@ -324,26 +324,29 @@ class MonAst():
 					
 					log.info('Evento Rename Detectado')
 					
-					self.channelsLock.acquire()
-					self.channels[Uniqueid]['Channel'] = Newname
-					self.channelsLock.release()
+					try:
+						self.channelsLock.acquire()
+						self.channels[Uniqueid]['Channel'] = Newname
+						self.channelsLock.release()
 					
-					self.callsLock.acquire()
-					for call in self.calls:
-						SrcUniqueID, DestUniqueID = call.split('-')
-						key = None
-						if (SrcUniqueID == Uniqueid):
-							key = 'Source'
-						if (DestUniqueID == Uniqueid):
-							key = 'Destination'
-						if key:
-							self.calls[call][key] = Newname
-							CallerIDName = self.calls[call]['CallerIDName']
-							CallerID     = self.calls[call]['CallerID']
-							break							
-					self.callsLock.release()
-					
-					enqueue.append('Rename: %s:::%s:::%s:::%s:::%s' % (Oldname, Newname, Uniqueid, CallerIDName, CallerID))					
+						self.callsLock.acquire()
+						for call in self.calls:
+							SrcUniqueID, DestUniqueID = call.split('-')
+							key = None
+							if (SrcUniqueID == Uniqueid):
+								key = 'Source'
+							if (DestUniqueID == Uniqueid):
+								key = 'Destination'
+							if key:
+								self.calls[call][key] = Newname
+								CallerIDName = self.calls[call]['CallerIDName']
+								CallerID     = self.calls[call]['CallerID']
+								break							
+						self.callsLock.release()
+						
+						enqueue.append('Rename: %s:::%s:::%s:::%s:::%s' % (Oldname, Newname, Uniqueid, CallerIDName, CallerID))
+					except:
+						log.error('Channel %s nao existe em self.channels, ignorado.' % Oldname)
 			
 			self.clientQueuelock.acquire()
 			for msg in enqueue:
