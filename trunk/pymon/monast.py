@@ -262,7 +262,9 @@ class MonAst():
 					self.callsLock.release()
 					
 					self.monitoredUsersLock.acquire()
-					user = Channel[:Channel.rfind('-')]
+					user = Channel
+					if Channel.rfind('-') != -1:
+						user = Channel[:Channel.rfind('-')]
 					if self.monitoredUsers.has_key(user) and self.monitoredUsers[user]['Calls'] > 0:
 						self.monitoredUsers[user]['Calls'] -= 1
 						enqueue.append('PeerStatus: %s:::%s:::%s' % (user, self.monitoredUsers[user]['Status'], self.monitoredUsers[user]['Calls']))
