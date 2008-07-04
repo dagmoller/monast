@@ -81,6 +81,7 @@ foreach ($peerStatus as $idx => $peer)
     
     $template->newBlock('peerOptions');
     $template->assign('peer', $peer);
+    $template->assign('CallerID', $CallerID);
     
     $template->newBlock('peerDragDrop');
     $template->assign('idx', $idx);
