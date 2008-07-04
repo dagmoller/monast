@@ -390,7 +390,7 @@ class MonAst():
 	def clientSocket(self, a, b):
 		log.info('Iniciando Thread clientSocket')
 		self.socketClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		self.socketClient.bind(('0.0.0.0', 5039))
+		self.socketClient.bind(('0.0.0.0', self.bindPort))
 		self.socketClient.listen(10)
 		while self.run:
 			try:
@@ -408,7 +408,7 @@ class MonAst():
 		count   = 0
 		log.info('Iniciando %s' % id)
 		try:
-			while True:
+			while self.run:
 				msg = sock.recv(1024)
 				if msg.strip():
 					msg = msg.strip()
@@ -558,7 +558,7 @@ class MonAst():
 		self.USERNAME = cp.get('global', 'username')
 		self.PASSWORD = cp.get('global', 'password')	
 		
-		self.bindPort       = cp.get('global', 'bind_port')
+		self.bindPort       = int(cp.get('global', 'bind_port'))
 		self.tranferContext = cp.get('global', 'transfer_context')
 		
 		self.userDisplay['DEFAULT'] = True if cp.get('users', 'default') == 'show' else False
@@ -587,6 +587,13 @@ class MonAst():
 		self.logoff()
 		self.close()
 
+		while True:
+			time.sleep(0.5)
+			self.clientSockLock.acquire()
+			if len(self.clientSocks) == 0:
+				break
+			self.clientSockLock.release()
+			
 		self.socketClient.shutdown(socket.SHUT_RDWR)
 		self.socketClient.close()
 

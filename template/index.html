@@ -130,7 +130,7 @@ Process('{json}');
 
 <!-- START BLOCK : peerDragDrop -->
 ddDivs['peerDiv-{peer}']               = new YAHOO.util.DD("peerDiv-{peer}");
-ddDivs['peerDiv-{peer}'].startPos      = YAHOO.util.Dom.getXY(YAHOO.util.Dom.get('peerDiv-{peer}'));
+ddDivs['peerDiv-{peer}'].onMouseDown   = setStartPosition;
 ddDivs['peerDiv-{peer}'].onDragDrop    = peerDrop; 
 ddDivs['peerDiv-{peer}'].onInvalidDrop = invalidDrop;
 <!-- END BLOCK : peerDragDrop -->
