@@ -260,7 +260,7 @@ function showOptions(div, state)
 }
 function showSelectTransferChannel(idA, srcA, idB, srcB, dst)
 {
-	$('transferDestination').innerHTML       = dst;
+	$('transferDestination').innerHTML       = callerIDs[dst];
 	$('transferSourceA').innerHTML           = '<a href="#" onCLick="transferCall(\'' + idA + '\', \'' + dst + '\', true); $(\'selectTransferChannel\').style.display = \'none\';">' + srcA + '</a>';
 	$('transferSourceB').innerHTML           = '<a href="#" onCLick="transferCall(\'' + idB + '\', \'' + dst + '\', true); $(\'selectTransferChannel\').style.display = \'none\';">' + srcB + '</a>';
 	$('selectTransferChannel').style.display = 'block';
