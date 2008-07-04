@@ -69,10 +69,11 @@ fclose($fp);
 $template->prepare();
 foreach ($peerStatus as $idx => $peer)
 {
-    list($peer, $status, $peerCalls) = explode(':::', $peer);
+    list($peer, $status, $peerCalls, $CallerID) = explode(':::', $peer);
 
     $template->newBlock('peer');
     $template->assign('peer', $peer);
+    $template->assign('CallerID', $CallerID);
     $template->assign('status', $status);
     $template->assign('status-color', color($status));
     $template->assign('calls', "$peerCalls call(s)");
@@ -84,6 +85,7 @@ foreach ($peerStatus as $idx => $peer)
     $template->newBlock('peerDragDrop');
     $template->assign('idx', $idx);
     $template->assign('peer', $peer);
+    $template->assign('CallerID', $CallerID);
 }
 
 foreach ($channels as $channel)

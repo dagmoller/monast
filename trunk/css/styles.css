@@ -10,11 +10,11 @@
 	width: 100%;
 	text-align: center;
 	font-family: Verdana;
-	font-size: 14px;
+	font-size: 0.8em;
 }
 #menu a {
 	font-family: Verdana;
-	font-size: 14px;
+	font-size: 0.8em;
 	font-weight: bold;
 	text-decoration: none;
 	text-align: center;
@@ -76,7 +76,7 @@
 	height: 300px; 
 	overflow: auto; 
 	font-family: 'courier new'; 
-	font-size: 10px;
+	font-size: 0.6em;
 	align: center; 
 	margin: 0 auto;
 	display: none;
@@ -92,7 +92,7 @@
 	position: absolute;
 	display: none;
 	font-family: Verdana;
-	font-size: 10px;
+	font-size: 0.6em;
 	width: 400px;
 	padding: 10px;
 	left: 50%;
@@ -107,20 +107,20 @@
 
 .tableTitle {
 	font-family: Verdana;
-	font-size: 10px;
+	font-size: 0.6em;
 	font-weight: bold;
 	background-color: #bbbbbb;
 }
 .statusHeader {
 	font-family: Verdana;
-	font-size: 10px;
+	font-size: 0.6em;
 	font-weight: bold;
 	background-color: #dddddd;
 }
 
 .status {
 	font-family: Verdana;
-	font-size: 10px;
+	font-size: 0.6em;
 	text-align: center;
 	border: 1px solid #aaaaaa;
 }
@@ -133,5 +133,5 @@
 .campo {
 	border: 1px solid #dddddd;
 	font-family: Verdana;
-	font-size: 10px;
+	font-size: 0.6em;
 }

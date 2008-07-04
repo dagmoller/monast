@@ -321,7 +321,7 @@ function transferCall(src, dst, isPeer)
 {
 	if (isPeer)
 	{
-		var c = confirm("Transfer call to " + dst + '?');
+		var c = confirm("Transfer call to " + callerIDs[dst] + '?');
 		if (!c)
 			return;
 	}
