@@ -404,113 +404,115 @@ class MonAst():
 				pass
 	
 	def clientThread(self, id, sock, addr):
-		session = None
-		count   = 0
+		session  = None
+		localRun = True
+		count    = 0
 		log.info('Iniciando %s' % id)
 		try:
-			while self.run:
+			while self.run and localRun:
 				msg = sock.recv(1024)
 				if msg.strip():
-					msg = msg.strip()
-					log.log('Client %s: %s' % (str(addr), msg))
-					self.clientQueuelock.acquire()
-					if msg.upper().startswith('SESSION: '):
-						session = msg[9:]
-						if not self.clientQueues.has_key(session):
-							self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time()}
-							sock.send('NEW SESSION\r\n')
-						else:
+					msgs = msg.strip().split('\r\n')
+					for msg in msgs:
+						log.log('Client %s: %s' % (str(addr), msg))
+						self.clientQueuelock.acquire()
+						if msg.upper().startswith('SESSION: '):
+							session = msg[9:]
+							if not self.clientQueues.has_key(session):
+								self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time()}
+								sock.send('NEW SESSION\r\n')
+							else:
+								self.clientQueues[session]['t'] = time.time()
+								sock.send('OK\r\n')
+						elif session and msg.upper() == 'GET STATUS':
 							self.clientQueues[session]['t'] = time.time()
-							sock.send('OK\r\n')
-					elif session and msg.upper() == 'GET STATUS':
-						self.clientQueues[session]['t'] = time.time()
-						sock.send('BEGIN STATUS\r\n')
-						self.monitoredUsersLock.acquire()
-						users = self.monitoredUsers.keys()
-						users.sort()
-						for user in users:
-							mu = self.monitoredUsers[user]
-							sock.send('PeerStatus: %s:::%s:::%s:::%s\r\n' % (user, mu['Status'], mu['Calls'], mu['CallerID'] if mu['CallerID'] != '--' else user))
-						self.monitoredUsersLock.release()
-						self.channelsLock.acquire()
-						for Uniqueid in self.channels:
-							ch = self.channels[Uniqueid]
-							sock.send('NewChannel: %s:::%s:::%s:::%s:::%s\r\n' % (ch['Channel'], ch['State'], ch['CallerIDNum'], ch['CallerIDName'], Uniqueid))
-						self.channelsLock.release()
-						self.callsLock.acquire()
-						for call in self.calls:
-							c = self.calls[call]
-							sock.send('Call: %s:::%s:::%s:::%s:::%s:::%s:::%s\r\n' % (c['Source'], c['Destination'], c['CallerID'], c['CallerIDName'], \
-																				c['SrcUniqueID'], c['DestUniqueID'], c['Status']))
-						self.callsLock.release()
-						sock.send('END STATUS\r\n')
-					elif session and msg.upper() == 'GET CHANGES':
-						self.clientQueues[session]['t'] = time.time()
-						sock.send('BEGIN CHANGES\r\n')
-						while True:
-							try:
-								msg = self.clientQueues[session]['q'].get(False)
-								sock.send(msg + '\r\n')
-							except Queue.Empty:
-								break
-						sock.send('END CHANGES\r\n')
-					elif msg.startswith('OriginateCall'):
-						self.monitoredUsersLock.acquire()
-						action, src, dst = msg.split(':::')
-						command = []
-						command.append('Action: Originate')
-						command.append('Channel: %s' % src)
-						command.append('Exten: %s' % dst)
-						command.append('Context: %s' % self.monitoredUsers[src]['Context'])
-						command.append('Priority: 1')
-						command.append('CallerID: %s' % MONAST_CALLERID)
-						for var in self.monitoredUsers[src]['Variables']:
-							command.append('Variable: %s' % var)
-						self.send(command)
-						self.monitoredUsersLock.release()
-					elif msg.startswith('OriginateDial'):
-						action, src, dst = msg.split(':::')
-						command = []
-						command.append('Action: Originate')
-						command.append('Channel: %s' % src)
-						command.append('Application: Dial')
-						command.append('Data: %s|30|rTt' % dst)
-						command.append('CallerID: %s' % MONAST_CALLERID)
-						self.send(command)
-					elif msg.startswith('HangupChannel'):
-						self.channelsLock.acquire()
-						action, Uniqueid = msg.split(':::')
-						command = []
-						command.append('Action: Hangup')
-						command.append('Channel: %s' % self.channels[Uniqueid]['Channel'])
-						self.send(command)
-						self.channelsLock.release()
-					elif msg.startswith('TransferCall'):
-						action, SrcUniqueID, dst, isPeer = msg.split(':::')
-						if isPeer == 'true':
-							tech, exten = dst.split('/')
-							try:
-								exten = int(exten)
-							except:
-								self.monitoredUsersLock.acquire()
-								exten = self.monitoredUsers[dst]['CallerID']
-								exten = exten[exten.find('<')+1:exten.find('>')]
-								self.monitoredUsersLock.release()
-						self.channelsLock.acquire()
-						srcChannel = self.channels[SrcUniqueID]['Channel']
-						command = []
-						command.append('Action: Redirect')
-						command.append('Channel: %s' % srcChannel)
-						command.append('Exten: %s' % exten)
-						command.append('Context: %s' % self.tranferContext)
-						command.append('Priority: 1')
-						self.send(command)
-						self.channelsLock.release()
-					else:
-						sock.send('NO SESSION\r\n')	
-					self.clientQueuelock.release()
-					if msg.upper() == 'BYE':
-						break
+							sock.send('BEGIN STATUS\r\n')
+							self.monitoredUsersLock.acquire()
+							users = self.monitoredUsers.keys()
+							users.sort()
+							for user in users:
+								mu = self.monitoredUsers[user]
+								sock.send('PeerStatus: %s:::%s:::%s:::%s\r\n' % (user, mu['Status'], mu['Calls'], mu['CallerID'] if mu['CallerID'] != '--' else user))
+							self.monitoredUsersLock.release()
+							self.channelsLock.acquire()
+							for Uniqueid in self.channels:
+								ch = self.channels[Uniqueid]
+								sock.send('NewChannel: %s:::%s:::%s:::%s:::%s\r\n' % (ch['Channel'], ch['State'], ch['CallerIDNum'], ch['CallerIDName'], Uniqueid))
+							self.channelsLock.release()
+							self.callsLock.acquire()
+							for call in self.calls:
+								c = self.calls[call]
+								sock.send('Call: %s:::%s:::%s:::%s:::%s:::%s:::%s\r\n' % (c['Source'], c['Destination'], c['CallerID'], c['CallerIDName'], \
+																					c['SrcUniqueID'], c['DestUniqueID'], c['Status']))
+							self.callsLock.release()
+							sock.send('END STATUS\r\n')
+						elif session and msg.upper() == 'GET CHANGES':
+							self.clientQueues[session]['t'] = time.time()
+							sock.send('BEGIN CHANGES\r\n')
+							while True:
+								try:
+									msg = self.clientQueues[session]['q'].get(False)
+									sock.send(msg + '\r\n')
+								except Queue.Empty:
+									break
+							sock.send('END CHANGES\r\n')
+						elif msg.startswith('OriginateCall'):
+							self.monitoredUsersLock.acquire()
+							action, src, dst = msg.split(':::')
+							command = []
+							command.append('Action: Originate')
+							command.append('Channel: %s' % src)
+							command.append('Exten: %s' % dst)
+							command.append('Context: %s' % self.monitoredUsers[src]['Context'])
+							command.append('Priority: 1')
+							command.append('CallerID: %s' % MONAST_CALLERID)
+							for var in self.monitoredUsers[src]['Variables']:
+								command.append('Variable: %s' % var)
+							self.send(command)
+							self.monitoredUsersLock.release()
+						elif msg.startswith('OriginateDial'):
+							action, src, dst = msg.split(':::')
+							command = []
+							command.append('Action: Originate')
+							command.append('Channel: %s' % src)
+							command.append('Application: Dial')
+							command.append('Data: %s|30|rTt' % dst)
+							command.append('CallerID: %s' % MONAST_CALLERID)
+							self.send(command)
+						elif msg.startswith('HangupChannel'):
+							self.channelsLock.acquire()
+							action, Uniqueid = msg.split(':::')
+							command = []
+							command.append('Action: Hangup')
+							command.append('Channel: %s' % self.channels[Uniqueid]['Channel'])
+							self.send(command)
+							self.channelsLock.release()
+						elif msg.startswith('TransferCall'):
+							action, SrcUniqueID, dst, isPeer = msg.split(':::')
+							if isPeer == 'true':
+								tech, exten = dst.split('/')
+								try:
+									exten = int(exten)
+								except:
+									self.monitoredUsersLock.acquire()
+									exten = self.monitoredUsers[dst]['CallerID']
+									exten = exten[exten.find('<')+1:exten.find('>')]
+									self.monitoredUsersLock.release()
+							self.channelsLock.acquire()
+							srcChannel = self.channels[SrcUniqueID]['Channel']
+							command = []
+							command.append('Action: Redirect')
+							command.append('Channel: %s' % srcChannel)
+							command.append('Exten: %s' % exten)
+							command.append('Context: %s' % self.tranferContext)
+							command.append('Priority: 1')
+							self.send(command)
+							self.channelsLock.release()
+						else:
+							sock.send('NO SESSION\r\n')	
+						self.clientQueuelock.release()
+						if msg.upper() == 'BYE':
+							localRun = False
 				else:
 					# POG para encerrar a tread caso o socket do cliente fique louco (acontece)
 					count += 1

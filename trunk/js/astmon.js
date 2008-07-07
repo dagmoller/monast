@@ -351,13 +351,15 @@ function backToStartPosition(id)
 
 function peerDrop(e, id) 
 {
-	var src = this.id.replace('peerDiv-', '');
-	var dst = id.replace('peerDiv-', '');
-	var c   = confirm('Originate a call from "' + callerIDs[src] + '" to "' + callerIDs[dst] + '"?');
-	
-	if (c)
-		originateDial(this.id.replace('peerDiv-', ''), id.replace('peerDiv-', ''));
+	if (id.indexOf('peerDiv-') != -1)
+	{
+		var src = this.id.replace('peerDiv-', '');
+		var dst = id.replace('peerDiv-', '');
+		var c   = confirm('Originate a call from "' + callerIDs[src] + '" to "' + callerIDs[dst] + '"?');
 		
+		if (c)
+			originateDial(this.id.replace('peerDiv-', ''), id.replace('peerDiv-', ''));
+	}		
 	backToStartPosition(this.id);
 }
 
