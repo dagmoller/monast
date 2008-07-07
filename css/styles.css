@@ -48,6 +48,7 @@
 	border: 1px solid #aaaaaa;
 	margin-bottom: 2px;
 	background-color: #ffffff;
+	z-index: 2;
 }
 
 #callsDiv {
@@ -60,14 +61,15 @@
 	border: 1px solid #aaaaaa;
 	margin-bottom: 2px;
 	background-color: #ffffff;
+	z-index: 2;
 }
 
 #trash {
-	position: fixed; 
+	position: absolute; 
 	top: 100px; 
 	left: 1120px;
 	display: none;
-	z-index: -1;
+	z-index: 1;
 }
 
 #debugMsg {
@@ -133,5 +135,5 @@
 .campo {
 	border: 1px solid #dddddd;
 	font-family: Verdana;
-	font-size: 0.6em;
+	font-size: 0.9em;
 }
