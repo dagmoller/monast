@@ -1,95 +1,13 @@
-
-#menu {
-	width: 600px;
-	/*border: 1px solid black;*/
-	align: center; 
-	margin: 0 auto;
-	text-align: center;
-}
-#menu table {
-	width: 100%;
-	text-align: center;
-	font-family: Verdana;
-	font-size: 0.8em;
-}
-#menu a {
-	font-family: Verdana;
-	font-size: 0.8em;
-	font-weight: bold;
-	text-decoration: none;
-	text-align: center;
-	color: black;
-}
-
 #peersDiv {
-	width: 1115px;
 	padding: 5px; 
-	align: center; 
-	margin: 0 auto;
 	display: block;
+	/*overflow: auto;*/
 }
-
-#chanCallDiv {
-	width: 1020px;
-	padding: 10px; 
-	/*align: center;*/ 
-	/*margin: 0 auto;*/
-	margin-left: 50px;
-	display: none;
-	/*border: 1px solid #000000;*/
-}
-
-#channelsDiv {
-	width: 350px;
-	float: left;
-}
-.channelDiv {
-	width: 350px;
-	border: 1px solid #aaaaaa;
-	margin-bottom: 2px;
-	background-color: #ffffff;
-	z-index: 2;
-}
-
-#callsDiv {
-	width: 600px;
-	float: left;
-	margin-left: 50px;
-}
-.callDiv {
-	width: 600px;
-	border: 1px solid #aaaaaa;
-	margin-bottom: 2px;
-	background-color: #ffffff;
-	z-index: 2;
-}
-
-#trash {
-	position: absolute; 
-	top: 100px; 
-	left: 1120px;
-	display: none;
-	z-index: 1;
-}
-
-#debugMsg {
-	border: black 1px solid; 
-	width: 1115px; 
-	height: 300px; 
-	overflow: auto; 
-	font-family: 'courier new'; 
-	font-size: 0.6em;
-	align: center; 
-	margin: 0 auto;
-	display: none;
-}
-
 .peerTable {
 	float: left; 
 	margin: 5px;
 	background-color: #ffffff;
 }
-
 .peerOptions {
 	position: absolute;
 	display: none;
@@ -106,7 +24,49 @@
 	color: black;
 	text-decoration: none;
 }
-
+.status {
+	font-family: Verdana;
+	font-size: 0.6em;
+	text-align: center;
+	border: 1px solid #aaaaaa;
+}
+.status a {
+	color: black;
+	text-decoration: none;
+}
+.campo {
+	border: 1px solid #dddddd;
+	font-family: Verdana;
+	font-size: 0.9em;
+}
+#chanCallDiv {
+	padding: 10px; 
+	display: none;
+	/*overflow: auto;*/
+}
+#channelsDiv {
+	width: 350px;
+	float: left;
+}
+.channelDiv {
+	width: 350px;
+	border: 1px solid #aaaaaa;
+	margin-bottom: 2px;
+	background-color: #ffffff;
+	z-index: 2;
+}
+#callsDiv {
+	width: 600px;
+	float: left;
+	margin-left: 50px;
+}
+.callDiv {
+	width: 600px;
+	border: 1px solid #aaaaaa;
+	margin-bottom: 2px;
+	background-color: #ffffff;
+	z-index: 2;
+}
 .tableTitle {
 	font-family: Verdana;
 	font-size: 0.6em;
@@ -119,21 +79,21 @@
 	font-weight: bold;
 	background-color: #dddddd;
 }
-
-.status {
-	font-family: Verdana;
+#trash {
+	position: absolute; 
+	top: 40px; 
+	left: 1100px;
+	display: none;
+	z-index: 1;
+}
+#debugMsg {
+	border: black 1px solid; 
+	width: 1115px; 
+	height: 300px; 
+	overflow: auto; 
+	font-family: 'courier new'; 
 	font-size: 0.6em;
-	text-align: center;
-	border: 1px solid #aaaaaa;
-}
-
-.status a {
-	color: black;
-	text-decoration: none;
-}
-
-.campo {
-	border: 1px solid #dddddd;
-	font-family: Verdana;
-	font-size: 0.9em;
+	align: center; 
+	margin: 0 auto;
+	display: none;
 }

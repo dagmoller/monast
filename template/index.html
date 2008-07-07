@@ -3,96 +3,115 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title>Asterisk Monitor (MonAst)</title>
-<link rel="stylesheet" href="css/styles.css" type="text/css">
+
+<!-- css --> 
+<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.5.2/build/fonts/fonts-min.css"> 
+<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.5.2/build/assets/skins/sam/skin.css"> 
+<!-- js --> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/yahoo-dom-event/yahoo-dom-event.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/animation/animation-min.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/dragdrop/dragdrop-min.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/container/container-min.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/logger/logger-min.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/element/element-beta-min.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/tabview/tabview-min.js"></script> 
+
 <script type="text/javascript" src="js/json.js"></script>
 <script type="text/javascript" src="js/ajax.js"></script>
 <script type="text/javascript" src="js/astmon.js"></script>
 <script type="text/javascript" src="js/shortcut.js"></script>
 
-<!-- Dependencies -->  
-<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/yahoo-dom-event/yahoo-dom-event.js" ></script> 
-<!-- Drag and Drop source file -->  
-<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/dragdrop/dragdrop-min.js" ></script>
-<!-- Animation -->  
-<script src="http://yui.yahooapis.com/2.5.2/build/animation/animation-min.js" type="text/javascript"></script> 
+<link rel="stylesheet" type="text/css" href="css/styles.css"> 
+
+</head>
+<body class="yui-skin-sam">
 
 <script type="text/javascript">
 var callerIDs = new Array();
 </script>
 
-</head>
-<body>
 <iframe id="__frame" width="1024" height="350" style="display: none"></iframe>
-<hr>
-<div id="menu">
-  <a href="#" onClick="showDiv('peersDiv')">Peers/Users</a>
-  &nbsp;|&nbsp;
-  <a href="#" onClick="showDiv('chanCallDiv')">Channels/Calls</a>
-  &nbsp;|&nbsp;
-  <a href="#" onClick="showDiv('debugMsg')">DEBUG MESSAGES</a>
-</div>
-<hr>
 
-<div id="peersDiv">
-  <!-- START BLOCK : peer -->
-  <div id="peerDiv-{peer}" class="peerTable">
-    <table class="status" width="175px">
-      <tr>
-        <td colspan="2" bgcolor="#DDDDDD" nowrap="nowrap"><b><a href="#" title="Options" onClick="showOptions('peerOptions-{peer}', 1)">{CallerID}</a></b></td>
-      </tr>
-      <tr>
-        <td id="peerStatus-{peer}" bgcolor="{status-color}" width="115px">{status}</td>
-        <td id="peerCalls-{peer}" bgcolor="{calls-color}" width="60px">{calls}</td>
-      </tr>
-    </table>
-  </div>
-  <script type="text/javascript">callerIDs['{peer}'] = '{CallerID}';</script>
-  <!-- END BLOCK : peer -->
-  <!-- START BLOCK : peerOptions -->
-  <div id="peerOptions-{peer}" class="peerOptions">
-    <table width="100%" border="0">
-      <tr>
-        <td align="left"><b>Options for "{CallerID}"</b></td>
-        <td align="center" width="50px"><a href="#" onClick="showOptions('peerOptions-{peer}', 0)"><b>Close</b></a></td>
-      </tr>
-    </table>
-    <hr>
-    <table width="100%" border="0">
-      <tr>
-        <td align="left">- Originate a call to <input type="text" id="originateNum-{peer}" size="10" class="campo">&nbsp;<button onClick="originateCall('{peer}')">Call</button></td>
-      </tr>
-    </table>
-  </div>
-<!-- END BLOCK : peerOptions -->
-</div>
+<div id="TabPannel" class="yui-navset">
+  <ul class="yui-nav">
+    <li><a href="#tab1"><em>Peers/Users</em></a></li>
+    <li><a href="#tab2"><em>Channels/Calls</em></a></li>
+    <li><a href="#tab3"><em>Mix (peers/channels)</em></a></li>
+    <li><a href="#tab3"><em>Debug</em></a></li>
+  </ul>
+  
+  <div class="yui-content">
+    <div id="peersDiv">
+      <!-- START BLOCK : peer -->
+      <div id="peerDiv-{peer}" class="peerTable">
+        <table class="status" width="175px">
+          <tr>
+            <td colspan="2" bgcolor="#DDDDDD" nowrap="nowrap"><b><a href="#" title="Options" onClick="showOptions('peerOptions-{peer}', 1)">{CallerID}</a></b></td>
+          </tr>
+          <tr>
+            <td id="peerStatus-{peer}" bgcolor="{status-color}" width="115px">{status}</td>
+            <td id="peerCalls-{peer}" bgcolor="{calls-color}" width="60px">{calls}</td>
+          </tr>
+        </table>
+      </div>
+      <script type="text/javascript">callerIDs['{peer}'] = '{CallerID}';</script>
+      <!-- END BLOCK : peer -->
+      <!-- START BLOCK : peerOptions -->
+      <div id="peerOptions-{peer}" class="peerOptions">
+        <table width="100%" border="0">
+          <tr>
+            <td align="left"><b>Options for "{CallerID}"</b></td>
+            <td align="center" width="50px"><a href="#" onClick="showOptions('peerOptions-{peer}', 0)"><b>Close</b></a></td>
+          </tr>
+        </table>
+        <hr>
+        <table width="100%" border="0">
+          <tr>
+            <td align="left">- Originate a call to <input type="text" id="originateNum-{peer}" size="10" class="campo">&nbsp;<button onClick="originateCall('{peer}')">Call</button></td>
+          </tr>
+        </table>
+      </div>
+      <!-- END BLOCK : peerOptions -->
+      <div style="clear: both;"></div>
+    </div>
+  
+    <div id="chanCallDiv">
+      <div id="channelsDiv">
+        <div class="channelDiv">
+          <table width="350">
+            <tr>
+              <td class="tableTitle" align="center" colspan="2">Channels</td>
+            </tr>
+            <tr>
+              <td class="statusHeader" align="center" width="270">Channel</td>
+              <td class="statusHeader" align="center" width="80">Status</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div id="callsDiv">
+        <div class="callDiv">
+          <table width="600">
+            <tr>
+              <td class="tableTitle" align="center" colspan="3">Calls</td>
+            </tr>
+            <tr>
+              <td class="statusHeader" align="center" width="260">SRC Channel</td>
+              <td class="statusHeader" align="center" width="80">Status</td>
+              <td class="statusHeader" align="center" width="260">DST Channel</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div style="clear: both;"></div>
+    </div>
 
-<div id="chanCallDiv">
-  <div id="channelsDiv">
-    <div class="channelDiv">
-      <table width="350">
-        <tr>
-          <td class="tableTitle" align="center" colspan="2">Channels</td>
-        </tr>
-        <tr>
-          <td class="statusHeader" align="center" width="270">Channel</td>
-          <td class="statusHeader" align="center" width="80">Status</td>
-        </tr>
-      </table>
+	<div id="mixed">
     </div>
-  </div>
-  <div id="callsDiv">
-    <div class="callDiv">
-      <table width="600">
-        <tr>
-          <td class="tableTitle" align="center" colspan="3">Calls</td>
-        </tr>
-        <tr>
-          <td class="statusHeader" align="center" width="260">SRC Channel</td>
-          <td class="statusHeader" align="center" width="80">Status</td>
-          <td class="statusHeader" align="center" width="260">DST Channel</td>
-        </tr>
-      </table>
+
+    <div id="debugMsg">
     </div>
+    
   </div>
 </div>
 
@@ -116,11 +135,26 @@ var callerIDs = new Array();
   </table>
 </div>
 
-<div id="debugMsg">
-</div>
-
-<script type="text/javascript">
+<script>
 YAHOO.util.DDM.mode = YAHOO.util.DDM.POINT;
+
+var tabPannel = new YAHOO.widget.TabView('TabPannel');
+tabPannel.set('activeIndex', 0);
+tabPannel.getTab(0).addListener('click', function(e){
+	$('chanCallDiv').style.display = 'none';
+});
+tabPannel.getTab(1).addListener('click', function(e){
+	$('peersDiv').style.display = 'none';
+	$('trash').style.display    = 'block';
+});
+tabPannel.getTab(2).addListener('click', function(e){
+	$('chanCallDiv').style.display = 'block';
+	$('peersDiv').style.display    = 'block';
+});
+tabPannel.getTab(3).addListener('click', function(e){
+	$('chanCallDiv').style.display = 'none';
+	$('peersDiv').style.display    = 'none';
+});
 
 var dTrash = new YAHOO.util.DDTarget("trash");
 
@@ -136,33 +170,6 @@ ddDivs['peerDiv-{peer}'].onInvalidDrop = invalidDrop;
 <!-- END BLOCK : peerDragDrop -->
 
 startIFrame();
-
-shortcut.add('F5', function(){ location.reload(); });
-shortcut.add('P', function(){ showDiv('peersDiv'); });
-shortcut.add('C', function(){ showDiv('chanCallDiv'); });
-shortcut.add('D', function(){ showDiv('debugMsg'); });
-
-shortcut.add('T', function()
-{
-	if ($('chanCallDiv').style.display == 'block')
-	{
-		if ($('trash').style.display == 'block')
-			$('trash').style.display = 'none';
-		else
-			$('trash').style.display = 'block';
-		
-		if ($('peersDiv').style.display == 'none')
-		{
-			$('peersDiv').style.display   = 'block';
-			$('chanCallDiv').style.margin = '0 auto';
-		}
-		else
-		{
-			$('peersDiv').style.display   = 'none';
-			$('chanCallDiv').style.margin = null;
-		}
-	}
-});
 
 </script>
 
