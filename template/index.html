@@ -142,6 +142,7 @@ var tabPannel = new YAHOO.widget.TabView('TabPannel');
 tabPannel.set('activeIndex', 0);
 tabPannel.getTab(0).addListener('click', function(e){
 	$('chanCallDiv').style.display = 'none';
+	$('trash').style.display       = 'none';
 });
 tabPannel.getTab(1).addListener('click', function(e){
 	$('peersDiv').style.display = 'none';
@@ -150,10 +151,12 @@ tabPannel.getTab(1).addListener('click', function(e){
 tabPannel.getTab(2).addListener('click', function(e){
 	$('chanCallDiv').style.display = 'block';
 	$('peersDiv').style.display    = 'block';
+	$('trash').style.display       = 'none';
 });
 tabPannel.getTab(3).addListener('click', function(e){
 	$('chanCallDiv').style.display = 'none';
 	$('peersDiv').style.display    = 'none';
+	$('trash').style.display       = 'none';
 });
 
 var dTrash = new YAHOO.util.DDTarget("trash");

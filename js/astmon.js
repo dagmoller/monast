@@ -227,23 +227,6 @@ function startIFrame()
 }
 //startIFrame(); // deve ser chamado no final da index.html
 
-function showDiv(div)
-{
-	var divs = new Array('peersDiv', 'chanCallDiv', 'trash', 'debugMsg');
-	for (i = 0; i < divs.length; i++)
-	{
-		if (divs[i] == div)
-			$(divs[i]).style.display = 'block';
-		else
-			$(divs[i]).style.display = 'none';
-	}
-	if (div == 'chanCallDiv')
-	{
-		$('trash').style.display      = 'block';
-		$('chanCallDiv').style.margin = null;
-	}
-}
-
 function showOptions(div, state)
 {
 	var divs = document.getElementsByTagName('div')
