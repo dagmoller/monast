@@ -220,7 +220,6 @@ function initIFrame()
 	var iframe = document.getElementById('__frame');
 	iframe.src = 'status.php';
 }
-
 function startIFrame()
 {
 	setTimeout('initIFrame()', 1000);
