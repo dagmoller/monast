@@ -227,28 +227,6 @@ function startIFrame()
 }
 //startIFrame(); // deve ser chamado no final da index.html
 
-function showOptions(div, state)
-{
-	var divs = document.getElementsByTagName('div')
-	for (i = 0; i < divs.length; i++)
-	{
-		if (divs[i].id.indexOf('peerOptions') != -1)
-		{
-			if (divs[i].id == div)
-				divs[i].style.display = (state ? 'block' : 'none');
-			else
-				divs[i].style.display = 'none';
-		}
-	}
-}
-function showSelectTransferChannel(idA, srcA, idB, srcB, dst)
-{
-	$('transferDestination').innerHTML       = callerIDs[dst];
-	$('transferSourceA').innerHTML           = '<a href="#" onCLick="transferCall(\'' + idA + '\', \'' + dst + '\', true); $(\'selectTransferChannel\').style.display = \'none\';">' + srcA + '</a>';
-	$('transferSourceB').innerHTML           = '<a href="#" onCLick="transferCall(\'' + idB + '\', \'' + dst + '\', true); $(\'selectTransferChannel\').style.display = \'none\';">' + srcB + '</a>';
-	$('selectTransferChannel').style.display = 'block';
-}
-
 // Originate a Call
 function originateCall(peer, number)
 {
@@ -360,7 +338,7 @@ function channelCallDrop(e, id)
 		var ids  = this.id.substring(5).split('-');
 		var srcA = $('channel-' + ids[0]).innerHTML;
 		var srcB = $('channel-' + ids[1]).innerHTML;
-		showSelectTransferChannel(ids[0], srcA, ids[1], srcB, id.substring(8));
+		showTransferDialog(ids[0], srcA, ids[1], srcB, id.substring(8));
 	}
 		
 	backToStartPosition(this.id);
@@ -373,7 +351,8 @@ function invalidDrop(e)
 
 // Originate Dialog
 var handleOriginateCancel = function(){
-	this.cancel();
+	$('originateNumber').value = '';
+	this.hide();
 }
 var handleOriginate = function(){
 	originateCall(this.peerId, $('originateNumber').value);
@@ -401,4 +380,32 @@ function showPeerOptionsMenu(id)
 		_POMENU[id].render("peerDiv-" + id);
 	}
 	_POMENU[id].show(); 
+}
+
+// Transfer Dialog
+var handleTransferCancel = function(){
+	this.hide();
+}
+var handleTransfer = function(){
+	var src = null;
+	if ($('transferSourceValueA').checked)
+		src = $('transferSourceValueA').value;
+	else
+		src = $('transferSourceValueB').value;
+	
+	transferCall(src, this.destChannel, true);
+	this.hide();
+}
+
+function showTransferDialog(idA, srcA, idB, srcB, dst)
+{
+	$('transferDestination').innerHTML = callerIDs[dst];
+	$('transferSourceValueA').value    = idA;
+	$('transferSourceValueB').value    = idB;
+	$('transferSourceValueA').checked  = true;
+	$('transferSourceTextA').innerHTML = srcA; 
+	$('transferSourceTextB').innerHTML = srcB;
+	transferDialog.destChannel         = dst;
+	transferDialog.render();
+	transferDialog.show();
 }

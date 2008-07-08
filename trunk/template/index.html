@@ -145,21 +145,26 @@ var originateDialog = new YAHOO.widget.Dialog("originateDiv",
 });
 </script>
 
-<div id="selectTransferChannel" class="peerOptions">
-  <table width="100%" border="0">
-    <tr>
-      <td align="left"><b>Select Channel to transfer to "<span id="transferDestination"></span>".</b></td>
-      <td align="center" width="50px"><a href="#" onClick="$('selectTransferChannel').style.display='none'"><b>Close</b></a></td>
-    </tr>
-  </table>
-  <hr>
-  <table width="100%" border="0">
-   <tr>
-      <td align="center" id="transferSourceA"></td>
-      <td align="center" id="transferSourceB"></td>
-    </tr>
-  </table>
+<div id="transferDiv">
+  <div class="hd">Please select channel to transfer to "<span id="transferDestination"></span>"</div>
+  <div class="bd">
+    <input type="radio" name="transferSource" id="transferSourceValueA" value=""><span id="transferSourceTextA"></span><br>
+    <input type="radio" name="transferSource" id="transferSourceValueB" value=""><span id="transferSourceTextB"></span>
+  </div>
 </div>
+<script type="text/javascript">
+var transferDialog = new YAHOO.widget.Dialog("transferDiv",
+{
+	width: '500px',
+	fixedcenter: true, 
+	buttons: [
+		{ text:"Transfer", handler: handleTransfer },
+		{ text:"Cancel", handler: handleTransferCancel, isDefault: true }
+	],
+	visible: false,
+	constraintoviewport : true,
+});
+</script>
 
 <script>
 YAHOO.util.DDM.mode = YAHOO.util.DDM.POINT;
