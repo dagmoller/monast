@@ -6,15 +6,21 @@
 
 <!-- css --> 
 <link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.5.2/build/fonts/fonts-min.css"> 
-<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.5.2/build/assets/skins/sam/skin.css"> 
+<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.5.2/build/assets/skins/sam/skin.css">
+<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.5.2/build/menu/assets/skins/sam/menu.css">
+<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.5.2/build/container/assets/skins/sam/container.css">
+<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.5.2/build/button/assets/skins/sam/button.css">
 <!-- js --> 
 <script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/yahoo-dom-event/yahoo-dom-event.js"></script> 
 <script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/animation/animation-min.js"></script> 
 <script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/dragdrop/dragdrop-min.js"></script> 
-<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/container/container-min.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/container/container-min.js"></script>
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/container/container_core-min.js"></script> 
 <script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/logger/logger-min.js"></script> 
-<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/element/element-beta-min.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/element/element-beta-min.js"></script>
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/button/button-min.js"></script> 
 <script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/tabview/tabview-min.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/menu/menu-min.js"></script>
 
 <script type="text/javascript" src="js/json.js"></script>
 <script type="text/javascript" src="js/ajax.js"></script>
@@ -46,7 +52,8 @@ var callerIDs = new Array();
       <div id="peerDiv-{peer}" class="peerTable">
         <table class="status" width="175px">
           <tr>
-            <td colspan="2" bgcolor="#DDDDDD" nowrap="nowrap"><b><a href="#" title="Options" onClick="showOptions('peerOptions-{peer}', 1)">{CallerID}</a></b></td>
+            <!-- <td colspan="2" bgcolor="#DDDDDD" nowrap="nowrap"><b><a href="#" title="Options" onClick="showOptions('peerOptions-{peer}', 1)">{CallerID}</a></b></td> -->
+            <td colspan="2" bgcolor="#DDDDDD" nowrap="nowrap"><b><a href="#" title="Options" onClick="showPeerOptionsMenu('{peer}')">{CallerID}</a></b></td>
           </tr>
           <tr>
             <td id="peerStatus-{peer}" bgcolor="{status-color}" width="115px">{status}</td>
@@ -118,6 +125,25 @@ var callerIDs = new Array();
 <div id="trash">
   <img src="image/trash-2.png" width="96" height="96" title="Drag channels or calls to Hangup">
 </div>
+
+<div id="originateDiv">
+  <div class="hd">Please enter destination number</div>
+  <div class="bd">
+    <label for="originateNumber">Destination: </label><input type="text" id="originateNumber" size="15" />
+  </div>
+</div>
+<script type="text/javascript">
+var originateDialog = new YAHOO.widget.Dialog("originateDiv",
+{
+	width: '300px',
+	buttons: [
+		{ text:"Originate", handler: handleOriginate },
+		{ text:"Cancel", handler: handleOriginateCancel, isDefault: true }
+	],
+	visible: false,
+	constraintoviewport : true,
+});
+</script>
 
 <div id="selectTransferChannel" class="peerOptions">
   <table width="100%" border="0">

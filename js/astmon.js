@@ -250,9 +250,8 @@ function showSelectTransferChannel(idA, srcA, idB, srcB, dst)
 }
 
 // Originate a Call
-function originateCall(peer)
+function originateCall(peer, number)
 {
-	var number = $('originateNum-' + peer).value;
 	if (!number)
 	{
 		alert('Destination number not defined!');
@@ -261,8 +260,10 @@ function originateCall(peer)
 	
 	var ret = function(msg)
 	{
-		if (msg == 'OK')
-			$('originateNum-' + peer).value = '';
+		if (msg == 'OK'){
+			$('originateNumber').value = '';
+			originateDialog.hide();
+		}
 	}
 	
 	var id = ajaxCall.init(false);
@@ -368,4 +369,36 @@ function channelCallDrop(e, id)
 function invalidDrop(e)
 {
 	backToStartPosition(this.id);
+}
+
+// Originate Dialog
+var handleOriginateCancel = function(){
+	this.cancel();
+}
+var handleOriginate = function(){
+	originateCall(this.peerId, $('originateNumber').value);
+}
+
+function showOriginateDialog(p_sType, p_aArgs, peerId)
+{
+	originateDialog.peerId = peerId;
+	originateDialog.cfg.queueProperty("xy", ddDivs['peerDiv-' + peerId].startPos);  
+	originateDialog.render();
+	originateDialog.show();
+}
+
+// Peer Options MENU
+var _POMENU = new Array();
+function showPeerOptionsMenu(id)
+{
+	if (!_POMENU[id])
+	{
+		_POMENU[id] = new YAHOO.widget.Menu("peerOptionsMenu-" + id, { xy: ddDivs['peerDiv-' + id].startPos });
+		_POMENU[id].addItems([
+			{text: 'Originate Call', onclick: {fn: showOriginateDialog, obj: id}}
+		]);
+		_POMENU[id].setItemGroupTitle('Options for "' + callerIDs[id] + '"', 0);
+		_POMENU[id].render("peerDiv-" + id);
+	}
+	_POMENU[id].show(); 
 }
