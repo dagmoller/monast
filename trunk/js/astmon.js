@@ -1,6 +1,7 @@
 
-var json   = new JSON();
-var ddDivs = new Array();
+var json      = new JSON();
+var ddDivs    = new Array();
+var callerIDs = new Array();
 
 String.prototype.trim = function() { return this.replace(/^\s*/, "").replace(/\s*$/, ""); }
 function $(id) { return document.getElementById(id); }
