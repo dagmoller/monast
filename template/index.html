@@ -110,6 +110,9 @@ var callerIDs = new Array();
           </table>
         </div>
       </div>
+      <div id="trash">
+        <img src="image/trash-2.png" width="96" height="96" title="Drag channels or calls to Hangup">
+      </div>
       <div style="clear: both;"></div>
     </div>
 
@@ -122,9 +125,7 @@ var callerIDs = new Array();
   </div>
 </div>
 
-<div id="trash">
-  <img src="image/trash-2.png" width="96" height="96" title="Drag channels or calls to Hangup">
-</div>
+
 
 <div id="originateDiv">
   <div class="hd">Please enter destination number</div>
@@ -173,21 +174,17 @@ var tabPannel = new YAHOO.widget.TabView('TabPannel');
 tabPannel.set('activeIndex', 0);
 tabPannel.getTab(0).addListener('click', function(e){
 	$('chanCallDiv').style.display = 'none';
-	$('trash').style.display       = 'none';
 });
 tabPannel.getTab(1).addListener('click', function(e){
 	$('peersDiv').style.display = 'none';
-	$('trash').style.display    = 'block';
 });
 tabPannel.getTab(2).addListener('click', function(e){
 	$('chanCallDiv').style.display = 'block';
 	$('peersDiv').style.display    = 'block';
-	$('trash').style.display       = 'none';
 });
 tabPannel.getTab(3).addListener('click', function(e){
 	$('chanCallDiv').style.display = 'none';
 	$('peersDiv').style.display    = 'none';
-	$('trash').style.display       = 'none';
 });
 
 var dTrash = new YAHOO.util.DDTarget("trash");
