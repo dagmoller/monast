@@ -78,15 +78,6 @@ foreach ($peerStatus as $idx => $peer)
     $template->assign('status-color', color($status));
     $template->assign('calls', "$peerCalls call(s)");
     $template->assign('calls-color', ($peerCalls > 0 ? '#ffffb0' : '#b0ffb0'));
-    
-    $template->newBlock('peerOptions');
-    $template->assign('peer', $peer);
-    $template->assign('CallerID', $CallerID);
-    
-    $template->newBlock('peerDragDrop');
-    $template->assign('idx', $idx);
-    $template->assign('peer', $peer);
-    $template->assign('CallerID', $CallerID);
 }
 
 foreach ($channels as $channel)
