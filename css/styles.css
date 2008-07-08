@@ -8,22 +8,6 @@
 	margin: 5px;
 	background-color: #ffffff;
 }
-.peerOptions {
-	position: absolute;
-	display: none;
-	font-family: Verdana;
-	font-size: 0.7em;
-	width: 400px;
-	padding: 10px;
-	left: 50%;
-	margin-left: -210px;
-	background-color: #ffffff;
-	border: 1px solid #000000;
-}
-.peerOptions a {
-	color: black;
-	text-decoration: none;
-}
 .status {
 	font-family: Verdana;
 	font-size: 0.7em;
@@ -91,7 +75,6 @@
 	overflow: auto; 
 	font-family: 'courier new'; 
 	font-size: 0.7em;
-	align: center; 
 	margin: 0 auto;
 	display: none;
 }
