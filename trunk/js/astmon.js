@@ -213,6 +213,50 @@ function Process(o)
 		td = $('callChannel-' + o['Uniqueid']);
 		if (td)
 			td.innerHTML = o['Newname'] + '<br>' + o['CallerIDName'] + ' <' + o['CallerID'] + '>';
+			
+		return;
+	}
+	
+	if (o['Action'] == 'MeetmeJoin')
+	{
+		var id  = 'meetme-' + o['Meetme'] + '-' + o['Usernum'];
+		var div = $(id);
+		if (!div)
+		{
+			div           = document.createElement('div');
+			div.id        = id;
+			div.className = 'meetmeDiv';
+			
+			var UserInfo = o['CallerIDName'] + ' <' + o['CallerIDNum'] + '>';		
+			if (o['CallerIDName'] == 'None' && o['CallerIDNum'] == 'None')
+				UserInfo = o['Channel'];
+			 
+			var template = "<table width='250'><tr>";
+			template    += "<td class='status'>{UserInfo}</td>";
+			template    += "</tr></table>";
+			template     = template.replace(/\{UserInfo\}/g, UserInfo);
+			
+			div.innerHTML = template;
+			
+			$('meetme-' + o['Meetme']).appendChild(div);
+			
+			ddDivs[id]               = new YAHOO.util.DD(id);
+			ddDivs[id].onMouseDown   = setStartPosition;
+			ddDivs[id].onDragDrop    = meetmeDrop;
+			ddDivs[id].onInvalidDrop = invalidDrop;
+		}
+		
+		return;
+	}
+	
+	if (o['Action'] == 'MeetmeLeave')
+	{
+		var id  = 'meetme-' + o['Meetme'] + '-' + o['Usernum'];
+		var div = $(id);
+		if (div)
+			$('meetme-' + o['Meetme']).removeChild(div);
+			
+		return;
 	}
 }
 
@@ -221,14 +265,18 @@ function initIFrame()
 	var iframe = document.getElementById('__frame');
 	iframe.src = 'status.php';
 }
-function startIFrame()
+function startIFrame() // deve ser chamado no final da index.html
 {
 	setTimeout('initIFrame()', 1000);
 }
-//startIFrame(); // deve ser chamado no final da index.html
+
+function showHidePannels(e)
+{
+	$(this.get('value')).style.display = (e.newValue ? 'block' : 'none');
+}
 
 // Originate a Call
-function originateCall(peer, number)
+function originateCall(peer, number, type)
 {
 	if (!number)
 	{
@@ -247,14 +295,14 @@ function originateCall(peer, number)
 	var id = ajaxCall.init(false);
 	ajaxCall.setResponseFunction(id, ret);
 	ajaxCall.setURL(id, 'action.php');
-	ajaxCall.addParam(id, 'action', 'OriginateCall:::' + peer + ':::' + number);
+	ajaxCall.addParam(id, 'action', 'OriginateCall:::' + peer + ':::' + number + ':::' + type);
 	ajaxCall.doCall(id);
 }
-function originateDial(src, dst)
+function originateDial(src, dst, type)
 {
 	var id = ajaxCall.init(false);
 	ajaxCall.setURL(id, 'action.php');
-	ajaxCall.addParam(id, 'action', 'OriginateDial:::' + src + ':::' + dst);
+	ajaxCall.addParam(id, 'action', 'OriginateDial:::' + src + ':::' + dst + ':::' + type);
 	ajaxCall.doCall(id);
 }
 
@@ -279,18 +327,41 @@ function hangupCall(chanId)
 }
 
 // Transfer
-function transferCall(src, dst, isPeer)
+function transferCall(src, dst, type)
 {
-	if (isPeer)
+	var comp = '';
+	var dest = '';
+	if (type == 'meetme')
 	{
-		var c = confirm("Transfer call to " + callerIDs[dst] + '?');
-		if (!c)
-			return;
+		comp = 'meetme ';
+		dest = dst;
 	}
+	else
+	{
+		dest = callerIDs[dst];
+	}
+	
+	var c = confirm("Transfer call to " + comp + dest + '?');
+	if (!c)
+		return;
+
 	var id = ajaxCall.init(false);
 	ajaxCall.setURL(id, 'action.php');
-	ajaxCall.addParam(id, 'action', 'TransferCall:::' + src + ':::' + dst + ':::' + (isPeer ? 'true' : 'false'));
+	ajaxCall.addParam(id, 'action', 'TransferCall:::' + src + ':::' + dst + ':::' + type);
 	ajaxCall.doCall(id);
+}
+
+// Meetme kick
+function meetmeKick(meetme, usernum)
+{
+	var c = confirm('Kick this user from meetme ' + meetme + '?');
+	if (c)
+	{
+		var id = ajaxCall.init(false);
+		ajaxCall.setURL(id, 'action.php');
+		ajaxCall.addParam(id, 'action', 'MeetmeKick:::' + meetme + ':::' + usernum);
+		ajaxCall.doCall(id);
+	}
 }
 
 // Yahoo
@@ -320,8 +391,17 @@ function peerDrop(e, id)
 		var c   = confirm('Originate a call from "' + callerIDs[src] + '" to "' + callerIDs[dst] + '"?');
 		
 		if (c)
-			originateDial(this.id.replace('peerDiv-', ''), id.replace('peerDiv-', ''));
-	}		
+			originateDial(src, dst, 'default');
+	}
+	if (id.indexOf('meetme-') != -1)
+	{
+		var src = this.id.replace('peerDiv-', '');
+		var dst = id.replace('meetme-', '');
+		var c   = confirm('Invite "' + callerIDs[src] + '" to meetme ' + dst + '?');
+		if (c)
+			originateCall(src, dst, 'meetme');
+	}
+	
 	backToStartPosition(this.id);
 }
 
@@ -331,7 +411,7 @@ function channelCallDrop(e, id)
 		hangupCall(this.id);
 		
 	if (id.indexOf('peerDiv-') != -1 && this.id.indexOf('call-') == -1)
-		transferCall(this.id, id.substring(8), true);
+		transferCall(this.id, id.substring(8), 'peer');
 		
 	if (id.indexOf('peerDiv-') != -1 && this.id.indexOf('call-') != -1)
 	{
@@ -339,6 +419,29 @@ function channelCallDrop(e, id)
 		var srcA = $('channel-' + ids[0]).innerHTML;
 		var srcB = $('channel-' + ids[1]).innerHTML;
 		showTransferDialog(ids[0], srcA, ids[1], srcB, id.substring(8));
+	}
+	
+	if (id.indexOf('meetme-') != -1)
+	{
+		if (this.id.indexOf('call-') == -1)
+		{
+			transferCall(this.id, id.replace('meetme-', ''), 'meetme');
+		}
+		else
+		{
+			transferCall(this.id.replace('call-', ''), id.replace('meetme-', ''), 'meetme');
+		}
+	}
+		
+	backToStartPosition(this.id);
+}
+
+function meetmeDrop(e, id)
+{
+	if (id == 'trash')
+	{
+		var info = this.id.replace('meetme-', '').split('-')
+		meetmeKick(info[0], info[1]);
 	}
 		
 	backToStartPosition(this.id);
@@ -355,7 +458,7 @@ var handleOriginateCancel = function(){
 	this.hide();
 }
 var handleOriginate = function(){
-	originateCall(this.peerId, $('originateNumber').value);
+	originateCall(this.peerId, $('originateNumber').value, 'default');
 }
 
 function showOriginateDialog(p_sType, p_aArgs, peerId)
@@ -393,7 +496,7 @@ var handleTransfer = function(){
 	else
 		src = $('transferSourceValueB').value;
 	
-	transferCall(src, this.destChannel, true);
+	transferCall(src, this.destChannel, 'peer');
 	this.hide();
 }
 

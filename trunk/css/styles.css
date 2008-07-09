@@ -1,12 +1,24 @@
 #peersDiv {
 	padding: 5px; 
-	display: block;
-	/*overflow: auto;*/
 }
 .peerTable {
 	float: left; 
 	margin: 5px;
 	background-color: #ffffff;
+}
+#meetmesDiv {
+	padding: 5px; 
+}
+.meetmeDivWrap {
+	float: left; 
+	margin: 5px;
+}
+.meetmeDiv {
+	width: 250px;
+	border: 1px solid #aaaaaa;
+	margin-bottom: 2px;
+	background-color: #ffffff;
+	z-index: 2;
 }
 .status {
 	font-family: Verdana;
@@ -24,9 +36,7 @@
 	font-size: 0.9em;
 }
 #chanCallDiv {
-	padding: 10px; 
-	display: none;
-	/*overflow: auto;*/
+	padding: 5px; 
 }
 #channelsDiv {
 	width: 350px;
@@ -76,5 +86,4 @@
 	font-family: 'courier new'; 
 	font-size: 0.7em;
 	margin: 0 auto;
-	display: none;
 }

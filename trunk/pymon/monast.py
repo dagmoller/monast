@@ -25,6 +25,8 @@ reLink        = re.compile('Event: Link|Channel1: ([^\r^\n^\s]*)|Channel2: ([^\r
 reUnlink      = re.compile('Event: Unlink|Channel1: ([^\r^\n^\s]*)|Channel2: ([^\r^\n^\s]*)|Uniqueid1: ([^\r^\n^\s]*)|Uniqueid2: ([^\r^\n^\s]*)|CallerID1: ([^\r^\n^\s]*)|CallerID2: ([^\r^\n^\s]*)')
 reNewcallerid = re.compile('Event: Newcallerid|Channel: ([^\r^\n^\s]*)|CallerID: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|Uniqueid: ([^\r^\n^\s]*)|CID-CallingPres: ([^\r^\n]*)')
 reRename      = re.compile('Event: Rename|Oldname: ([^\r^\n^\s]*)|Newname: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)')
+reMeetmeJoin  = re.compile('Event: MeetmeJoin|Uniqueid: ([^\r^\n^\s]*)|Meetme: ([^\r^\n^\s]*)|Usernum: ([^\r^\n^\s]*)|CallerIDnum: ([^\r^\n^\s]*)|CallerIDname: ([^\r^\n]*)')
+reMeetmeLeave = re.compile('Event: MeetmeLeave|Uniqueid: ([^\r^\n^\s]*)|Meetme: ([^\r^\n^\s]*)|Usernum: ([^\r^\n^\s]*)|Duration: ([^\r^\n^\s]*)')
 
 def merge(l):
 	out = [None for x in l[0]]
@@ -47,6 +49,9 @@ class MonAst():
 	
 	bindPort       = None
 	tranferContext = None
+	
+	meetmeContext = None
+	meetmePrefix  = None
 	
 	userDisplay = {} 
 	
@@ -78,7 +83,10 @@ class MonAst():
 	calls     = {}
 	callsLock = threading.RLock()
 	
-	configFiles = ['sip.conf', 'iax.conf']
+	meetme     = {}
+	meetmeLock = threading.RLock()
+	
+	configFiles = ['sip.conf', 'iax.conf', 'meetme.conf']
 	
 	def send(self, lines):
 		if self.connected:
@@ -351,6 +359,29 @@ class MonAst():
 						enqueue.append('Rename: %s:::%s:::%s:::%s:::%s' % (Oldname, Newname, Uniqueid, CallerIDName, CallerID))
 					except:
 						log.error('Channel %s nao existe em self.channels, ignorado.' % Oldname)
+						
+				if block.startswith('Event: MeetmeJoin'):
+					Uniqueid, Meetme, Usernum, CallerIDNum, CallerIDName = merge(reMeetmeJoin.findall(block))
+					
+					log.info('Evento MeetmeJoin detectado')
+					
+					self.meetmeLock.acquire()
+					self.channelsLock.acquire()
+					self.meetme[Meetme][Usernum] = {'Uniqueid': Uniqueid, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName}
+					ch = self.channels[Uniqueid]
+					enqueue.append('MeetmeJoin: %s:::%s:::%s:::%s:::%s:::%s' % (Meetme, Uniqueid, Usernum, ch['Channel'], CallerIDNum, CallerIDName))
+					self.channelsLock.release()
+					self.meetmeLock.release()
+				
+				if block.startswith('Event: MeetmeLeave'):
+					Uniqueid, Meetme, Usernum, Duration = merge(reMeetmeLeave.findall(block))
+					
+					log.info('Evento MeetmeLeave detectado')
+					
+					self.meetmeLock.acquire()
+					del self.meetme[Meetme][Usernum]
+					enqueue.append('MeetmeLeave: %s:::%s:::%s:::%s' % (Meetme, Uniqueid, Usernum, Duration))
+					self.meetmeLock.release()
 			
 			self.clientQueuelock.acquire()
 			for msg in enqueue:
@@ -359,33 +390,43 @@ class MonAst():
 			self.clientQueuelock.release()
 	
 	def parseConfig(self, msg, type):
-		if type == 'sip.conf':
-			tech = 'SIP'
-		if type == 'iax.conf':
-			tech = 'IAX2'
-		
+		log.info('Parsing %s' % type)
 		lines = msg.split('\r\n')
-		user  = None
-		self.monitoredUsersLock.acquire()
-		for line in lines:
-			if line.startswith('Category-') and not line.endswith(': general') and not line.endswith(': authentication'):
-				user = '%s/%s' % (tech, line[line.find(': ') + 2:]) 
-				if self.userDisplay['DEFAULT'] and not self.userDisplay.has_key(user):
-					self.monitoredUsers[user] = {'Channeltype': tech, 'Status': '--', 'Calls': 0, 'CallerID': '--', 'Context': 'default', 'Variables': []}
-				elif not self.userDisplay['DEFAULT'] and self.userDisplay.has_key(user):
-					self.monitoredUsers[user] = {'Channeltype': tech, 'Status': '--', 'Calls': 0, 'CallerID': '--', 'Context': 'default', 'Variables': []}
-				else:
-					user = None
-				
-			if user and line.startswith('Line-'):
-				tmp, param = line.split(': ')
-				if param.startswith('callerid'):
-					self.monitoredUsers[user]['CallerID'] = param[param.find('=')+1:]
-				if param.startswith('context'):
-					self.monitoredUsers[user]['Context'] = param[param.find('=')+1:]
-				if param.startswith('setvar'):
-					self.monitoredUsers[user]['Variables'].append(param[param.find('=')+1:]) 
-		self.monitoredUsersLock.release()
+		
+		if type in ('sip.conf', 'iax.conf'): # SIP or IAX
+			user = None
+			tech = None
+			if type == 'sip.conf':
+				tech = 'SIP'
+			if type == 'iax.conf':
+				tech = 'IAX2'
+			self.monitoredUsersLock.acquire()
+			for line in lines:
+				if line.startswith('Category-') and not line.endswith(': general') and not line.endswith(': authentication'):
+					user = '%s/%s' % (tech, line[line.find(': ') + 2:]) 
+					if self.userDisplay['DEFAULT'] and not self.userDisplay.has_key(user):
+						self.monitoredUsers[user] = {'Channeltype': tech, 'Status': '--', 'Calls': 0, 'CallerID': '--', 'Context': 'default', 'Variables': []}
+					elif not self.userDisplay['DEFAULT'] and self.userDisplay.has_key(user):
+						self.monitoredUsers[user] = {'Channeltype': tech, 'Status': '--', 'Calls': 0, 'CallerID': '--', 'Context': 'default', 'Variables': []}
+					else:
+						user = None
+					
+				if user and line.startswith('Line-'):
+					tmp, param = line.split(': ')
+					if param.startswith('callerid'):
+						self.monitoredUsers[user]['CallerID'] = param[param.find('=')+1:]
+					if param.startswith('context'):
+						self.monitoredUsers[user]['Context'] = param[param.find('=')+1:]
+					if param.startswith('setvar'):
+						self.monitoredUsers[user]['Variables'].append(param[param.find('=')+1:]) 
+			self.monitoredUsersLock.release()
+		elif type == 'meetme.conf':
+			self.meetmeLock.acquire()
+			for line in lines:
+				if line.startswith('Line-') and line.find('conf=') != -1:
+					params = line[line.find('conf=')+5:].split(',')
+					self.meetme[params[0]] = {}
+			self.meetmeLock.release()
 					
 	def clientSocket(self, a, b):
 		log.info('Iniciando Thread clientSocket')
@@ -425,27 +466,41 @@ class MonAst():
 								self.clientQueues[session]['t'] = time.time()
 								sock.send('OK\r\n')
 						elif session and msg.upper() == 'GET STATUS':
+							self.monitoredUsersLock.acquire()
+							self.channelsLock.acquire()
+							self.callsLock.acquire()
+							self.meetmeLock.acquire()
+							
 							self.clientQueues[session]['t'] = time.time()
 							sock.send('BEGIN STATUS\r\n')
-							self.monitoredUsersLock.acquire()
+							
 							users = self.monitoredUsers.keys()
 							users.sort()
 							for user in users:
 								mu = self.monitoredUsers[user]
 								sock.send('PeerStatus: %s:::%s:::%s:::%s\r\n' % (user, mu['Status'], mu['Calls'], mu['CallerID'] if mu['CallerID'] != '--' else user))
-							self.monitoredUsersLock.release()
-							self.channelsLock.acquire()
 							for Uniqueid in self.channels:
 								ch = self.channels[Uniqueid]
 								sock.send('NewChannel: %s:::%s:::%s:::%s:::%s\r\n' % (ch['Channel'], ch['State'], ch['CallerIDNum'], ch['CallerIDName'], Uniqueid))
-							self.channelsLock.release()
-							self.callsLock.acquire()
 							for call in self.calls:
 								c = self.calls[call]
 								sock.send('Call: %s:::%s:::%s:::%s:::%s:::%s:::%s\r\n' % (c['Source'], c['Destination'], c['CallerID'], c['CallerIDName'], \
 																					c['SrcUniqueID'], c['DestUniqueID'], c['Status']))
-							self.callsLock.release()
+							meetmeRooms = self.meetme.keys()
+							meetmeRooms.sort()
+							for meetme in meetmeRooms:
+								sock.send('MeetmeRoom: %s\r\n' % meetme)
+								for Usernum in self.meetme[meetme]:
+									mm = self.meetme[meetme][Usernum]
+									ch = self.channels[Uniqueid]
+									sock.send('MeetmeJoin: %s:::%s:::%s:::%s:::%s:::%s\r\n' % (meetme, mm['Uniqueid'], Usernum, ch['Channel'], mm['CallerIDNum'], mm['CallerIDName']))
+							
 							sock.send('END STATUS\r\n')
+							
+							self.meetmeLock.release()
+							self.callsLock.release()
+							self.channelsLock.release()
+							self.monitoredUsersLock.release()
 						elif session and msg.upper() == 'GET CHANGES':
 							self.clientQueues[session]['t'] = time.time()
 							sock.send('BEGIN CHANGES\r\n')
@@ -458,12 +513,16 @@ class MonAst():
 							sock.send('END CHANGES\r\n')
 						elif msg.startswith('OriginateCall'):
 							self.monitoredUsersLock.acquire()
-							action, src, dst = msg.split(':::')
+							action, src, dst, type = msg.split(':::')
+							Context = self.monitoredUsers[src]['Context']
+							if type == 'meetme':
+								Context = self.meetmeContext
+								dst     = '%s%s' % (self.meetmePrefix, dst)
 							command = []
 							command.append('Action: Originate')
 							command.append('Channel: %s' % src)
 							command.append('Exten: %s' % dst)
-							command.append('Context: %s' % self.monitoredUsers[src]['Context'])
+							command.append('Context: %s' % Context)
 							command.append('Priority: 1')
 							command.append('CallerID: %s' % MONAST_CALLERID)
 							for var in self.monitoredUsers[src]['Variables']:
@@ -471,7 +530,7 @@ class MonAst():
 							self.send(command)
 							self.monitoredUsersLock.release()
 						elif msg.startswith('OriginateDial'):
-							action, src, dst = msg.split(':::')
+							action, src, dst, type = msg.split(':::')
 							command = []
 							command.append('Action: Originate')
 							command.append('Channel: %s' % src)
@@ -488,8 +547,14 @@ class MonAst():
 							self.send(command)
 							self.channelsLock.release()
 						elif msg.startswith('TransferCall'):
-							action, SrcUniqueID, dst, isPeer = msg.split(':::')
-							if isPeer == 'true':
+							action, src, dst, type = msg.split(':::')
+							Context    = self.tranferContext
+							SrcChannel   = None
+							ExtraChannel = None
+							if type == 'peer':
+								self.channelsLock.acquire()
+								SrcChannel  = self.channels[src]['Channel']
+								self.channelsLock.release()
 								tech, exten = dst.split('/')
 								try:
 									exten = int(exten)
@@ -498,16 +563,32 @@ class MonAst():
 									exten = self.monitoredUsers[dst]['CallerID']
 									exten = exten[exten.find('<')+1:exten.find('>')]
 									self.monitoredUsersLock.release()
-							self.channelsLock.acquire()
-							srcChannel = self.channels[SrcUniqueID]['Channel']
+							elif type == 'meetme':
+								self.channelsLock.acquire()
+								tmp = src.split('-')
+								if len(tmp) == 2:
+									SrcChannel   = self.channels[tmp[0]]['Channel']
+									ExtraChannel = self.channels[tmp[1]]['Channel']
+								else:
+									SrcChannel   = self.channels[tmp[0]]['Channel']
+								self.channelsLock.release()
+								Context = self.meetmeContext
+								exten   = '%s%s' % (self.meetmePrefix, dst)
 							command = []
 							command.append('Action: Redirect')
-							command.append('Channel: %s' % srcChannel)
+							command.append('Channel: %s' % SrcChannel)
+							if ExtraChannel:
+								command.append('ExtraChannel: %s' % ExtraChannel)
 							command.append('Exten: %s' % exten)
-							command.append('Context: %s' % self.tranferContext)
+							command.append('Context: %s' % Context)
 							command.append('Priority: 1')
 							self.send(command)
-							self.channelsLock.release()
+						elif msg.startswith('MeetmeKick'):
+							action, Meetme, Usernum = msg.split(':::')
+							command = []
+							command.append('Action: Command')
+							command.append('Command: meetme kick %s %s' % (Meetme, Usernum))
+							self.send(command)
 						else:
 							sock.send('NO SESSION\r\n')	
 						self.clientQueuelock.release()
@@ -521,7 +602,7 @@ class MonAst():
 						break
 		except socket.error, e:
 			log.error('Socket ERROR %s: %s' % (id, e))
-			for lock in (self.clientQueuelock, self.monitoredUsersLock, self.channelsLock, self.callsLock):
+			for lock in (self.clientQueuelock, self.monitoredUsersLock, self.channelsLock, self.callsLock, self.meetmeLock):
 				try:
 					lock.release()
 				except:
@@ -562,6 +643,9 @@ class MonAst():
 		
 		self.bindPort       = int(cp.get('global', 'bind_port'))
 		self.tranferContext = cp.get('global', 'transfer_context')
+		
+		self.meetmeContext = cp.get('global', 'meetme_context')
+		self.meetmePrefix  = cp.get('global', 'meetme_prefix')
 		
 		self.userDisplay['DEFAULT'] = True if cp.get('users', 'default') == 'show' else False
 		

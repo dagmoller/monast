@@ -145,6 +145,36 @@ function parseMsg($msg)
 		return $json->encode($saida);
 	}
 	
+	if (strpos($msg, 'MeetmeJoin: ') !== false)
+	{
+	    list($Meetme, $Uniqueid, $Usernum, $Channel, $CallerIDNum, $CallerIDName) = explode(':::', substr($msg, 12));
+        $saida = array
+        (
+            'Action'       => 'MeetmeJoin',
+            'Meetme'       => $Meetme, 
+            'Uniqueid'     => $Uniqueid, 
+            'Usernum'      => $Usernum,
+            'Channel'      => $Channel,
+            'CallerIDNum'  => $CallerIDNum, 
+            'CallerIDName' => $CallerIDName
+        );
+    	return $json->encode($saida);
+	}
+	
+    if (strpos($msg, 'MeetmeLeave: ') !== false)
+	{
+	    list($Meetme, $Uniqueid, $Usernum, $Duration) = explode(':::', substr($msg, 13));
+        $saida = array
+        (
+            'Action'       => 'MeetmeLeave',
+            'Meetme'       => $Meetme, 
+            'Uniqueid'     => $Uniqueid, 
+            'Usernum'      => $Usernum, 
+            'Duration'     => $Duration 
+        );
+    	return $json->encode($saida);
+	}
+	
 	return $json->encode(array('Action' => 'None'));
 }
 
@@ -152,7 +182,7 @@ session_start();
 $sessid = session_id();
 session_write_close();
 
-$inicio  = time();
+$inicio = time();
 
 $errno  = null;
 $errstr = null;
@@ -219,11 +249,14 @@ while (!feof($fp))
 	}
 	
 	session_start();
-	$action = getValor('Action', 'session');
-	if ($action)
+	$actions = getValor('Actions', 'session');
+	if (count($actions) > 0)
 	{
-	    fwrite($fp, "$action\r\n");
-	    setValor('Action', '');
+	    foreach ($actions as $action)
+	    {
+	        fwrite($fp, "$action\r\n");
+	    }
+	    setValor('Actions', array());
 	}
 	session_write_close();
 	
