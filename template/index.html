@@ -159,15 +159,15 @@
   </div>
 </div>
 <script type="text/javascript">
-var originateDialog = new YAHOO.widget.Dialog("originateDiv",
+var originateDialog = new YAHOO.widget.Dialog("originateDiv", 
 {
-	width: '300px',
+	visible: false,
+	constraintoviewport: true,
 	buttons: [
 		{ text:"Originate", handler: handleOriginate },
 		{ text:"Cancel", handler: handleOriginateCancel, isDefault: true }
 	],
-	visible: false,
-	constraintoviewport : true,
+	width: '300px'
 });
 </script>
 
@@ -181,7 +181,6 @@ var originateDialog = new YAHOO.widget.Dialog("originateDiv",
 <script type="text/javascript">
 var transferDialog = new YAHOO.widget.Dialog("transferDiv",
 {
-	width: '500px',
 	fixedcenter: true, 
 	buttons: [
 		{ text:"Transfer", handler: handleTransfer },
@@ -189,10 +188,11 @@ var transferDialog = new YAHOO.widget.Dialog("transferDiv",
 	],
 	visible: false,
 	constraintoviewport : true,
+	width: '500px'
 });
 </script>
 
-<script>
+<script type="text/javascript">
 YAHOO.util.DDM.mode = YAHOO.util.DDM.POINT;
 
 var tabPannel = new YAHOO.widget.TabView('TabPannel');
