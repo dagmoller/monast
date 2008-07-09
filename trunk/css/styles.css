@@ -1,3 +1,6 @@
+#mixed {
+	margin: 5px;
+}
 #peersDiv {
 	padding: 5px; 
 }
@@ -41,6 +44,7 @@
 #channelsDiv {
 	width: 350px;
 	float: left;
+	margin: 5px;
 }
 .channelDiv {
 	width: 350px;
@@ -52,7 +56,8 @@
 #callsDiv {
 	width: 600px;
 	float: left;
-	margin-left: 50px;
+	margin: 5px;
+	margin-left: 40px;
 }
 .callDiv {
 	width: 600px;
