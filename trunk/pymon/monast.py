@@ -541,10 +541,13 @@ class MonAst():
 						elif msg.startswith('HangupChannel'):
 							self.channelsLock.acquire()
 							action, Uniqueid = msg.split(':::')
-							command = []
-							command.append('Action: Hangup')
-							command.append('Channel: %s' % self.channels[Uniqueid]['Channel'])
-							self.send(command)
+							try:
+								command = []
+								command.append('Action: Hangup')
+								command.append('Channel: %s' % self.channels[Uniqueid]['Channel'])
+								self.send(command)
+							except:
+								log.error('Uniqueid %s not found on self.channels' % Uniqueid)
 							self.channelsLock.release()
 						elif msg.startswith('TransferCall'):
 							action, src, dst, type = msg.split(':::')
