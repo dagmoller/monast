@@ -267,7 +267,7 @@ while (!feof($fp))
 		fwrite($fp, "BYE\r\n");
 		
 		if ($now >= (getValor('started', 'session') + MONAST_BROWSER_REFRESH))
-			print "<script>parent.location.reload();</script>";
+			print "<script>parent.location.href = 'index.php';</script>";
 		else		
 			print "<script>parent.startIFrame();</script>\r\n";
 			
