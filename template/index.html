@@ -36,14 +36,34 @@
 
 <div id="TabPannel" class="yui-navset">
   <ul class="yui-nav">
+    <li><a href="#tab0"><em>Mixed Pannels</em></a></li>
     <li><a href="#tab1"><em>Peers/Users</em></a></li>
-    <li><a href="#tab2"><em>Channels/Calls</em></a></li>
-    <li><a href="#tab3"><em>Mix (peers/channels)</em></a></li>
-    <li><a href="#tab3"><em>Debug</em></a></li>
+    <li><a href="#tab2"><em>Meetme Rooms</em></a></li>
+    <li><a href="#tab3"><em>Channels/Calls</em></a></li>
+    <li><a href="#tab4"><em>Debug</em></a></li>
   </ul>
   
-  <div class="yui-content">
+  <div class="yui-content"> 
+    <div id="mixed">
+      <fieldset id="pannelsToShow">
+        <legend>Pannels to Show</legend> 
+        <input id="checkBoxTab1" type="checkbox" name="checkBoxTab1" value="peersDiv">
+        <input id="checkBoxTab2" type="checkbox" name="checkBoxTab2" value="meetmesDiv">
+        <input id="checkBoxTab3" type="checkbox" name="checkBoxTab3" value="chanCallDiv">
+      </fieldset>
+      <script type="text/javascript">
+        var ocheckBoxTab1 = new YAHOO.widget.Button("checkBoxTab1", { label: "Peers/Users" });
+            ocheckBoxTab1.addListener('checkedChange', showHidePannels);
+        var ocheckBoxTab2 = new YAHOO.widget.Button("checkBoxTab2", { label:"Meetme Rooms" });
+            ocheckBoxTab2.addListener('checkedChange', showHidePannels);
+        var ocheckBoxTab3 = new YAHOO.widget.Button("checkBoxTab3", { label:"Channels/Calls" });
+            ocheckBoxTab3.addListener('checkedChange', showHidePannels);
+      </script>
+    </div>
+  
     <div id="peersDiv">
+    <fieldset>
+      <legend>Peers/Users</legend> 
       <!-- START BLOCK : peer -->
       <div id="peerDiv-{peer}" class="peerTable">
         <table class="status" width="175px">
@@ -65,9 +85,33 @@
       </script>
       <!-- END BLOCK : peer -->
       <div style="clear: both;"></div>
+    </fieldset>
     </div>
-  
+    
+    <div id="meetmesDiv">
+    <fieldset>
+      <legend>Meetme Rooms</legend> 
+      <!-- START BLOCK : meetme -->
+      <div id="meetme-{meetme}" class="meetmeDivWrap">
+        <div class="meetmeDiv">
+          <table width="250">
+            <tr>
+              <td align="center" class="statusHeader">Meetme ({meetme})</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <script type="text/javascript">
+		ddDivs['meetme-{meetme}'] = new YAHOO.util.DDTarget('meetme-{meetme}');
+      </script>
+      <!-- END BLOCK : meetme -->
+      <div style="clear: both;"></div>
+    </fieldset>
+    </div>
+    
     <div id="chanCallDiv">
+    <fieldset>
+      <legend>Channels/Calls</legend> 
       <div id="channelsDiv">
         <div class="channelDiv">
           <table width="350">
@@ -99,9 +143,7 @@
         <img src="image/trash-2.png" width="96" height="96" title="Drag channels or calls to Hangup">
       </div>
       <div style="clear: both;"></div>
-    </div>
-
-    <div id="mixed">
+    </fieldset>
     </div>
 
     <div id="debugMsg">
@@ -154,20 +196,18 @@ var transferDialog = new YAHOO.widget.Dialog("transferDiv",
 YAHOO.util.DDM.mode = YAHOO.util.DDM.POINT;
 
 var tabPannel = new YAHOO.widget.TabView('TabPannel');
-tabPannel.set('activeIndex', 0);
+tabPannel.set('activeIndex', 1);
+tabPannel.addListener('beforeActiveTabChange', function(e){
+	var pannels = new Array('peersDiv', 'meetmesDiv', 'chanCallDiv', 'debugMsg');
+	for (i = 0; i < pannels.length; i++)
+		$(pannels[i]).style.display = 'none';
+});
 tabPannel.getTab(0).addListener('click', function(e){
-	$('chanCallDiv').style.display = 'none';
-});
-tabPannel.getTab(1).addListener('click', function(e){
-	$('peersDiv').style.display = 'none';
-});
-tabPannel.getTab(2).addListener('click', function(e){
-	$('chanCallDiv').style.display = 'block';
-	$('peersDiv').style.display    = 'block';
-});
-tabPannel.getTab(3).addListener('click', function(e){
-	$('chanCallDiv').style.display = 'none';
-	$('peersDiv').style.display    = 'none';
+	var buttons = new Array(ocheckBoxTab1, ocheckBoxTab2, ocheckBoxTab3);
+	for (i = 0; i < buttons.length; i++)
+	{
+		$(buttons[i].get('value')).style.display = (buttons[i].get('checked') ? 'block' : 'none');
+	}
 });
 
 var dTrash = new YAHOO.util.DDTarget("trash");

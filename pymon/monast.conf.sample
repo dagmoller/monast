@@ -13,6 +13,10 @@ bind_port = 5039
 # Context to use in transfer calls
 transfer_context = default
 
+# Context and prefix for meetme
+meetme_context = default
+meetme_prefix = 
+
 [users]
 # defualt show/hide
 default = show

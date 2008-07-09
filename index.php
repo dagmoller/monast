@@ -4,16 +4,18 @@ require_once 'lib/include.php';
 
 session_start();
 setValor('started', time());
-setValor('Action', '');
+setValor('Actions', array());
 session_write_close();
 
-$json       = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
-$template   = new TemplatePower('template/index.html');
-$sessionId  = session_id();
-$peerStatus = array();
-$channels   = array();
-$calls      = array();
-$isStatus   = false;
+$json        = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
+$template    = new TemplatePower('template/index.html');
+$sessionId   = session_id();
+$peerStatus  = array();
+$channels    = array();
+$calls       = array();
+$meetmeRooms = array();
+$meetmeJoins = array();
+$isStatus    = false;
 
 $errno  = null;
 $errstr = null;
@@ -55,10 +57,16 @@ while (!feof($fp))
 					$peerStatus[] = substr($message, strlen('PeerStatus: '));
 
 				if (strpos($message, 'NewChannel: ') === 0)
-					$channels[] = $message;	
+					$channels[] = substr($message, strlen('NewChannel: '));	
 
 				if (strpos($message, 'Call: ') === 0)
-					$calls[] = $message;
+					$calls[] = substr($message, strlen('Call: '));	
+					
+				if (strpos($message, 'MeetmeRoom: ') === 0)
+				    $meetmeRooms[] = substr($message, strlen('MeetmeRoom: '));
+				    
+				if (strpos($message, 'MeetmeJoin: ') === 0)
+				    $meetmeJoins[] = substr($message, strlen('MeetmeJoin: '));
 			}
 		}
 	}
@@ -80,10 +88,33 @@ foreach ($peerStatus as $idx => $peer)
     $template->assign('calls-color', ($peerCalls > 0 ? '#ffffb0' : '#b0ffb0'));
 }
 
+foreach ($meetmeRooms as $idx => $meetmeRoom)
+{
+    $template->newBlock('meetme');
+    $template->assign('meetme', $meetmeRoom);
+}
+
+foreach ($meetmeJoins as $idx => $meetmeJoin)
+{
+    list($Meetme, $Uniqueid, $Usernum, $Channel, $CallerIDNum, $CallerIDName) = explode(':::', $meetmeJoin);
+    $tmp = array
+    (
+        'Action'       => 'MeetmeJoin',
+        'Meetme'       => $Meetme, 
+        'Uniqueid'     => $Uniqueid, 
+        'Usernum'      => $Usernum,
+        'Channel'      => $Channel,
+        'CallerIDNum'  => $CallerIDNum, 
+        'CallerIDName' => $CallerIDName
+    );
+    
+    $template->newBlock('process');
+	$template->assign('json', $json->encode($tmp));
+}
+
 foreach ($channels as $channel)
 {
-	$tmp = substr($channel, 12);
-	list($Channel, $State, $CallerIDNum, $CallerIDName, $Uniqueid) = explode(':::', $tmp);
+	list($Channel, $State, $CallerIDNum, $CallerIDName, $Uniqueid) = explode(':::', $channel);
 	$tmp = array
 	(
 		'Action'       => 'NewChannel',
@@ -100,8 +131,7 @@ foreach ($channels as $channel)
 
 foreach ($calls as $call)
 {
-	$tmp = substr($call, 6);
-	list($Source, $Destination, $CallerID, $CallerIDName, $SrcUniqueID, $DestUniqueID, $Status) = explode(':::', $tmp);
+	list($Source, $Destination, $CallerID, $CallerIDName, $SrcUniqueID, $DestUniqueID, $Status) = explode(':::', $call);
 	$tmp = array
 	(
 		'Action'       => 'Call',
