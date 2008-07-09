@@ -492,7 +492,7 @@ class MonAst():
 								sock.send('MeetmeRoom: %s\r\n' % meetme)
 								for Usernum in self.meetme[meetme]:
 									mm = self.meetme[meetme][Usernum]
-									ch = self.channels[Uniqueid]
+									ch = self.channels[mm['Uniqueid']]
 									sock.send('MeetmeJoin: %s:::%s:::%s:::%s:::%s:::%s\r\n' % (meetme, mm['Uniqueid'], Usernum, ch['Channel'], mm['CallerIDNum'], mm['CallerIDName']))
 							
 							sock.send('END STATUS\r\n')
