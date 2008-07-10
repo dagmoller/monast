@@ -21,6 +21,7 @@
 <script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/button/button-min.js"></script> 
 <script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/tabview/tabview-min.js"></script> 
 <script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/menu/menu-min.js"></script>
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/cookie/cookie-beta-min.js"></script> 
 
 <script type="text/javascript" src="js/json.js"></script>
 <script type="text/javascript" src="js/ajax.js"></script>
@@ -195,22 +196,49 @@ var transferDialog = new YAHOO.widget.Dialog("transferDiv",
 <script type="text/javascript">
 YAHOO.util.DDM.mode = YAHOO.util.DDM.POINT;
 
-var tabPannel = new YAHOO.widget.TabView('TabPannel');
-tabPannel.set('activeIndex', 1);
-tabPannel.addListener('beforeActiveTabChange', function(e){
+var _state = json.decode(YAHOO.util.Cookie.get("_state"));
+console.dir(_state);
+if (!_state)
+{
+	_state = {activeIndex: 1, buttons: {'checkBoxTab1': false, 'checkBoxTab2': false, 'checkBoxTab3': false}}
+	YAHOO.util.Cookie.set('_state', json.encode(_state));
+}
+
+var _buttons = new Array(ocheckBoxTab1, ocheckBoxTab2, ocheckBoxTab3);
+
+var _tabPannel = new YAHOO.widget.TabView('TabPannel');
+_tabPannel.addListener('beforeActiveTabChange', function(e){
 	var pannels = new Array('peersDiv', 'meetmesDiv', 'chanCallDiv', 'debugMsg');
 	for (i = 0; i < pannels.length; i++)
 		$(pannels[i]).style.display = 'none';
-});
-tabPannel.getTab(0).addListener('click', function(e){
-	var buttons = new Array(ocheckBoxTab1, ocheckBoxTab2, ocheckBoxTab3);
-	for (i = 0; i < buttons.length; i++)
+
+	var tabs = this.get('tabs');
+	for (i = 0; i < tabs.length; i++)
 	{
-		$(buttons[i].get('value')).style.display = (buttons[i].get('checked') ? 'block' : 'none');
+		if (tabs[i].get('label') == e.newValue.get('label'))
+		{
+			_state.activeIndex = i;
+			YAHOO.util.Cookie.set('_state', json.encode(_state));
+			break;
+		}
 	}
 });
+_tabPannel.getTab(0).addListener('click', function(e){
+	for (i = 0; i < _buttons.length; i++)
+	{
+		_buttons[i].set('checked', _state.buttons[_buttons[i].get('id')]);
+	}
+});
+_tabPannel.set('activeIndex', _state.activeIndex);
+if (_state.activeIndex == 0)
+{
+	for (i = 0; i < _buttons.length; i++)
+	{
+		_buttons[i].set('checked', _state.buttons[_buttons[i].get('id')]);
+	}
+}
 
-var dTrash = new YAHOO.util.DDTarget("trash");
+var _dTrash = new YAHOO.util.DDTarget("trash");
 
 <!-- START BLOCK : process -->
 Process('{json}');

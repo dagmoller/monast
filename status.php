@@ -199,6 +199,7 @@ fwrite($fp, "SESSION: $sessid\r\n");
 $isStatus = false;
 $isOK     = false;
 $hasMsg   = array();
+$reload   = false;
 
 while (!feof($fp))
 {
@@ -228,6 +229,18 @@ while (!feof($fp))
 			{
 				$isStatus = false;
 			}
+			elseif (strpos($message, 'Reload: ') !== false)
+			{
+           	    $time = substr($message, 8);
+            	$saida = array
+        	    (
+        	        'Action' => 'Reload',
+        	        'time'   => ($time * 1000)
+        	    );
+        	    print "<script>parent.Process('" . $json->encode($saida) . "');</script>\r\n";
+        	    $reload = true;
+        	    break;
+			}
 			elseif ($isStatus)
 			{
 				$hasMsg = true;
@@ -237,6 +250,12 @@ while (!feof($fp))
 				flush();
 			}
 		}
+	}
+	
+	if ($reload)
+	{
+	    fwrite($fp, "BYE\r\n");
+	    break;
 	}
 	
 	if ($hasMsg)
