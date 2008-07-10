@@ -53,6 +53,12 @@ function Process(o)
 	$('debugMsg').innerHTML += o + "<br>\r\n";
 	o = json.decode(o);
 	
+	if (o['Action'] == 'Reload')
+	{
+		setTimeout("location.href = 'index.php'", o['time']);
+		return;
+	}
+	
 	if (o['Action'] == 'PeerStatus')
 	{
 		var td = $('peerStatus-' + o['Peer']);
@@ -273,6 +279,8 @@ function startIFrame() // deve ser chamado no final da index.html
 function showHidePannels(e)
 {
 	$(this.get('value')).style.display = (e.newValue ? 'block' : 'none');
+	_state.buttons[this.get('id')] = e.newValue;
+	YAHOO.util.Cookie.set('_state', json.encode(_state));
 }
 
 // Originate a Call

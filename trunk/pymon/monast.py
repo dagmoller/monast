@@ -86,7 +86,8 @@ class MonAst():
 	meetme     = {}
 	meetmeLock = threading.RLock()
 	
-	configFiles = ['sip.conf', 'iax.conf', 'meetme.conf']
+	configFiles    = ['sip.conf', 'iax.conf', 'meetme.conf']
+	configFilesPop = []
 	
 	def send(self, lines):
 		if self.connected:
@@ -125,9 +126,13 @@ class MonAst():
 					self.parse(msg)
 					msg = ''
 			except socket.error, e:
-				log.error('Erro lendo socket: %s' % e)
+				log.error('Thread read :: Erro lendo socket: %s' % e)
+				self.connected = False
+				time.sleep(10)
 			except:
 				log.error('\n' + traceback.format_exc())
+				self.connected = False
+				time.sleep(10)
 	
 	def connect(self):
 		while not self.connected:
@@ -143,6 +148,7 @@ class MonAst():
 		
 		for conf in self.configFiles:
 			self.send(['Action: GetConfig', 'Filename: %s' % conf])
+			self.configFilesPop.append(conf)
 		
 		if not self.tRead:
 			self.tRead = thread.start_new_thread(self.read, ('read', 2))
@@ -173,7 +179,7 @@ class MonAst():
 			enqueue = []
 			blocks  = msg.split('\r\n\r\n')
 			for block in blocks:
-				if block == 'Response: Pong':
+				if block.strip() == 'Response: Pong':
 					log.info('Recebido PONG')
 					self.pingResp = True
 					continue
@@ -181,7 +187,7 @@ class MonAst():
 				log.show(block)
 				
 				if block.startswith('Response: Success\r\nCategory-'):
-					self.parseConfig(block.replace('Response: Success\r\n', ''), self.configFiles.pop(0))
+					self.parseConfig(block.replace('Response: Success\r\n', ''), self.configFilesPop.pop(0))
 				
 				if block.startswith('Event: PeerEntry\r\n'):
 					Channeltype, ObjectName, IPaddress, IPport, Status = merge(rePeerEntry.findall(block))
@@ -427,6 +433,12 @@ class MonAst():
 					params = line[line.find('conf=')+5:].split(',')
 					self.meetme[params[0]] = {}
 			self.meetmeLock.release()
+			
+			# deve ser executado no parser do ultimo arquivo
+			self.clientQueuelock.acquire()
+			for session in self.clientQueues:
+				self.clientQueues[session]['q'].put('Reload: 10')
+			self.clientQueuelock.release()
 					
 	def clientSocket(self, a, b):
 		log.info('Iniciando Thread clientSocket')
