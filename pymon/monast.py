@@ -726,7 +726,7 @@ if __name__ == '__main__':
 	for o, a in opts:
 		if o in ('-h', '--help'):
 			_usage()
-		if o in ('-c', '--help'):
+		if o in ('-c', '--config'):
 			configFile = a
 			
 	if not os.path.exists(configFile):
