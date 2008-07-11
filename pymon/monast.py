@@ -190,7 +190,7 @@ class MonAst:
 	def close(self):
 		log.info('Fechando socket')
 		try:
-			self.socketAMI.shutdown(2)
+			self.socketAMI.shutdown(2) # same as socket.SHUT_RDWR
 			self.socketAMI.close()
 		except socket.error, e:
 			log.error('Erro fechando socket: %s' % e)
@@ -731,7 +731,7 @@ class MonAst:
 				break
 			self.clientSockLock.release()
 			
-		self.socketClient.shutdown(2)
+		self.socketClient.shutdown(2) # same as socket.SHUT_RDWR 
 		self.socketClient.close()
 
 def _usage():
