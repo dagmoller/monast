@@ -23,7 +23,7 @@ $fp     = @fsockopen(HOSTNAME, HOSTPORT, $errno, $errstr, 60);
 
 if ($errstr)
 {
-	echo "<b>AstMon ERROR:</b> conectando a " . HOSTNAME . ":" . HOSTPORT . ": " . $errstr . "\r\n";
+	echo "<b>MonAst ERROR:</b> conectando a " . HOSTNAME . ":" . HOSTPORT . ": " . $errstr . "\r\n";
 	die;
 }
 
