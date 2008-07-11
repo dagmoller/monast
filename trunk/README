@@ -1,0 +1,17 @@
+Before playing with Monast you must install a couple of things in
+your system (with administrator privileges). Make sure to have both
+PHP5 and Python2.5 (2.4 patch can be found in project's page) installed.
+
+Copy the sample file named monast.conf.sample from the pymon/
+directory to /etc/monast.conf and edit it properly as documented
+inside of this file. Do some tests with your Asterisk Manager
+Interface user before trying it out, maybe it's your fault and not
+Monast's. You can then execute the monast.py script located in the
+pymon/ directory as well. You should see a bunch of log messages
+confirming the AMI login and start receiving events.
+
+Monast has been successfully tested under many Linux distributions
+(like Slackware, CentOS and Mandriva) and also on MacOS X.
+
+Monast webpage is located at <http://monast.sf.net> and it's licenced
+under both BSD and GPL. It has been created by Diego Aguirre (DagMoller).

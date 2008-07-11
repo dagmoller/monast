@@ -1,5 +1,6 @@
 #!/usr/bin/python -u
 
+import os
 import re
 import sys
 import time
@@ -9,6 +10,7 @@ import random
 import thread
 import threading
 import traceback
+import getopt
 import Queue
 import log
 from ConfigParser import SafeConfigParser
@@ -41,6 +43,8 @@ class MyConfigParser(SafeConfigParser):
         return optionstr
 
 class MonAst():
+
+	monastConfigFile = None
 
 	HOSTNAME = None
 	HOSTPORT = None
@@ -649,7 +653,7 @@ class MonAst():
 			
 	def start(self):
 		cp = MyConfigParser()
-		cp.read('monast.conf')
+		cp.read(self.monastConfigFile)
 		
 		self.HOSTNAME = cp.get('global', 'hostname')
 		self.HOSTPORT = int(cp.get('global', 'hostport'))
@@ -698,7 +702,37 @@ class MonAst():
 		self.socketClient.shutdown(socket.SHUT_RDWR)
 		self.socketClient.close()
 
+def _usage():
+	
+	usage = """
+	Usage: %s [options]
+	
+	Options:
+		-h | --help                     => display this help
+		-c | --config <config file>     => use alterantive config file instead /etc/monast.conf
+	""" % sys.argv[0]
+	print usage
+	sys.exit()
+
 if __name__ == '__main__':
 
+	try:
+		opts, args = getopt.getopt(sys.argv[1:], 'hc:', ['help', 'config='])
+	except:
+		_usage()
+	
+	configFile = '/etc/monast.conf'
+	
+	for o, a in opts:
+		if o in ('-h', '--help'):
+			_usage()
+		if o in ('-c', '--help'):
+			configFile = a
+			
+	if not os.path.exists(configFile):
+		print 'Config file "%s" not found...' % configFile
+		sys.exit(1)
+
 	monast = MonAst()
+	monast.monastConfigFile = configFile
 	monast.start()
