@@ -1,0 +1,282 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+
+<!--
+/*
+* Copyright (c) 2008, Diego Aguirre
+* All rights reserved.
+* 
+* Redistribution and use in source and binary forms, with or without modification,
+* are permitted provided that the following conditions are met:
+* 
+*     * Redistributions of source code must retain the above copyright notice, 
+*       this list of conditions and the following disclaimer.
+*     * Redistributions in binary form must reproduce the above copyright notice, 
+*       this list of conditions and the following disclaimer in the documentation 
+*       and/or other materials provided with the distribution.
+*     * Neither the name of the <ORGANIZATION> nor the names of its contributors
+*       may be used to endorse or promote products derived from this software 
+*       without specific prior written permission.
+* 
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
+* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
+* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+* OF THE POSSIBILITY OF SUCH DAMAGE.
+*/ 
+ -->
+
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Asterisk Monitor (MonAst)</title>
+
+<!-- css --> 
+<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.5.2/build/fonts/fonts-min.css"> 
+<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.5.2/build/assets/skins/sam/skin.css">
+<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.5.2/build/menu/assets/skins/sam/menu.css">
+<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.5.2/build/container/assets/skins/sam/container.css">
+<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.5.2/build/button/assets/skins/sam/button.css">
+<!-- js --> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/yahoo-dom-event/yahoo-dom-event.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/animation/animation-min.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/dragdrop/dragdrop-min.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/container/container-min.js"></script>
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/container/container_core-min.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/logger/logger-min.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/element/element-beta-min.js"></script>
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/button/button-min.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/tabview/tabview-min.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/menu/menu-min.js"></script>
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/cookie/cookie-beta-min.js"></script> 
+
+<script type="text/javascript" src="js/json.js"></script>
+<script type="text/javascript" src="js/ajax.js"></script>
+<script type="text/javascript" src="js/astmon.js"></script>
+<script type="text/javascript" src="js/shortcut.js"></script>
+
+<link rel="stylesheet" type="text/css" href="css/styles.css"> 
+
+</head>
+<body class="yui-skin-sam">
+
+<iframe id="__frame" width="1024" height="350" style="display: none"></iframe>
+
+<div id="TabPannel" class="yui-navset">
+  <ul class="yui-nav">
+    <li><a href="#tab0"><em>Mixed Pannels</em></a></li>
+    <li><a href="#tab1"><em>Peers/Users</em></a></li>
+    <li><a href="#tab2"><em>Meetme Rooms</em></a></li>
+    <li><a href="#tab3"><em>Channels/Calls</em></a></li>
+    <li><a href="#tab4"><em>Debug</em></a></li>
+  </ul>
+  
+  <div class="yui-content"> 
+    <div id="mixed">
+      <fieldset id="pannelsToShow">
+        <legend>Pannels to Show</legend> 
+        <input id="checkBoxTab1" type="checkbox" name="checkBoxTab1" value="peersDiv">
+        <input id="checkBoxTab2" type="checkbox" name="checkBoxTab2" value="meetmesDiv">
+        <input id="checkBoxTab3" type="checkbox" name="checkBoxTab3" value="chanCallDiv">
+      </fieldset>
+      <script type="text/javascript">
+        var ocheckBoxTab1 = new YAHOO.widget.Button("checkBoxTab1", { label: "Peers/Users" });
+            ocheckBoxTab1.addListener('checkedChange', showHidePannels);
+        var ocheckBoxTab2 = new YAHOO.widget.Button("checkBoxTab2", { label:"Meetme Rooms" });
+            ocheckBoxTab2.addListener('checkedChange', showHidePannels);
+        var ocheckBoxTab3 = new YAHOO.widget.Button("checkBoxTab3", { label:"Channels/Calls" });
+            ocheckBoxTab3.addListener('checkedChange', showHidePannels);
+      </script>
+    </div>
+  
+    <div id="peersDiv">
+    <fieldset>
+      <legend>Peers/Users</legend> 
+      <!-- START BLOCK : peer -->
+      <div id="peerDiv-{peer}" class="peerTable">
+        <table class="status" width="175px">
+          <tr>
+            <td colspan="2" bgcolor="#DDDDDD" nowrap="nowrap"><b><a href="#" title="Options" onClick="showPeerOptionsMenu('{peer}')">{CallerID}</a></b></td>
+          </tr>
+          <tr>
+            <td id="peerStatus-{peer}" bgcolor="{status-color}" width="115px">{status}</td>
+            <td id="peerCalls-{peer}" bgcolor="{calls-color}" width="60px">{calls}</td>
+          </tr>
+        </table>
+      </div>
+      <script type="text/javascript">
+		callerIDs['{peer}'] = '{CallerID}';
+		ddDivs['peerDiv-{peer}']               = new YAHOO.util.DD("peerDiv-{peer}");
+		ddDivs['peerDiv-{peer}'].onMouseDown   = setStartPosition;
+		ddDivs['peerDiv-{peer}'].onDragDrop    = peerDrop; 
+		ddDivs['peerDiv-{peer}'].onInvalidDrop = invalidDrop;
+      </script>
+      <!-- END BLOCK : peer -->
+      <div style="clear: both;"></div>
+    </fieldset>
+    </div>
+    
+    <div id="meetmesDiv">
+    <fieldset>
+      <legend>Meetme Rooms</legend> 
+      <!-- START BLOCK : meetme -->
+      <div id="meetme-{meetme}" class="meetmeDivWrap">
+        <div class="meetmeDiv">
+          <table width="250">
+            <tr>
+              <td align="center" class="statusHeader">Meetme ({meetme})</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <script type="text/javascript">
+		ddDivs['meetme-{meetme}'] = new YAHOO.util.DDTarget('meetme-{meetme}');
+      </script>
+      <!-- END BLOCK : meetme -->
+      <div style="clear: both;"></div>
+    </fieldset>
+    </div>
+    
+    <div id="chanCallDiv">
+    <fieldset>
+      <legend>Channels/Calls</legend> 
+      <div id="channelsDiv">
+        <div class="channelDiv">
+          <table width="350">
+            <tr>
+              <td class="tableTitle" align="center" colspan="2">Channels</td>
+            </tr>
+            <tr>
+              <td class="statusHeader" align="center" width="270">Channel</td>
+              <td class="statusHeader" align="center" width="80">Status</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div id="callsDiv">
+        <div class="callDiv">
+          <table width="600">
+            <tr>
+              <td class="tableTitle" align="center" colspan="3">Calls</td>
+            </tr>
+            <tr>
+              <td class="statusHeader" align="center" width="260">SRC Channel</td>
+              <td class="statusHeader" align="center" width="80">Status</td>
+              <td class="statusHeader" align="center" width="260">DST Channel</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div id="trash">
+        <img src="image/trash-2.png" width="96" height="96" title="Drag channels or calls to Hangup">
+      </div>
+      <div style="clear: both;"></div>
+    </fieldset>
+    </div>
+
+    <div id="debugMsg">
+    </div>
+    
+  </div>
+</div>
+
+<div id="originateDiv">
+  <div class="hd">Please enter destination number</div>
+  <div class="bd">
+    <label for="originateNumber">Destination: </label><input type="text" id="originateNumber" size="15" />
+  </div>
+</div>
+<script type="text/javascript">
+var originateDialog = new YAHOO.widget.Dialog("originateDiv", 
+{
+	visible: false,
+	constraintoviewport: true,
+	buttons: [
+		{ text:"Originate", handler: handleOriginate },
+		{ text:"Cancel", handler: handleOriginateCancel, isDefault: true }
+	],
+	width: '300px'
+});
+</script>
+
+<div id="transferDiv">
+  <div class="hd">Please select channel to transfer to "<span id="transferDestination"></span>"</div>
+  <div class="bd">
+    <input type="radio" name="transferSource" id="transferSourceValueA" value=""><span id="transferSourceTextA"></span><br>
+    <input type="radio" name="transferSource" id="transferSourceValueB" value=""><span id="transferSourceTextB"></span>
+  </div>
+</div>
+<script type="text/javascript">
+var transferDialog = new YAHOO.widget.Dialog("transferDiv",
+{
+	fixedcenter: true, 
+	buttons: [
+		{ text:"Transfer", handler: handleTransfer },
+		{ text:"Cancel", handler: handleTransferCancel, isDefault: true }
+	],
+	visible: false,
+	constraintoviewport : true,
+	width: '500px'
+});
+</script>
+
+<script type="text/javascript">
+YAHOO.util.DDM.mode = YAHOO.util.DDM.POINT;
+
+var _state = json.decode(YAHOO.util.Cookie.get("_state"));
+if (!_state)
+{
+	_state = {activeIndex: 1, buttons: {'checkBoxTab1': false, 'checkBoxTab2': false, 'checkBoxTab3': false}}
+	YAHOO.util.Cookie.set('_state', json.encode(_state));
+}
+
+var _buttons = new Array(ocheckBoxTab1, ocheckBoxTab2, ocheckBoxTab3);
+
+var _tabPannel = new YAHOO.widget.TabView('TabPannel');
+_tabPannel.addListener('beforeActiveTabChange', function(e){
+	var pannels = new Array('peersDiv', 'meetmesDiv', 'chanCallDiv', 'debugMsg');
+	for (i = 0; i < pannels.length; i++)
+		$(pannels[i]).style.display = 'none';
+
+	var tabs = this.get('tabs');
+	for (i = 0; i < tabs.length; i++)
+	{
+		if (tabs[i].get('label') == e.newValue.get('label'))
+		{
+			_state.activeIndex = i;
+			YAHOO.util.Cookie.set('_state', json.encode(_state));
+			break;
+		}
+	}
+});
+_tabPannel.getTab(0).addListener('click', function(e){
+	for (i = 0; i < _buttons.length; i++)
+	{
+		_buttons[i].set('checked', _state.buttons[_buttons[i].get('id')]);
+	}
+});
+_tabPannel.set('activeIndex', _state.activeIndex);
+if (_state.activeIndex == 0)
+{
+	for (i = 0; i < _buttons.length; i++)
+	{
+		_buttons[i].set('checked', _state.buttons[_buttons[i].get('id')]);
+	}
+}
+
+var _dTrash = new YAHOO.util.DDTarget("trash");
+
+<!-- START BLOCK : process -->
+Process('{json}');
+<!-- END BLOCK : process -->
+
+startIFrame();
+
+</script>
+
+</body>
+</html>
