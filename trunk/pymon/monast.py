@@ -730,7 +730,8 @@ if __name__ == '__main__':
 			configFile = a
 			
 	if not os.path.exists(configFile):
-		print 'Config file "%s" not found...' % configFile
+		print '  Config file "%s" not found.' % configFile
+		print '  Run "%s --help" for help.' % sys.argv[0]
 		sys.exit(1)
 
 	monast = MonAst()
