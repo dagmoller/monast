@@ -1,64 +1,30 @@
+
 /*
-Classe para utiliza?o de AJAX...
-Como usar:
-
-Incluir ao arquivo .js do AJAX...
-
-	$portal->adicionaIncludeFile ( 'javascript', 'include', 'js/tpl_ajax.js' );
-
-Obter um ID para utiliza?o, a chamada ao metodo recebe 2 parametros opcionais: MostrarProgresso = true e Debug = false.
-este metodo retorna um ID que deve ser usado nos outros metodos da classe.
-
-	var ajaxId = ajaxCall.init(); // ou
-	var ajaxId = ajaxCall.init(true, false);
-
-Setar a URL que ser?chamada:
-
-	ajaxCall.setURL(ajaxId, url);
-
-Setar o metodo de envio, GET (default) ou POST
-	ajaxCall.setMethod(ajaxId, 'POST');
-
-Adicionar parametros a URL, seja para GET ou POST
-	ajaxCall.addParam(ajaxId, 'parametro_1', 123);
-	ajaxCall.addParam(ajaxId, 'parametro_2', 'uma_string_qualquer');
-
-ou setar uma string de parametros: (deve ser chamado antes de qualquer chamada a addParam())
-	ajaxCall.setParams(ajaxId, 'parametro_1=123&parametro_2=uma_string_qualquer');
-
-ou usar todos os parametros (de campos ativos) de um form da pagina. (deve ser chamado antes de qualquer chamada a addParam())
-	ajaxCall.useParamsFromForm(ajaxId, 'form_name');
-
-OPCIONAL: setar o tipo de retorno TEXT (default), XML ou OBJ.
-	ajaxCall.setResponseType(ajaxId, 'xml');
-
-	Quando utilizado o tipo XML, retorno ser?um objeto DOM, e dever?ser setado um header com o Content-Type: application/xml
-	Quando utilizado o tipo OBJ, os dados dever? ser retornados pelo php como JSON. Classes que extendem PT_JSRS j?retornam.
-	Ex:
-		PHP:
-			require_once('portal/pt_json.php');
-			$saida = array('numeros' => 1234, 'array' => array(1, 2, 3, 4), 'usuario' => 'aguirre');
-			$json = new Services_JSON();
-			echo $json->encode($saida);
-		JS:
-			o retorno no javascript ser?um objeto igual ao do PHP.
-	
-OPCIONAL: Adicionar headers.
-	ajaxCall.addHeader(ajaxId, 'Content-Type', 'text/html');
-
-Setar a funcao que tratar?os dados de retorno.
-	funcaoRetorno = function(retorno)
-	{
-		alert(retorno);
-	}
-	ajaxCall.setResponseFunction(ajaxId, funcaoRetorno);
-
-Execuatr a chamada.
-	ajaxCall.doCall(ajaxId);
-
-	
-OBS: para evitar problemas com caracteres acentuados, setar um header no PHP
-colocando o charset como ISO-8859-1
+* Copyright (c) 2008, Diego Aguirre
+* All rights reserved.
+* 
+* Redistribution and use in source and binary forms, with or without modification,
+* are permitted provided that the following conditions are met:
+* 
+*     * Redistributions of source code must retain the above copyright notice, 
+*       this list of conditions and the following disclaimer.
+*     * Redistributions in binary form must reproduce the above copyright notice, 
+*       this list of conditions and the following disclaimer in the documentation 
+*       and/or other materials provided with the distribution.
+*     * Neither the name of the <ORGANIZATION> nor the names of its contributors
+*       may be used to endorse or promote products derived from this software 
+*       without specific prior written permission.
+* 
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
+* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
+* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+* OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 var mantemHide = false;
