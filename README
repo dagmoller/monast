@@ -1,6 +1,6 @@
 Before playing with Monast you must install a couple of things in
 your system (with administrator privileges). Make sure to have both
-PHP5 and Python2.5 (2.4 patch can be found in project's page) installed.
+PHP5 and Python2.5 (2.3 patch can be found in project's page) installed.
 
 Copy the sample file named monast.conf.sample from the pymon/
 directory to /etc/monast.conf and edit it properly as documented

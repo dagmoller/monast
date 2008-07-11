@@ -68,7 +68,7 @@ class MyConfigParser(SafeConfigParser):
     def optionxform(self, optionstr):
         return optionstr
 
-class MonAst():
+class MonAst:
 
 	monastConfigFile = None
 
@@ -190,7 +190,7 @@ class MonAst():
 	def close(self):
 		log.info('Fechando socket')
 		try:
-			self.socketAMI.shutdown(socket.SHUT_RDWR)
+			self.socketAMI.shutdown(2)
 			self.socketAMI.close()
 		except socket.error, e:
 			log.error('Erro fechando socket: %s' % e)
@@ -520,7 +520,10 @@ class MonAst():
 							users.sort()
 							for user in users:
 								mu = self.monitoredUsers[user]
-								sock.send('PeerStatus: %s:::%s:::%s:::%s\r\n' % (user, mu['Status'], mu['Calls'], mu['CallerID'] if mu['CallerID'] != '--' else user))
+								CallerID = mu['CallerID']
+								if CallerID == '--':
+									CallerID = user
+								sock.send('PeerStatus: %s:::%s:::%s:::%s\r\n' % (user, mu['Status'], mu['Calls'], CallerID))
 							for Uniqueid in self.channels:
 								ch = self.channels[Uniqueid]
 								sock.send('NewChannel: %s:::%s:::%s:::%s:::%s\r\n' % (ch['Channel'], ch['State'], ch['CallerIDNum'], ch['CallerIDName'], Uniqueid))
@@ -692,7 +695,10 @@ class MonAst():
 		self.meetmeContext = cp.get('global', 'meetme_context')
 		self.meetmePrefix  = cp.get('global', 'meetme_prefix')
 		
-		self.userDisplay['DEFAULT'] = True if cp.get('users', 'default') == 'show' else False
+		if cp.get('users', 'default') == 'show':
+			self.userDisplay['DEFAULT'] = True 
+		else:
+			self.userDisplay['DEFAULT'] = False
 		
 		for user, display in cp.items('users'):
 			if user.startswith('SIP') or user.startswith('IAX2'): 
@@ -725,7 +731,7 @@ class MonAst():
 				break
 			self.clientSockLock.release()
 			
-		self.socketClient.shutdown(socket.SHUT_RDWR)
+		self.socketClient.shutdown(2)
 		self.socketClient.close()
 
 def _usage():
