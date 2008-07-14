@@ -708,7 +708,7 @@ class MonAst:
 					self.userDisplay[user] = True
 			if display == 'force':
 				tech, peer = user.split('/')
-				self.monitoredUsers[user] = {'Channeltype': tech, 'Status': '--', 'Calls': 0, 'CallerID': '--', 'Context': 'default'}
+				self.monitoredUsers[user] = {'Channeltype': tech, 'Status': '--', 'Calls': 0, 'CallerID': '--', 'Context': 'default', 'Variables': []}
 	
 		self.cs  = thread.start_new_thread(self.clientSocket, ('clientsSocket', 2))
 		self.cqr = thread.start_new_thread(self.clienQueueRemover, ('clienQueueRemover', 2))
