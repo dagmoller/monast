@@ -450,7 +450,8 @@ class MonAst:
 				if user and line.startswith('Line-'):
 					tmp, param = line.split(': ')
 					if param.startswith('callerid'):
-						self.monitoredUsers[user]['CallerID'] = param[param.find('=')+1:]
+						quotes = re.compile("['\"]")
+						self.monitoredUsers[user]['CallerID'] = quotes.sub("", param[param.find('=')+1:])
 					if param.startswith('context'):
 						self.monitoredUsers[user]['Context'] = param[param.find('=')+1:]
 					if param.startswith('setvar'):
