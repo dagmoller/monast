@@ -472,9 +472,6 @@ class MonAst:
 					
 	def clientSocket(self, a, b):
 		log.info('Iniciando Thread clientSocket')
-		self.socketClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		self.socketClient.bind(('0.0.0.0', self.bindPort))
-		self.socketClient.listen(10)
 		while self.run:
 			try:
 				(sc, addr) = self.socketClient.accept()
@@ -709,6 +706,14 @@ class MonAst:
 			if display == 'force':
 				tech, peer = user.split('/')
 				self.monitoredUsers[user] = {'Channeltype': tech, 'Status': '--', 'Calls': 0, 'CallerID': '--', 'Context': 'default', 'Variables': []}
+	
+		try:
+			self.socketClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			self.socketClient.bind(('0.0.0.0', self.bindPort))
+			self.socketClient.listen(10)
+		except socket.error, e:
+			log.error("Cound not open socket on port %d, motive: %s" % (self.bindPort, e))
+			sys.exit(1)
 	
 		self.cs  = thread.start_new_thread(self.clientSocket, ('clientsSocket', 2))
 		self.cqr = thread.start_new_thread(self.clienQueueRemover, ('clienQueueRemover', 2))
