@@ -51,7 +51,9 @@ $fp     = @fsockopen(HOSTNAME, HOSTPORT, $errno, $errstr, 60);
 
 if ($errstr)
 {
-	echo "<b>MonAst ERROR:</b> conectando a " . HOSTNAME . ":" . HOSTPORT . ": " . $errstr . "\r\n";
+	echo "<title>Monast Error</title>\n";
+	echo "<h1>Monast Error</h1>\n<p>Could not connect to " . HOSTNAME . ":" . HOSTPORT . " (" . $errstr . ").</p>\n";
+	echo "<p>Make sure monast.py is running so the panel can connect to its port properly.</p>";
 	die;
 }
 

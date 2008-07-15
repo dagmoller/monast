@@ -218,7 +218,9 @@ $fp     = @fsockopen(HOSTNAME, HOSTPORT, $errno, $errstr, 60);
 
 if ($errstr)
 {
-	echo "<script>alert('AstMon ERROR: conectando a " . HOSTNAME . ":" . HOSTPORT . ": " . $errstr . "');</script>";
+    $error  = "!! MonAst ERROR !!\\n\\nCould not connect to " . HOSTNAME . ":" . HOSTPORT . ": $errstr\\n";
+    $error .= "Make sure monast.py is running so the panel can connect to its port properly.";
+	echo "<script>alert('$error');</script>";
 	die;
 }
 
