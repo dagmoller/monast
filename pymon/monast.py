@@ -55,6 +55,7 @@ reNewcallerid = re.compile('Event: Newcallerid|Channel: ([^\r^\n^\s]*)|CallerID:
 reRename      = re.compile('Event: Rename|Oldname: ([^\r^\n^\s]*)|Newname: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)')
 reMeetmeJoin  = re.compile('Event: MeetmeJoin|Uniqueid: ([^\r^\n^\s]*)|Meetme: ([^\r^\n^\s]*)|Usernum: ([^\r^\n^\s]*)|CallerIDnum: ([^\r^\n^\s]*)|CallerIDname: ([^\r^\n]*)')
 reMeetmeLeave = re.compile('Event: MeetmeLeave|Uniqueid: ([^\r^\n^\s]*)|Meetme: ([^\r^\n^\s]*)|Usernum: ([^\r^\n^\s]*)|Duration: ([^\r^\n^\s]*)')
+reStatus      = re.compile('Event: Status|Channel: ([^\r^\n^\s]*)|CallerIDNum: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|State: ([^\r^\n^\s]*)|Link: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)')
 
 def merge(l):
 	out = [None for x in l[0]]
@@ -125,10 +126,10 @@ class MonAst:
 			try:
 				self.socketAMI.send('%s\r\n\r\n' % '\r\n'.join(lines))
 			except socket.error, e:
-				log.error('Erro enviando dados pelo socket: %e' % e)
+				log.error('Erro enviando dados pelo socket: %s' % e)
 	
 	def ping(self, a, b):
-		log.info('Iniciando Thread ping')
+		log.info('Starting Thread ping')
 		t = 0
 		while self.run:
 			time.sleep(1)
@@ -147,7 +148,7 @@ class MonAst:
 			t += 1
 	
 	def read(self, a, b):
-		log.info('Iniciando Thread read')
+		log.info('Starting Thread read')
 		msg = ''
 		while self.run:
 			try:
@@ -363,6 +364,11 @@ class MonAst:
 					
 					log.info('Evento Newcallerid detectado')
 					
+					self.channelsLock.acquire()
+					self.channels[Uniqueid]['CallerIDName'] = CallerIDName
+					self.channels[Uniqueid]['CallerIDNum']  = CallerID
+					self.channelsLock.release()
+					
 					enqueue.append('NewCallerid: %s:::%s:::%s:::%s:::%s' % (Channel, CallerID, CallerIDName, Uniqueid, CIDCallingPres))
 					
 				if block.startswith('Event: Rename\r\n'):
@@ -418,6 +424,79 @@ class MonAst:
 					del self.meetme[Meetme][Usernum]
 					enqueue.append('MeetmeLeave: %s:::%s:::%s:::%s' % (Meetme, Uniqueid, Usernum, Duration))
 					self.meetmeLock.release()
+				
+				## the next 3 blocks, will garante that no channels will be dummed in monast
+				## pasrts of this blocks are copied from other blocks like Hangup, Link
+				if block == 'Response: Success\r\nMessage: Channel status will follow':
+					log.info('Cleaning channelStatus')
+					self.channelStatus = []
+					
+				if block == 'Event: StatusComplete':
+					log.info('Event StatusComplete detected')
+					
+					self.channelsLock.acquire()
+					self.callsLock.acquire()
+					lostChannels = [i for i in self.channels.keys() if i not in self.channelStatus]
+					for Uniqueid in lostChannels:
+						log.log('Removing lost channel %s' % Uniqueid)
+						try:
+							Channel = self.channels[Uniqueid]['Channel']
+							del self.channels[Uniqueid]
+							enqueue.append('Hangup: %s:::%s:::FAKE:::FAKE' % (Channel, Uniqueid))
+						except:
+							pass
+						
+						toDelete = None
+						for id in self.calls:
+							if id.find(Uniqueid) != -1 and self.calls[id]['Status'] == 'Dial':
+								toDelete = id
+								break
+						if toDelete:
+							del self.calls[toDelete]
+							src, dst = toDelete.split('-')
+							enqueue.append('Unlink: FAKE:::FAKE:::%s:::%s:::FAKE:::FAKE' % (src, dst))
+						
+						self.monitoredUsersLock.acquire()
+						user = Channel
+						if Channel.rfind('-') != -1:
+							user = Channel[:Channel.rfind('-')]
+						if self.monitoredUsers.has_key(user) and self.monitoredUsers[user]['Calls'] > 0:
+							self.monitoredUsers[user]['Calls'] -= 1
+							enqueue.append('PeerStatus: %s:::%s:::%s' % (user, self.monitoredUsers[user]['Status'], self.monitoredUsers[user]['Calls']))
+						self.monitoredUsersLock.release()
+					self.callsLock.release()
+					self.channelsLock.release()
+				
+				if block.startswith('Event: Status\r\n'):
+					Channel, CallerIDNum, CallerIDName, State, Link, Uniqueid = merge(reStatus.findall(block))
+					
+					log.info('Event Status detected')
+					
+					self.channelStatus.append(Uniqueid)
+					
+					self.channelsLock.acquire()
+					if not self.channels.has_key(Uniqueid):
+						self.channels[Uniqueid] = {'Channel': Channel, 'State': State, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName}
+						self.monitoredUsersLock.acquire()
+						user = Channel
+						if Channel.rfind('-') != -1:
+							user = Channel[:Channel.rfind('-')]
+						if self.monitoredUsers.has_key(user):
+							self.monitoredUsers[user]['Calls'] += 1
+							enqueue.append('PeerStatus: %s:::%s:::%s' % (user, self.monitoredUsers[user]['Status'], self.monitoredUsers[user]['Calls']))
+						self.monitoredUsersLock.release()
+						enqueue.append('NewChannel: %s:::%s:::%s:::%s:::%s' % (Channel, State, CallerIDNum, CallerIDName, Uniqueid))
+						if Link:
+							for UniqueidLink in self.channels:
+								if self.channels[UniqueidLink]['Channel'] == Link:
+									self.callsLock.acquire()
+									self.calls['%s-%s' % (Uniqueid, UniqueidLink)] = {
+										'Source': Channel, 'Destination': Link, 'CallerID': CallerIDNum, 'CallerIDName': CallerIDName, 
+										'SrcUniqueID': Uniqueid, 'DestUniqueID': UniqueidLink, 'Status': 'Link'
+									}
+									self.callsLock.release()
+									enqueue.append('Link: %s:::%s:::%s:::%s:::%s:::%s' % (Channel, Link, Uniqueid, UniqueidLink, CallerIDNum, self.channels[UniqueidLink]['CallerIDNum']))
+					self.channelsLock.release()
 			
 			self.clientQueuelock.acquire()
 			for msg in enqueue:
@@ -472,7 +551,7 @@ class MonAst:
 			self.clientQueuelock.release()
 					
 	def clientSocket(self, a, b):
-		log.info('Iniciando Thread clientSocket')
+		log.info('Starting Thread clientSocket')
 		while self.run:
 			try:
 				(sc, addr) = self.socketClient.accept()
@@ -488,7 +567,7 @@ class MonAst:
 		session  = None
 		localRun = True
 		count    = 0
-		log.info('Iniciando %s' % id)
+		log.info('Starting %s' % id)
 		try:
 			while self.run and localRun:
 				msg = sock.recv(1024)
@@ -527,8 +606,9 @@ class MonAst:
 								sock.send('NewChannel: %s:::%s:::%s:::%s:::%s\r\n' % (ch['Channel'], ch['State'], ch['CallerIDNum'], ch['CallerIDName'], Uniqueid))
 							for call in self.calls:
 								c = self.calls[call]
-								sock.send('Call: %s:::%s:::%s:::%s:::%s:::%s:::%s\r\n' % (c['Source'], c['Destination'], c['CallerID'], c['CallerIDName'], \
-																					c['SrcUniqueID'], c['DestUniqueID'], c['Status']))
+								src, dst = call.split('-')
+								sock.send('Call: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s\r\n' % (c['Source'], c['Destination'], c['CallerID'], c['CallerIDName'], \
+																			self.channels[dst]['CallerIDNum'], c['SrcUniqueID'], c['DestUniqueID'], c['Status']))
 							meetmeRooms = self.meetme.keys()
 							meetmeRooms.sort()
 							for meetme in meetmeRooms:
@@ -663,7 +743,7 @@ class MonAst:
 		self.clientSockLock.release()
 	
 	def clienQueueRemover(self, a, b):
-		log.info('Iniciando thread clienQueueRemover')
+		log.info('Starting thread clienQueueRemover')
 		while self.run:
 			time.sleep(60)
 			self.clientQueuelock.acquire()
@@ -677,7 +757,14 @@ class MonAst:
 				log.info('Removendo session morta: %s' % session)
 				del self.clientQueues[session]
 			self.clientQueuelock.release()
-			
+	
+	def channelChecker(self, a, b):
+		log.info('Starting thread channelChecker')
+		time.sleep(10)
+		while self.run:
+			self.send(['Action: Status'])
+			time.sleep(60)
+	
 	def start(self):
 		cp = MyConfigParser()
 		cp.read(self.monastConfigFile)
@@ -716,6 +803,7 @@ class MonAst:
 			log.error("Cound not open socket on port %d, motive: %s" % (self.bindPort, e))
 			sys.exit(1)
 	
+		self.cc  = thread.start_new_thread(self.channelChecker, ('channelChecker', 2))
 		self.cs  = thread.start_new_thread(self.clientSocket, ('clientsSocket', 2))
 		self.cqr = thread.start_new_thread(self.clienQueueRemover, ('clienQueueRemover', 2))
 	
