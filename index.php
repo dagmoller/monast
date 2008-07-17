@@ -165,7 +165,7 @@ foreach ($channels as $channel)
 
 foreach ($calls as $call)
 {
-	list($Source, $Destination, $CallerID, $CallerIDName, $CallerID2, $SrcUniqueID, $DestUniqueID, $Status) = explode(':::', $call);
+	list($Source, $Destination, $CallerID, $CallerIDName, $CallerID2, $SrcUniqueID, $DestUniqueID, $Status, $Seconds) = explode(':::', $call);
 	$tmp = array
 	(
 		'Action'       => 'Call',
@@ -176,7 +176,8 @@ foreach ($calls as $call)
 	    'CallerID2'    => $CallerID2,
 		'SrcUniqueID'  => $SrcUniqueID, 
 		'DestUniqueID' => $DestUniqueID, 
-		'Status'       => $Status
+		'Status'       => $Status,
+	    'Seconds'      => $Seconds
 	);
 	
 	$template->newBlock('process');
