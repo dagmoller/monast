@@ -822,7 +822,7 @@ class MonAst:
 			self.socketClient.bind(('0.0.0.0', self.bindPort))
 			self.socketClient.listen(10)
 		except socket.error, e:
-			log.error("Cound not open socket on port %d, motive: %s" % (self.bindPort, e))
+			log.error("Cound not open socket on port %d, cause: %s" % (self.bindPort, e))
 			sys.exit(1)
 	
 		self.cc  = thread.start_new_thread(self.channelChecker, ('channelChecker', 2))
