@@ -55,7 +55,7 @@ reNewcallerid   = re.compile('Event: Newcallerid|Channel: ([^\r^\n^\s]*)|CallerI
 reRename        = re.compile('Event: Rename|Oldname: ([^\r^\n^\s]*)|Newname: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)')
 reMeetmeJoin    = re.compile('Event: MeetmeJoin|Uniqueid: ([^\r^\n^\s]*)|Meetme: ([^\r^\n^\s]*)|Usernum: ([^\r^\n^\s]*)|CallerIDnum: ([^\r^\n^\s]*)|CallerIDname: ([^\r^\n]*)')
 reMeetmeLeave   = re.compile('Event: MeetmeLeave|Uniqueid: ([^\r^\n^\s]*)|Meetme: ([^\r^\n^\s]*)|Usernum: ([^\r^\n^\s]*)|Duration: ([^\r^\n^\s]*)')
-reStatus        = re.compile('Event: Status|Channel: ([^\r^\n^\s]*)|CallerIDNum: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|State: ([^\r^\n^\s]*)|Link: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)')
+reStatus        = re.compile('Event: Status|Channel: ([^\r^\n^\s]*)|CallerIDNum: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|State: ([^\r^\n^\s]*)|Seconds: ([^\r^\n^\s]*)|Link: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)')
 reReload        = re.compile('Event: Reload|Message: ([^\r^\n]*)')
 reChannelReload = re.compile('Event: ChannelReload|Channel: ([^\r^\n^\s]*)|ReloadReason: ([^\r^\n]*)')
 
@@ -322,7 +322,7 @@ class MonAst:
 					self.callsLock.acquire()
 					self.calls['%s-%s' % (SrcUniqueID, DestUniqueID)] = {
 						'Source': Source, 'Destination': Destination, 'CallerID': CallerID, 'CallerIDName': CallerIDName, 
-						'SrcUniqueID': SrcUniqueID, 'DestUniqueID': DestUniqueID, 'Status': 'Dial'
+						'SrcUniqueID': SrcUniqueID, 'DestUniqueID': DestUniqueID, 'Status': 'Dial', 'startTime': 0
 					}
 					self.callsLock.release()
 					
@@ -336,13 +336,16 @@ class MonAst:
 					self.callsLock.acquire()
 					try:
 						self.calls['%s-%s' % (Uniqueid1, Uniqueid2)]['Status'] = 'Link'
+						if self.calls['%s-%s' % (Uniqueid1, Uniqueid2)]['startTime'] == 0:
+							self.calls['%s-%s' % (Uniqueid1, Uniqueid2)]['startTime'] = time.time()
 						#enqueue.append('Link: %s:::%s:::%s:::%s:::%s:::%s' % (Channel1, Channel2, Uniqueid1, Uniqueid2, CallerID1, CallerID2))
 					except:
 						self.calls['%s-%s' % (Uniqueid1, Uniqueid2)] = {
 							'Source': Channel1, 'Destination': Channel2, 'CallerID': CallerID1, 'CallerIDName': '', 
-							'SrcUniqueID': Uniqueid1, 'DestUniqueID': Uniqueid2, 'Status': 'Link'
+							'SrcUniqueID': Uniqueid1, 'DestUniqueID': Uniqueid2, 'Status': 'Link', 'startTime': time.time()
 						}
-					enqueue.append('Link: %s:::%s:::%s:::%s:::%s:::%s' % (Channel1, Channel2, Uniqueid1, Uniqueid2, CallerID1, CallerID2))
+					Seconds = time.time() - self.calls['%s-%s' % (Uniqueid1, Uniqueid2)]['startTime']
+					enqueue.append('Link: %s:::%s:::%s:::%s:::%s:::%s:::%d' % (Channel1, Channel2, Uniqueid1, Uniqueid2, CallerID1, CallerID2, Seconds))
 					self.callsLock.release()
 				
 				if block.startswith('Event: Unlink\r\n'):
@@ -488,7 +491,7 @@ class MonAst:
 					self.channelsLock.release()
 				
 				if block.startswith('Event: Status\r\n'):
-					Channel, CallerIDNum, CallerIDName, State, Link, Uniqueid = merge(reStatus.findall(block))
+					Channel, CallerIDNum, CallerIDName, State, Seconds, Link, Uniqueid = merge(reStatus.findall(block))
 					
 					log.info('Event Status detected')
 					
@@ -512,10 +515,11 @@ class MonAst:
 									self.callsLock.acquire()
 									self.calls['%s-%s' % (Uniqueid, UniqueidLink)] = {
 										'Source': Channel, 'Destination': Link, 'CallerID': CallerIDNum, 'CallerIDName': CallerIDName, 
-										'SrcUniqueID': Uniqueid, 'DestUniqueID': UniqueidLink, 'Status': 'Link'
+										'SrcUniqueID': Uniqueid, 'DestUniqueID': UniqueidLink, 'Status': 'Link', 'startTime': time.time() - Seconds
 									}
 									self.callsLock.release()
-									enqueue.append('Link: %s:::%s:::%s:::%s:::%s:::%s' % (Channel, Link, Uniqueid, UniqueidLink, CallerIDNum, self.channels[UniqueidLink]['CallerIDNum']))
+									enqueue.append('Link: %s:::%s:::%s:::%s:::%s:::%s:::%d' % \
+												(Channel, Link, Uniqueid, UniqueidLink, CallerIDNum, self.channels[UniqueidLink]['CallerIDNum'], Seconds))
 					self.channelsLock.release()
 			
 			self.clientQueuelock.acquire()
@@ -629,8 +633,8 @@ class MonAst:
 							for call in self.calls:
 								c = self.calls[call]
 								src, dst = call.split('-')
-								sock.send('Call: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s\r\n' % (c['Source'], c['Destination'], c['CallerID'], c['CallerIDName'], \
-																			self.channels[dst]['CallerIDNum'], c['SrcUniqueID'], c['DestUniqueID'], c['Status']))
+								sock.send('Call: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s:::%d\r\n' % (c['Source'], c['Destination'], c['CallerID'], c['CallerIDName'], \
+																	self.channels[dst]['CallerIDNum'], c['SrcUniqueID'], c['DestUniqueID'], c['Status'], time.time() - c['startTime']))
 							meetmeRooms = self.meetme.keys()
 							meetmeRooms.sort()
 							for meetme in meetmeRooms:

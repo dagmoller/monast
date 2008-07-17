@@ -141,7 +141,7 @@ function Process(o)
 	{
 		var template = "<table width='600'><tr>";
 		template    += "<td class='status' width='260' id='callChannel-{SrcUniqueID}'>{Source}</td>";
-		template    += "<td class='status' width='80' bgcolor='{color}' id='callStatus-{SrcUniqueID}-{DestUniqueID}'>{Status}</td>";
+		template    += "<td class='status' width='80' bgcolor='{color}' id='callStatus-{SrcUniqueID}-{DestUniqueID}'>{Status}<br><span style='font-family: monospace;' id='chrono-callStatus-{SrcUniqueID}-{DestUniqueID}'></span></td>";
 		template    += "<td class='status' width='260' id='callChannel-{DestUniqueID}'>{Destination}</td>";
 		template    += "</tr></table>";
 		
@@ -158,6 +158,8 @@ function Process(o)
 		div.innerHTML = template;
 		
 		$('callsDiv').appendChild(div);
+		if (o['Status'] == 'Link')
+			chrono('callStatus-' + o['SrcUniqueID'] + '-' + o['DestUniqueID'], o['Seconds']);
 		
 		ddDivs[div.id]               = new YAHOO.util.DD(div.id);
 		ddDivs[div.id].onMouseDown   = setStartPosition;
@@ -205,7 +207,8 @@ function Process(o)
 		if (td)
 		{
 			td.style.backgroundColor = color('Link');
-			td.innerHTML = 'Link';
+			td.innerHTML = 'Link<br><span style="font-family: monospace;" id="chrono-' + td.id + '"></span>';
+			chrono(td.id, o['Seconds']);
 		}
 		else
 		{
@@ -225,6 +228,7 @@ function Process(o)
 	
 	if (o['Action'] == 'Unlink')
 	{
+		stopChrono('callStatus-' + o['Uniqueid1'] + '-' + o['Uniqueid2']);
 		$('callsDiv').removeChild($('call-' + o['Uniqueid1'] + '-' + o['Uniqueid2']));
 		return;
 	}
@@ -547,4 +551,59 @@ function showTransferDialog(idA, srcA, idB, srcB, dst)
 	transferDialog.destChannel         = dst;
 	transferDialog.render();
 	transferDialog.show();
+}
+
+// Chrono for calls linked
+var _chrono = new Array();
+function chrono(id, secs)
+{
+	if (_chrono[id])
+	{
+		if (secs)
+		{
+			var d = new Date(secs * 1000);
+			_chrono[id].secs  = d.getUTCSeconds();
+			_chrono[id].mins  = d.getUTCMinutes();
+			_chrono[id].hours = d.getUTCHours();
+		}
+		else
+			_chrono[id].secs += 1;
+			
+		if (_chrono[id].secs == 60)
+		{
+			_chrono[id].secs  = 0;
+			_chrono[id].mins += 1;
+		}
+		if (_chrono[id].mins == 60)
+		{
+			_chrono[id].mins   = 0;
+			_chrono[id].hours += 1;
+		}
+	}
+	else
+	{
+		if (secs)
+		{
+			var d = new Date(secs * 1000);
+			_chrono[id] = {hours: d.getUTCHours(), mins: d.getUTCMinutes(), secs: d.getUTCSeconds(), run: true};
+		}
+		else
+			_chrono[id] = {hours: 0, mins: 0, secs: 0, run: true};
+	}
+	
+	if (_chrono[id].run)
+	{
+		var secs  = (_chrono[id].secs < 10 ? '0' + _chrono[id].secs : _chrono[id].secs);
+		var mins  = (_chrono[id].mins < 10 ? '0' + _chrono[id].mins : _chrono[id].mins);
+		var hours = (_chrono[id].hours < 10 ? '0' + _chrono[id].hours : _chrono[id].hours);
+		
+		$('chrono-' + id).innerHTML = hours + ':' + mins + ':' + secs;
+		
+		setTimeout('chrono("' + id + '")', 1000);
+	}
+}
+function stopChrono(id)
+{
+	if (_chrono[id])
+		_chrono[id].run = false;
 }

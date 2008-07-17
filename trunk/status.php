@@ -113,7 +113,7 @@ function parseMsg($msg)
 	
 	if (strpos($msg, 'Link: ') !== false)
 	{	
-		list($Channel1, $Channel2, $Uniqueid1, $Uniqueid2, $CallerID1, $CallerID2) = explode(':::', substr($msg, 6));
+		list($Channel1, $Channel2, $Uniqueid1, $Uniqueid2, $CallerID1, $CallerID2, $Seconds) = explode(':::', substr($msg, 6));
 		$saida = array
 		(
 			'Action'    => 'Link',
@@ -122,7 +122,8 @@ function parseMsg($msg)
 			'Uniqueid1' => $Uniqueid1, 
 			'Uniqueid2' => $Uniqueid2, 
 			'CallerID1' => $CallerID1, 
-			'CallerID2' => $CallerID2
+			'CallerID2' => $CallerID2,
+		    'Seconds'   => $Seconds
 		);
 		return $json->encode($saida);
 	}
