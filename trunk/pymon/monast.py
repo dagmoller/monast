@@ -43,19 +43,21 @@ from ConfigParser import SafeConfigParser
 
 MONAST_CALLERID = "MonAst WEB"
 
-rePeerEntry   = re.compile('Event: PeerEntry|Channeltype: ([^\r^\n^\s]*)|ObjectName: ([^\r^\n^\s]*)|IPaddress: ([^\r^\n^\s]*)|IPport: ([^\r^\n^\s]*)|Status: ([^\r^\n]*)')
-rePeerStatus  = re.compile('Event: PeerStatus|Peer: ([^\r^\n^\s]*)|PeerStatus: ([^\r^\n^\s]*)')
-reNewChannel  = re.compile('Event: Newchannel|Channel: ([^\r^\n^\s]*)|State: ([^\r^\n^\s]*)|CallerIDNum: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|Uniqueid: ([^\r^\n^\s]*)')
-reHangup      = re.compile('Event: Hangup|Channel: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)|Cause: ([^\r^\n^\s]*)|Cause-txt: ([^\r^\n]*)')
-reNewState    = re.compile('Event: Newstate|Channel: ([^\r^\n^\s]*)|State: ([^\r^\n^\s]*)|CallerID: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n^]*)|Uniqueid: ([^\r^\n^\s]*)')
-reDial        = re.compile('Event: Dial|Source: ([^\r^\n^\s]*)|Destination: ([^\r^\n^\s]*)|CallerID: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|SrcUniqueID: ([^\r^\n^\s]*)|DestUniqueID: ([^\r^\n^\s]*)')
-reLink        = re.compile('Event: Link|Channel1: ([^\r^\n^\s]*)|Channel2: ([^\r^\n^\s]*)|Uniqueid1: ([^\r^\n^\s]*)|Uniqueid2: ([^\r^\n^\s]*)|CallerID1: ([^\r^\n^\s]*)|CallerID2: ([^\r^\n^\s]*)')
-reUnlink      = re.compile('Event: Unlink|Channel1: ([^\r^\n^\s]*)|Channel2: ([^\r^\n^\s]*)|Uniqueid1: ([^\r^\n^\s]*)|Uniqueid2: ([^\r^\n^\s]*)|CallerID1: ([^\r^\n^\s]*)|CallerID2: ([^\r^\n^\s]*)')
-reNewcallerid = re.compile('Event: Newcallerid|Channel: ([^\r^\n^\s]*)|CallerID: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|Uniqueid: ([^\r^\n^\s]*)|CID-CallingPres: ([^\r^\n]*)')
-reRename      = re.compile('Event: Rename|Oldname: ([^\r^\n^\s]*)|Newname: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)')
-reMeetmeJoin  = re.compile('Event: MeetmeJoin|Uniqueid: ([^\r^\n^\s]*)|Meetme: ([^\r^\n^\s]*)|Usernum: ([^\r^\n^\s]*)|CallerIDnum: ([^\r^\n^\s]*)|CallerIDname: ([^\r^\n]*)')
-reMeetmeLeave = re.compile('Event: MeetmeLeave|Uniqueid: ([^\r^\n^\s]*)|Meetme: ([^\r^\n^\s]*)|Usernum: ([^\r^\n^\s]*)|Duration: ([^\r^\n^\s]*)')
-reStatus      = re.compile('Event: Status|Channel: ([^\r^\n^\s]*)|CallerIDNum: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|State: ([^\r^\n^\s]*)|Link: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)')
+rePeerEntry     = re.compile('Event: PeerEntry|Channeltype: ([^\r^\n^\s]*)|ObjectName: ([^\r^\n^\s]*)|IPaddress: ([^\r^\n^\s]*)|IPport: ([^\r^\n^\s]*)|Status: ([^\r^\n]*)')
+rePeerStatus    = re.compile('Event: PeerStatus|Peer: ([^\r^\n^\s]*)|PeerStatus: ([^\r^\n^\s]*)')
+reNewChannel    = re.compile('Event: Newchannel|Channel: ([^\r^\n^\s]*)|State: ([^\r^\n^\s]*)|CallerIDNum: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|Uniqueid: ([^\r^\n^\s]*)')
+reHangup        = re.compile('Event: Hangup|Channel: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)|Cause: ([^\r^\n^\s]*)|Cause-txt: ([^\r^\n]*)')
+reNewState      = re.compile('Event: Newstate|Channel: ([^\r^\n^\s]*)|State: ([^\r^\n^\s]*)|CallerID: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n^]*)|Uniqueid: ([^\r^\n^\s]*)')
+reDial          = re.compile('Event: Dial|Source: ([^\r^\n^\s]*)|Destination: ([^\r^\n^\s]*)|CallerID: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|SrcUniqueID: ([^\r^\n^\s]*)|DestUniqueID: ([^\r^\n^\s]*)')
+reLink          = re.compile('Event: Link|Channel1: ([^\r^\n^\s]*)|Channel2: ([^\r^\n^\s]*)|Uniqueid1: ([^\r^\n^\s]*)|Uniqueid2: ([^\r^\n^\s]*)|CallerID1: ([^\r^\n^\s]*)|CallerID2: ([^\r^\n^\s]*)')
+reUnlink        = re.compile('Event: Unlink|Channel1: ([^\r^\n^\s]*)|Channel2: ([^\r^\n^\s]*)|Uniqueid1: ([^\r^\n^\s]*)|Uniqueid2: ([^\r^\n^\s]*)|CallerID1: ([^\r^\n^\s]*)|CallerID2: ([^\r^\n^\s]*)')
+reNewcallerid   = re.compile('Event: Newcallerid|Channel: ([^\r^\n^\s]*)|CallerID: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|Uniqueid: ([^\r^\n^\s]*)|CID-CallingPres: ([^\r^\n]*)')
+reRename        = re.compile('Event: Rename|Oldname: ([^\r^\n^\s]*)|Newname: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)')
+reMeetmeJoin    = re.compile('Event: MeetmeJoin|Uniqueid: ([^\r^\n^\s]*)|Meetme: ([^\r^\n^\s]*)|Usernum: ([^\r^\n^\s]*)|CallerIDnum: ([^\r^\n^\s]*)|CallerIDname: ([^\r^\n]*)')
+reMeetmeLeave   = re.compile('Event: MeetmeLeave|Uniqueid: ([^\r^\n^\s]*)|Meetme: ([^\r^\n^\s]*)|Usernum: ([^\r^\n^\s]*)|Duration: ([^\r^\n^\s]*)')
+reStatus        = re.compile('Event: Status|Channel: ([^\r^\n^\s]*)|CallerIDNum: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|State: ([^\r^\n^\s]*)|Link: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)')
+reReload        = re.compile('Event: Reload|Message: ([^\r^\n]*)')
+reChannelReload = re.compile('Event: ChannelReload|Channel: ([^\r^\n^\s]*)|ReloadReason: ([^\r^\n]*)')
 
 def merge(l):
 	out = [None for x in l[0]]
@@ -185,9 +187,6 @@ class MonAst:
 			self.tRead = thread.start_new_thread(self.read, ('read', 2))
 			self.tPing = thread.start_new_thread(self.ping, ('ping', 2))
 			
-		self.send(['Action: SIPPeers'])
-		self.send(['Action: IAXPeers'])
-	
 	def close(self):
 		log.info('Fechando socket')
 		try:
@@ -425,8 +424,29 @@ class MonAst:
 					enqueue.append('MeetmeLeave: %s:::%s:::%s:::%s' % (Meetme, Uniqueid, Usernum, Duration))
 					self.meetmeLock.release()
 				
-				## the next 3 blocks, will garante that no channels will be dummed in monast
+				if block.startswith('Event: Reload'):
+					for conf in self.configFiles:
+						self.send(['Action: GetConfig', 'Filename: %s' % conf])
+						self.configFilesPop.append(conf)
+						
+				if block.startswith('Event: ChannelReload'):
+					Channel, ReloadReason = merge(reChannelReload.findall(block))
+					fileName = None
+					if Channel == 'SIP':
+						fileName = 'sip.conf'
+					
+					if fileName:
+						self.send(['Action: GetConfig', 'Filename: %s' % fileName])
+						self.configFilesPop.append(fileName)
+						
+						self.clientQueuelock.acquire()
+						for session in self.clientQueues:
+							self.clientQueues[session]['q'].put('Reload: 10')
+						self.clientQueuelock.release()
+				
+				## the next 3 blocks (3 ifs), will garante that no channels will be dummed in monast
 				## pasrts of this blocks are copied from other blocks like Hangup, Link
+				## keep this 3 blocks in last
 				if block == 'Response: Success\r\nMessage: Channel status will follow':
 					log.info('Cleaning channelStatus')
 					self.channelStatus = []
@@ -513,8 +533,10 @@ class MonAst:
 			tech = None
 			if type == 'sip.conf':
 				tech = 'SIP'
+				self.send(['Action: SIPPeers'])
 			if type == 'iax.conf':
 				tech = 'IAX2'
+				self.send(['Action: IAXPeers'])
 			self.monitoredUsersLock.acquire()
 			for line in lines:
 				if line.startswith('Category-') and not line.endswith(': general') and not line.endswith(': authentication'):
