@@ -30,6 +30,10 @@
 
 require_once 'lib/include.php';
 
+header("Cache-Control: no-cache, must-revalidate");
+header("Pragma: no-cache");
+header("Expires: -1");
+
 session_start();
 setValor('started', time());
 setValor('Actions', array());
@@ -161,7 +165,7 @@ foreach ($channels as $channel)
 
 foreach ($calls as $call)
 {
-	list($Source, $Destination, $CallerID, $CallerIDName, $SrcUniqueID, $DestUniqueID, $Status) = explode(':::', $call);
+	list($Source, $Destination, $CallerID, $CallerIDName, $CallerID2, $SrcUniqueID, $DestUniqueID, $Status) = explode(':::', $call);
 	$tmp = array
 	(
 		'Action'       => 'Call',
@@ -169,6 +173,7 @@ foreach ($calls as $call)
 		'Destination'  => $Destination, 
 		'CallerID'     => $CallerID, 
 		'CallerIDName' => $CallerIDName, 
+	    'CallerID2'    => $CallerID2,
 		'SrcUniqueID'  => $SrcUniqueID, 
 		'DestUniqueID' => $DestUniqueID, 
 		'Status'       => $Status
