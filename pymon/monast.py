@@ -515,7 +515,7 @@ class MonAst:
 									self.callsLock.acquire()
 									self.calls['%s-%s' % (Uniqueid, UniqueidLink)] = {
 										'Source': Channel, 'Destination': Link, 'CallerID': CallerIDNum, 'CallerIDName': CallerIDName, 
-										'SrcUniqueID': Uniqueid, 'DestUniqueID': UniqueidLink, 'Status': 'Link', 'startTime': time.time() - Seconds
+										'SrcUniqueID': Uniqueid, 'DestUniqueID': UniqueidLink, 'Status': 'Link', 'startTime': time.time() - int(Seconds)
 									}
 									self.callsLock.release()
 									enqueue.append('Link: %s:::%s:::%s:::%s:::%s:::%s:::%d' % \
