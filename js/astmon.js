@@ -557,6 +557,9 @@ function showTransferDialog(idA, srcA, idB, srcB, dst)
 var _chrono = new Array();
 function chrono(id, secs)
 {
+	if (!MONAST_CALL_TIME)
+		return;
+
 	if (_chrono[id])
 	{
 		if (secs)
