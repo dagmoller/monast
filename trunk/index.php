@@ -109,6 +109,9 @@ while (!feof($fp))
 fclose($fp);
 
 $template->prepare();
+
+$template->assign('MONAST_CALL_TIME', MONAST_CALL_TIME ? 'true' : 'false');
+
 foreach ($peerStatus as $idx => $peer)
 {
     list($peer, $status, $peerCalls, $CallerID) = explode(':::', $peer);
