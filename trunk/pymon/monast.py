@@ -542,6 +542,12 @@ class MonAst:
 				tech = 'IAX2'
 				self.send(['Action: IAXPeers'])
 			self.monitoredUsersLock.acquire()
+			oldUsers = []
+			newUsers = []
+			# get actual users
+			for user in self.monitoredUsers:
+				if user.startswith(tech):
+					oldUsers.append(user)
 			for line in lines:
 				if line.startswith('Category-') and not line.endswith(': general') and not line.endswith(': authentication'):
 					user = '%s/%s' % (tech, line[line.find(': ') + 2:]) 
@@ -551,7 +557,9 @@ class MonAst:
 						self.monitoredUsers[user] = {'Channeltype': tech, 'Status': '--', 'Calls': 0, 'CallerID': '--', 'Context': 'default', 'Variables': []}
 					else:
 						user = None
-					
+
+				newUsers.append(user)
+				
 				if user and line.startswith('Line-'):
 					tmp, param = line.split(': ')
 					if param.startswith('callerid'):
@@ -560,7 +568,9 @@ class MonAst:
 					if param.startswith('context'):
 						self.monitoredUsers[user]['Context'] = param[param.find('=')+1:]
 					if param.startswith('setvar'):
-						self.monitoredUsers[user]['Variables'].append(param[param.find('=')+1:]) 
+						self.monitoredUsers[user]['Variables'].append(param[param.find('=')+1:])
+			for user in [i for i in oldUsers if i not in newUsers]:
+				del self.monitoredUsers[user]
 			self.monitoredUsersLock.release()
 		elif type == 'meetme.conf':
 			self.meetmeLock.acquire()
