@@ -562,7 +562,7 @@ function chrono(id, secs)
 
 	if (_chrono[id])
 	{
-		if (secs)
+		if (secs && secs > 0)
 		{
 			var d = new Date(secs * 1000);
 			_chrono[id].secs  = d.getUTCSeconds();
@@ -588,25 +588,22 @@ function chrono(id, secs)
 		if (secs)
 		{
 			var d = new Date(secs * 1000);
-			_chrono[id] = {hours: d.getUTCHours(), mins: d.getUTCMinutes(), secs: d.getUTCSeconds(), run: true};
+			_chrono[id] = {hours: d.getUTCHours(), mins: d.getUTCMinutes(), secs: d.getUTCSeconds(), run: null};
 		}
 		else
-			_chrono[id] = {hours: 0, mins: 0, secs: 0, run: true};
+			_chrono[id] = {hours: 0, mins: 0, secs: 0, run: null};
 	}
 	
-	if (_chrono[id].run)
-	{
-		var secs  = (_chrono[id].secs < 10 ? '0' + _chrono[id].secs : _chrono[id].secs);
-		var mins  = (_chrono[id].mins < 10 ? '0' + _chrono[id].mins : _chrono[id].mins);
-		var hours = (_chrono[id].hours < 10 ? '0' + _chrono[id].hours : _chrono[id].hours);
+	var secs  = (_chrono[id].secs < 10 ? '0' + _chrono[id].secs : _chrono[id].secs);
+	var mins  = (_chrono[id].mins < 10 ? '0' + _chrono[id].mins : _chrono[id].mins);
+	var hours = (_chrono[id].hours < 10 ? '0' + _chrono[id].hours : _chrono[id].hours);
 		
-		$('chrono-' + id).innerHTML = hours + ':' + mins + ':' + secs;
+	$('chrono-' + id).innerHTML = hours + ':' + mins + ':' + secs;
 		
-		setTimeout('chrono("' + id + '")', 1000);
-	}
+	_chrono[id].run = setTimeout('chrono("' + id + '")', 1000);
 }
 function stopChrono(id)
 {
 	if (_chrono[id])
-		_chrono[id].run = false;
+		clearTimeout(_chrono[id].run);
 }
