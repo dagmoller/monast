@@ -519,7 +519,7 @@ class MonAst:
 									}
 									self.callsLock.release()
 									enqueue.append('Link: %s:::%s:::%s:::%s:::%s:::%s:::%d' % \
-												(Channel, Link, Uniqueid, UniqueidLink, CallerIDNum, self.channels[UniqueidLink]['CallerIDNum'], Seconds))
+												(Channel, Link, Uniqueid, UniqueidLink, CallerIDNum, self.channels[UniqueidLink]['CallerIDNum'], int(Seconds)))
 					self.channelsLock.release()
 			
 			self.clientQueuelock.acquire()
