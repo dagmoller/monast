@@ -929,10 +929,13 @@ class MonAst:
 
 		while True:
 			time.sleep(0.5)
+			canBreak = False
 			self.clientSockLock.acquire()
 			if len(self.clientSocks) == 0:
-				break
+				canBreak = True
 			self.clientSockLock.release()
+			if canBreak:
+				break
 			
 		self.socketClient.shutdown(2) # same as socket.SHUT_RDWR 
 		self.socketClient.close()
