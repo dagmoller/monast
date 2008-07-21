@@ -204,6 +204,33 @@ function parseMsg($msg)
     	return $json->encode($saida);
 	}
 	
+	if (strpos($msg, 'ParkedCall: ') !== false)
+	{
+	    list($Exten, $Channel, $From, $Timeout, $CallerID, $CallerIDName) = explode(':::', substr($msg, 12));
+    	$saida = array
+    	(
+    		'Action'       => 'ParkedCall',
+    		'Exten'        => $Exten, 
+    		'Channel'      => $Channel, 
+    		'From'         => $From, 
+    		'Timeout'      => $Timeout, 
+    	    'CallerID'     => $CallerID,
+    		'CallerIDName' => $CallerIDName, 
+    	);
+    	return $json->encode($saida);
+	}
+	
+    if (strpos($msg, 'UnparkedCall: ') !== false)
+	{
+	    list($Exten) = explode(':::', substr($msg, 14));
+    	$saida = array
+    	(
+    		'Action'       => 'UnparkedCall',
+    		'Exten'        => $Exten, 
+    	);
+    	return $json->encode($saida);
+	}
+	
 	return $json->encode(array('Action' => 'None'));
 }
 

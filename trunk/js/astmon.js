@@ -296,6 +296,51 @@ function Process(o)
 			
 		return;
 	}
+	
+	if (o['Action'] == 'ParkedCall')
+	{
+		var id  = 'parked-' + o['Exten'];
+		var div = $(id);
+		if (!div)
+		{
+			div           = document.createElement('div');
+			div.id        = id;
+			div.className = 'parkedDiv';
+			
+			var user = o['From'];
+			if (o['From'].lastIndexOf('-') != -1)
+				user = o['From'].substring(0, o['From'].lastIndexOf('-'));
+			
+			var template = "<table width='600'><tr>";
+			template    += "<td class='status' align='center' width='80'>{Exten}</td>";
+			template    += "<td class='status' align='center' width='260'>{From}<br>{CallerIDFrom}</td>";
+			template    += "<td class='status' align='center' width='260'>{Channel}<br>{CallerIDName} <{CallerID}></td>";
+			template    += "</tr></table>";
+			template     = template.replace(/\{Exten\}/g, o['Exten']);
+			template     = template.replace(/\{From\}/g, o['From']);
+			template     = template.replace(/\{CallerIDFrom\}/g, callerIDs[user]);
+			template     = template.replace(/\{CallerIDName\}/g, o['CallerIDName']);
+			template     = template.replace(/\{CallerID\}/g, o['CallerID']);
+			template     = template.replace(/\{Channel\}/g, o['Channel']);
+			
+			div.innerHTML = template;
+			
+			$('parkedsDiv').appendChild(div);
+			
+			ddDivs[id]               = new YAHOO.util.DD(id);
+			ddDivs[id].onMouseDown   = setStartPosition;
+			ddDivs[id].onDragDrop    = parkedCallDrop;
+			ddDivs[id].onInvalidDrop = invalidDrop;
+		}
+	}
+	
+	if (o['Action'] == 'UnparkedCall')
+	{
+		var id  = 'parked-' + o['Exten'];
+		var div = $(id);
+		if (div)
+			$('parkedsDiv').removeChild(div);
+	}
 }
 
 function initIFrame()
@@ -404,6 +449,19 @@ function meetmeKick(meetme, usernum)
 	}
 }
 
+// Parked Hangup()
+function parkedHangup(exten)
+{
+	var c = confirm('Hangup parked call on exten ' + exten + '?');
+	if (c)
+	{
+		var id = ajaxCall.init(false);
+		ajaxCall.setURL(id, 'action.php');
+		ajaxCall.addParam(id, 'action', 'ParkedHangup:::' + exten);
+		ajaxCall.doCall(id);
+	}
+}
+
 // Yahoo
 function setStartPosition(e)
 {
@@ -484,6 +542,23 @@ function meetmeDrop(e, id)
 		meetmeKick(info[0], info[1]);
 	}
 		
+	backToStartPosition(this.id);
+}
+
+function parkedCallDrop(e, id)
+{
+	var parked = this.id.replace('parked-', '');
+	if (id == 'trash')
+		parkedHangup(parked);
+	
+	if (id.indexOf('peerDiv-') != -1)
+	{
+		var source = id.replace('peerDiv-', '');
+		var c = confirm('Transfer Parked Call on exten ' + parked + ' to ' + callerIDs[source] + '?');
+		if (c)
+			originateCall(source, parked, 'default');
+	}
+	
 	backToStartPosition(this.id);
 }
 
