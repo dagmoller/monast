@@ -76,7 +76,8 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
     <li><a href="#tab1"><em>Peers/Users</em></a></li>
     <li><a href="#tab2"><em>Meetme Rooms</em></a></li>
     <li><a href="#tab3"><em>Channels/Calls</em></a></li>
-    <li><a href="#tab4"><em>Debug</em></a></li>
+    <li><a href="#tab4"><em>Parked Calls</em></a></li>
+    <li><a href="#tab5"><em>Debug</em></a></li>
   </ul>
   
   <div class="yui-content"> 
@@ -86,6 +87,7 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
         <input id="checkBoxTab1" type="checkbox" name="checkBoxTab1" value="peersDiv">
         <input id="checkBoxTab2" type="checkbox" name="checkBoxTab2" value="meetmesDiv">
         <input id="checkBoxTab3" type="checkbox" name="checkBoxTab3" value="chanCallDiv">
+        <input id="checkBoxTab4" type="checkbox" name="checkBoxTab4" value="parkedCallsDiv">
       </fieldset>
       <script type="text/javascript">
         var ocheckBoxTab1 = new YAHOO.widget.Button("checkBoxTab1", { label: "Peers/Users" });
@@ -94,6 +96,8 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
             ocheckBoxTab2.addListener('checkedChange', showHidePannels);
         var ocheckBoxTab3 = new YAHOO.widget.Button("checkBoxTab3", { label:"Channels/Calls" });
             ocheckBoxTab3.addListener('checkedChange', showHidePannels);
+        var ocheckBoxTab4 = new YAHOO.widget.Button("checkBoxTab4", { label:"Parked Calls" });
+            ocheckBoxTab4.addListener('checkedChange', showHidePannels);
       </script>
     </div>
   
@@ -181,6 +185,26 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
       <div style="clear: both;"></div>
     </fieldset>
     </div>
+    
+    <div id="parkedCallsDiv">
+    <fieldset>
+      <legend>Parked Calls</legend>
+      <div id="parkedsDiv">
+        <div class="parkedDiv">
+          <table width="600">
+            <tr>
+              <td class="tableTitle" align="center" colspan="3">Parked Calls</td>
+            </tr>
+            <tr>
+              <td class="statusHeader" align="center" width="80">Exten</td>
+              <td class="statusHeader" align="center" width="260">Parked From</td>
+              <td class="statusHeader" align="center" width="260">Parked Channel</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </fieldset>
+    </div>
 
     <div id="debugMsg">
     </div>
@@ -234,15 +258,15 @@ YAHOO.util.DDM.mode = YAHOO.util.DDM.POINT;
 var _state = json.decode(YAHOO.util.Cookie.get("_state"));
 if (!_state)
 {
-	_state = {activeIndex: 1, buttons: {'checkBoxTab1': false, 'checkBoxTab2': false, 'checkBoxTab3': false}}
+	_state = {activeIndex: 1, buttons: {'checkBoxTab1': false, 'checkBoxTab2': false, 'checkBoxTab3': false, 'checkBoxTab4': false}}
 	YAHOO.util.Cookie.set('_state', json.encode(_state));
 }
 
-var _buttons = new Array(ocheckBoxTab1, ocheckBoxTab2, ocheckBoxTab3);
+var _buttons = new Array(ocheckBoxTab1, ocheckBoxTab2, ocheckBoxTab3, ocheckBoxTab4);
 
 var _tabPannel = new YAHOO.widget.TabView('TabPannel');
 _tabPannel.addListener('beforeActiveTabChange', function(e){
-	var pannels = new Array('peersDiv', 'meetmesDiv', 'chanCallDiv', 'debugMsg');
+	var pannels = new Array('peersDiv', 'meetmesDiv', 'chanCallDiv', 'parkedCallsDiv', 'debugMsg');
 	for (i = 0; i < pannels.length; i++)
 		$(pannels[i]).style.display = 'none';
 

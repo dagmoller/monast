@@ -43,21 +43,26 @@ from ConfigParser import SafeConfigParser
 
 MONAST_CALLERID = "MonAst WEB"
 
-rePeerEntry     = re.compile('Event: PeerEntry|Channeltype: ([^\r^\n^\s]*)|ObjectName: ([^\r^\n^\s]*)|IPaddress: ([^\r^\n^\s]*)|IPport: ([^\r^\n^\s]*)|Status: ([^\r^\n]*)')
-rePeerStatus    = re.compile('Event: PeerStatus|Peer: ([^\r^\n^\s]*)|PeerStatus: ([^\r^\n^\s]*)')
-reNewChannel    = re.compile('Event: Newchannel|Channel: ([^\r^\n^\s]*)|State: ([^\r^\n^\s]*)|CallerIDNum: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|Uniqueid: ([^\r^\n^\s]*)')
-reHangup        = re.compile('Event: Hangup|Channel: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)|Cause: ([^\r^\n^\s]*)|Cause-txt: ([^\r^\n]*)')
-reNewState      = re.compile('Event: Newstate|Channel: ([^\r^\n^\s]*)|State: ([^\r^\n^\s]*)|CallerID: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n^]*)|Uniqueid: ([^\r^\n^\s]*)')
-reDial          = re.compile('Event: Dial|Source: ([^\r^\n^\s]*)|Destination: ([^\r^\n^\s]*)|CallerID: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|SrcUniqueID: ([^\r^\n^\s]*)|DestUniqueID: ([^\r^\n^\s]*)')
-reLink          = re.compile('Event: Link|Channel1: ([^\r^\n^\s]*)|Channel2: ([^\r^\n^\s]*)|Uniqueid1: ([^\r^\n^\s]*)|Uniqueid2: ([^\r^\n^\s]*)|CallerID1: ([^\r^\n^\s]*)|CallerID2: ([^\r^\n^\s]*)')
-reUnlink        = re.compile('Event: Unlink|Channel1: ([^\r^\n^\s]*)|Channel2: ([^\r^\n^\s]*)|Uniqueid1: ([^\r^\n^\s]*)|Uniqueid2: ([^\r^\n^\s]*)|CallerID1: ([^\r^\n^\s]*)|CallerID2: ([^\r^\n^\s]*)')
-reNewcallerid   = re.compile('Event: Newcallerid|Channel: ([^\r^\n^\s]*)|CallerID: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|Uniqueid: ([^\r^\n^\s]*)|CID-CallingPres: ([^\r^\n]*)')
-reRename        = re.compile('Event: Rename|Oldname: ([^\r^\n^\s]*)|Newname: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)')
-reMeetmeJoin    = re.compile('Event: MeetmeJoin|Uniqueid: ([^\r^\n^\s]*)|Meetme: ([^\r^\n^\s]*)|Usernum: ([^\r^\n^\s]*)|CallerIDnum: ([^\r^\n^\s]*)|CallerIDname: ([^\r^\n]*)')
-reMeetmeLeave   = re.compile('Event: MeetmeLeave|Uniqueid: ([^\r^\n^\s]*)|Meetme: ([^\r^\n^\s]*)|Usernum: ([^\r^\n^\s]*)|Duration: ([^\r^\n^\s]*)')
-reStatus        = re.compile('Event: Status|Channel: ([^\r^\n^\s]*)|CallerIDNum: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|State: ([^\r^\n^\s]*)|Seconds: ([^\r^\n^\s]*)|Link: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)')
-reReload        = re.compile('Event: Reload|Message: ([^\r^\n]*)')
-reChannelReload = re.compile('Event: ChannelReload|Channel: ([^\r^\n^\s]*)|ReloadReason: ([^\r^\n]*)')
+rePeerEntry         = re.compile('Event: PeerEntry|Channeltype: ([^\r^\n^\s]*)|ObjectName: ([^\r^\n^\s]*)|IPaddress: ([^\r^\n^\s]*)|IPport: ([^\r^\n^\s]*)|Status: ([^\r^\n]*)')
+rePeerStatus        = re.compile('Event: PeerStatus|Peer: ([^\r^\n^\s]*)|PeerStatus: ([^\r^\n^\s]*)')
+reNewChannel        = re.compile('Event: Newchannel|Channel: ([^\r^\n^\s]*)|State: ([^\r^\n^\s]*)|CallerIDNum: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|Uniqueid: ([^\r^\n^\s]*)')
+reHangup            = re.compile('Event: Hangup|Channel: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)|Cause: ([^\r^\n^\s]*)|Cause-txt: ([^\r^\n]*)')
+reNewState          = re.compile('Event: Newstate|Channel: ([^\r^\n^\s]*)|State: ([^\r^\n^\s]*)|CallerID: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n^]*)|Uniqueid: ([^\r^\n^\s]*)')
+reDial              = re.compile('Event: Dial|Source: ([^\r^\n^\s]*)|Destination: ([^\r^\n^\s]*)|CallerID: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|SrcUniqueID: ([^\r^\n^\s]*)|DestUniqueID: ([^\r^\n^\s]*)')
+reLink              = re.compile('Event: Link|Channel1: ([^\r^\n^\s]*)|Channel2: ([^\r^\n^\s]*)|Uniqueid1: ([^\r^\n^\s]*)|Uniqueid2: ([^\r^\n^\s]*)|CallerID1: ([^\r^\n^\s]*)|CallerID2: ([^\r^\n^\s]*)')
+reUnlink            = re.compile('Event: Unlink|Channel1: ([^\r^\n^\s]*)|Channel2: ([^\r^\n^\s]*)|Uniqueid1: ([^\r^\n^\s]*)|Uniqueid2: ([^\r^\n^\s]*)|CallerID1: ([^\r^\n^\s]*)|CallerID2: ([^\r^\n^\s]*)')
+reNewcallerid       = re.compile('Event: Newcallerid|Channel: ([^\r^\n^\s]*)|CallerID: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|Uniqueid: ([^\r^\n^\s]*)|CID-CallingPres: ([^\r^\n]*)')
+reRename            = re.compile('Event: Rename|Oldname: ([^\r^\n^\s]*)|Newname: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)')
+reMeetmeJoin        = re.compile('Event: MeetmeJoin|Uniqueid: ([^\r^\n^\s]*)|Meetme: ([^\r^\n^\s]*)|Usernum: ([^\r^\n^\s]*)|CallerIDnum: ([^\r^\n^\s]*)|CallerIDname: ([^\r^\n]*)')
+reMeetmeLeave       = re.compile('Event: MeetmeLeave|Uniqueid: ([^\r^\n^\s]*)|Meetme: ([^\r^\n^\s]*)|Usernum: ([^\r^\n^\s]*)|Duration: ([^\r^\n^\s]*)')
+reStatus            = re.compile('Event: Status|Channel: ([^\r^\n^\s]*)|CallerIDNum: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)|State: ([^\r^\n^\s]*)|Seconds: ([^\r^\n^\s]*)|Link: ([^\r^\n^\s]*)|Uniqueid: ([^\r^\n^\s]*)')
+reReload            = re.compile('Event: Reload|Message: ([^\r^\n]*)')
+reChannelReload     = re.compile('Event: ChannelReload|Channel: ([^\r^\n^\s]*)|ReloadReason: ([^\r^\n]*)')
+reParkedCall        = re.compile('Event: ParkedCall|Exten: ([^\r^\n^\s]*)|Channel: ([^\r^\n^\s]*)|From: ([^\r^\n^\s]*)|Timeout: ([^\r^\n^\s]*)|CallerID: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)')
+reUnparkedCall      = re.compile('Event: UnParkedCall|Exten: ([^\r^\n^\s]*)|Channel: ([^\r^\n^\s]*)|From: ([^\r^\n^\s]*)|CallerID: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)')
+reParkedCallTimeOut = re.compile('Event: ParkedCallTimeOut|Exten: ([^\r^\n^\s]*)|Channel: ([^\r^\n^\s]*)|CallerID: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)')
+reParkedCallGiveUp  = re.compile('Event: ParkedCallGiveUp|Exten: ([^\r^\n^\s]*)|Channel: ([^\r^\n^\s]*)|CallerID: ([^\r^\n^\s]*)|CallerIDName: ([^\r^\n]*)')
+
 
 def merge(l):
 	out = [None for x in l[0]]
@@ -118,6 +123,9 @@ class MonAst:
 	
 	meetme     = {}
 	meetmeLock = threading.RLock()
+	
+	parked     = {}
+	parkedLock = threading.RLock()
 	
 	configFiles    = ['sip.conf', 'iax.conf', 'meetme.conf']
 	configFilesPop = []
@@ -209,7 +217,8 @@ class MonAst:
 			enqueue = []
 			blocks  = msg.split('\r\n\r\n')
 			for block in blocks:
-				if block.strip() == 'Response: Pong':
+				block = block.strip()
+				if block == 'Response: Pong':
 					log.info('Recebido PONG')
 					self.pingResp = True
 					continue
@@ -428,11 +437,13 @@ class MonAst:
 					self.meetmeLock.release()
 				
 				if block.startswith('Event: Reload'):
+					log.info('Event Reload detected')
 					for conf in self.configFiles:
 						self.send(['Action: GetConfig', 'Filename: %s' % conf])
 						self.configFilesPop.append(conf)
 						
 				if block.startswith('Event: ChannelReload'):
+					log.info('Event ChannelReload detected')
 					Channel, ReloadReason = merge(reChannelReload.findall(block))
 					fileName = None
 					if Channel == 'SIP':
@@ -446,6 +457,51 @@ class MonAst:
 						for session in self.clientQueues:
 							self.clientQueues[session]['q'].put('Reload: 10')
 						self.clientQueuelock.release()
+				
+				if block.startswith('Event: ParkedCall\r\n'):
+					log.info('Event ParkedCall detected')
+					Exten, Channel, From, Timeout, CallerID, CallerIDName = merge(reParkedCall.findall(block))
+					
+					self.parkedLock.acquire()
+					self.parked[Exten] = {'Channel': Channel, 'From': From, 'Timeout': Timeout, 'CallerID': CallerID, 'CallerIDName': CallerIDName}
+					enqueue.append('ParkedCall: %s:::%s:::%s:::%s:::%s:::%s' % (Exten, Channel, From, Timeout, CallerID, CallerIDName))
+					self.parkedLock.release()
+					
+				if block.startswith('Event: UnParkedCall\r\n'):
+					log.info('Event UnParkedCall detected')
+					Exten, Channel, From, CallerID, CallerIDName = merge(reUnparkedCall.findall(block))
+					
+					self.parkedLock.acquire()
+					try:
+						del self.parked[Exten]
+						enqueue.append('UnparkedCall: %s' % (Exten))
+					except:
+						log.error('UnParkedCall => Parked Exten not found: %s' % Exten)
+					self.parkedLock.release()
+				
+				if block.startswith('Event: ParkedCallTimeOut\r\n'):
+					log.info('Event ParkedCallTimeOut detected')
+					Exten, Channel, CallerID, CallerIDName = merge(reParkedCallTimeOut.findall(block))
+					
+					self.parkedLock.acquire()
+					try:
+						del self.parked[Exten]
+						enqueue.append('UnparkedCall: %s' % (Exten))
+					except:
+						log.error('ParkedCallTimeOut => Parked Exten not found: %s' % Exten)
+					self.parkedLock.release()
+				
+				if block.startswith('Event: ParkedCallGiveUp\r\n'):
+					log.info('Event ParkedCallGiveUp detected')
+					Exten, Channel, CallerID, CallerIDName = merge(reParkedCallGiveUp.findall(block))
+					
+					self.parkedLock.acquire()
+					try:
+						del self.parked[Exten]
+						enqueue.append('UnparkedCall: %s' % (Exten))
+					except:
+						log.error('ParkedCallGiveUp => Parked Exten not found: %s' % Exten)
+					self.parkedLock.release()
 				
 				## the next 3 blocks (3 ifs), will garante that no channels will be dummed in monast
 				## pasrts of this blocks are copied from other blocks like Hangup, Link
@@ -572,6 +628,7 @@ class MonAst:
 			for user in [i for i in oldUsers if i not in newUsers]:
 				del self.monitoredUsers[user]
 			self.monitoredUsersLock.release()
+		
 		elif type == 'meetme.conf':
 			self.meetmeLock.acquire()
 			for line in lines:
@@ -625,6 +682,7 @@ class MonAst:
 							self.channelsLock.acquire()
 							self.callsLock.acquire()
 							self.meetmeLock.acquire()
+							self.parkedLock.acquire()
 							
 							self.clientQueues[session]['t'] = time.time()
 							sock.send('BEGIN STATUS\r\n')
@@ -654,8 +712,15 @@ class MonAst:
 									ch = self.channels[mm['Uniqueid']]
 									sock.send('MeetmeJoin: %s:::%s:::%s:::%s:::%s:::%s\r\n' % (meetme, mm['Uniqueid'], Usernum, ch['Channel'], mm['CallerIDNum'], mm['CallerIDName']))
 							
+							parkedCalls = self.parked.keys()
+							parkedCalls.sort()
+							for Exten in parkedCalls:
+								pc = self.parked[Exten]
+								sock.send('ParkedCall: %s:::%s:::%s:::%s:::%s:::%s' % (Exten, pc['Channel'], pc['From'], pc['Timeout'], pc['CallerID'], pc['CallerIDName']))
+							
 							sock.send('END STATUS\r\n')
 							
+							self.parkedLock.release()
 							self.meetmeLock.release()
 							self.callsLock.release()
 							self.channelsLock.release()
@@ -751,6 +816,14 @@ class MonAst:
 							command.append('Action: Command')
 							command.append('Command: meetme kick %s %s' % (Meetme, Usernum))
 							self.send(command)
+						elif msg.startswith('ParkedHangup'):
+							action, Exten = msg.split(':::')
+							self.parkedLock.acquire()
+							command = []
+							command.append('Action: Hangup')
+							command.append('Channel: %s' % self.parked[Exten]['Channel'])
+							self.send(command)
+							self.parkedLock.release()
 						else:
 							sock.send('NO SESSION\r\n')	
 						self.clientQueuelock.release()

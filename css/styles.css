@@ -52,21 +52,6 @@
 	background-color: #ffffff;
 	z-index: 2;
 }
-.status {
-	font-family: Verdana;
-	font-size: 0.7em;
-	text-align: center;
-	border: 1px solid #aaaaaa;
-}
-.status a {
-	color: black;
-	text-decoration: none;
-}
-.campo {
-	border: 1px solid #dddddd;
-	font-family: Verdana;
-	font-size: 0.9em;
-}
 #chanCallDiv {
 	padding: 5px; 
 }
@@ -95,17 +80,17 @@
 	background-color: #ffffff;
 	z-index: 2;
 }
-.tableTitle {
-	font-family: Verdana;
-	font-size: 0.7em;
-	font-weight: bold;
-	background-color: #bbbbbb;
+#parkedCallsDiv {
+	padding: 5px; 
 }
-.statusHeader {
-	font-family: Verdana;
-	font-size: 0.7em;
-	font-weight: bold;
-	background-color: #dddddd;
+#parkedsDiv {
+	margin: 5px;
+}
+.parkedDiv {
+	width: 600px;
+	border: 1px solid #aaaaaa;
+	margin-bottom: 2px;
+	background-color: #ffffff;
 }
 #trash {
 	z-index: 1;
@@ -122,4 +107,31 @@
 	color: #ffffff;
 	background-color: #000000;
 	margin: 0 auto;
+}
+.tableTitle {
+	font-family: Verdana;
+	font-size: 0.7em;
+	font-weight: bold;
+	background-color: #bbbbbb;
+}
+.statusHeader {
+	font-family: Verdana;
+	font-size: 0.7em;
+	font-weight: bold;
+	background-color: #dddddd;
+}
+.status {
+	font-family: Verdana;
+	font-size: 0.7em;
+	text-align: center;
+	border: 1px solid #aaaaaa;
+}
+.status a {
+	color: black;
+	text-decoration: none;
+}
+.campo {
+	border: 1px solid #dddddd;
+	font-family: Verdana;
+	font-size: 0.9em;
 }

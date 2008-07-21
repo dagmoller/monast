@@ -37,16 +37,17 @@ header("Expires: -1");
 session_start();
 setValor('started', time());
 setValor('Actions', array());
+$sessionId = session_id();
 session_write_close();
 
 $json        = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
 $template    = new TemplatePower('template/index.html');
-$sessionId   = session_id();
 $peerStatus  = array();
 $channels    = array();
 $calls       = array();
 $meetmeRooms = array();
 $meetmeJoins = array();
+$parkedCalls = array();
 $isStatus    = false;
 
 $errno  = null;
@@ -101,6 +102,9 @@ while (!feof($fp))
 				    
 				if (strpos($message, 'MeetmeJoin: ') === 0)
 				    $meetmeJoins[] = substr($message, strlen('MeetmeJoin: '));
+				    
+				if (strpos($message, 'ParkedCall: ') === 0)
+				    $parkedCalls[] = substr($message, strlen('ParkedCall: '));
 			}
 		}
 	}
@@ -181,6 +185,24 @@ foreach ($calls as $call)
 		'DestUniqueID' => $DestUniqueID, 
 		'Status'       => $Status,
 	    'Seconds'      => $Seconds
+	);
+	
+	$template->newBlock('process');
+	$template->assign('json', $json->encode($tmp));
+}
+
+foreach ($parkedCalls as $park)
+{
+	list($Exten, $Channel, $From, $Timeout, $CallerID, $CallerIDName) = explode(':::', $park);
+	$tmp = array
+	(
+		'Action'       => 'ParkedCall',
+		'Exten'        => $Exten, 
+		'Channel'      => $Channel, 
+		'From'         => $From, 
+		'Timeout'      => $Timeout, 
+	    'CallerID'     => $CallerID,
+		'CallerIDName' => $CallerIDName, 
 	);
 	
 	$template->newBlock('process');
