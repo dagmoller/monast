@@ -440,6 +440,15 @@ function transferCall(src, dst, type)
 	ajaxCall.doCall(id);
 }
 
+// Park
+function parkCall(park, announce)
+{
+	var id = ajaxCall.init(false);
+	ajaxCall.setURL(id, 'action.php');
+	ajaxCall.addParam(id, 'action', 'ParkCall:::' + park + ':::' + announce);
+	ajaxCall.doCall(id);
+}
+
 // Meetme kick
 function meetmeKick(meetme, usernum)
 {
@@ -626,6 +635,10 @@ var handleTransfer = function(){
 		this.destChannel = $('transferSourceValueA').value
 		if (src == $('transferSourceValueA').value)
 			this.destChannel = $('transferSourceValueB').value
+			
+		parkCall(src, this.destChannel);
+		this.hide();
+		return;
 	}
 	
 	transferCall(src, this.destChannel, type);
