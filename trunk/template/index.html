@@ -84,10 +84,23 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
     <div id="mixed">
       <fieldset id="pannelsToShow">
         <legend>Pannels to Show</legend> 
+        <div style="float: left;">
         <input id="checkBoxTab1" type="checkbox" name="checkBoxTab1" value="peersDiv">
         <input id="checkBoxTab2" type="checkbox" name="checkBoxTab2" value="meetmesDiv">
         <input id="checkBoxTab3" type="checkbox" name="checkBoxTab3" value="chanCallDiv">
         <input id="checkBoxTab4" type="checkbox" name="checkBoxTab4" value="parkedCallsDiv">
+        </div>
+        
+        <div id="trash">
+          <img src="image/trashcan_full.png" width="32" height="32" title="Hangup Channels/Calls or Kick meetme users"><br>Trash
+        </div>
+        <!-- <div style="float:right; text-align: center; margin-right: 25px;" id="record">
+          <img src="image/player_record.png" width="32" height="32" title="Record Channels/Calls"><br>Record
+        </div> -->
+        <div style="float:right; text-align: center; margin-right: 25px;" id="park">
+          <img src="image/park.png" width="32" height="32" title="Park Calls"><br>Park
+        </div>
+        
       </fieldset>
       <script type="text/javascript">
         var ocheckBoxTab1 = new YAHOO.widget.Button("checkBoxTab1", { label: "Peers/Users" });
@@ -179,9 +192,9 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
           </table>
         </div>
       </div>
-      <div id="trash">
+      <!-- <div id="trash">
         <img src="image/trash-2.png" width="96" height="96" title="Drag channels or calls to Hangup">
-      </div>
+      </div> -->
       <div style="clear: both;"></div>
     </fieldset>
     </div>
@@ -297,7 +310,7 @@ if (_state.activeIndex == 0)
 }
 
 var _dTrash = new YAHOO.util.DDTarget("trash");
-var _dPark  = new YAHOO.util.DDTarget("parkedCallsDiv");
+var _dPark  = new YAHOO.util.DDTarget("park");
 
 <!-- START BLOCK : process -->
 Process('{json}');
