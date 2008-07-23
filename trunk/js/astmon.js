@@ -421,6 +421,10 @@ function transferCall(src, dst, type)
 		comp = 'meetme ';
 		dest = dst;
 	}
+	else if (type == 'park')
+	{
+		dest = 'Park';
+	}
 	else
 	{
 		dest = callerIDs[dst];
@@ -522,15 +526,19 @@ function channelCallDrop(e, id)
 	if (id.indexOf('meetme-') != -1)
 	{
 		if (this.id.indexOf('call-') == -1)
-		{
 			transferCall(this.id, id.replace('meetme-', ''), 'meetme');
-		}
 		else
-		{
 			transferCall(this.id.replace('call-', ''), id.replace('meetme-', ''), 'meetme');
-		}
 	}
-		
+	
+	if (this.id.indexOf('call-') != -1 && id == 'parkedCallsDiv')
+	{
+		var ids  = this.id.substring(5).split('-');
+		var srcA = $('channel-' + ids[0]).innerHTML;
+		var srcB = $('channel-' + ids[1]).innerHTML;
+		showTransferDialog(ids[0], srcA, ids[1], srcB, 'ParkedCalls');
+	}
+	
 	backToStartPosition(this.id);
 }
 
@@ -611,13 +619,28 @@ var handleTransfer = function(){
 	else
 		src = $('transferSourceValueB').value;
 	
-	transferCall(src, this.destChannel, 'peer');
+	var type = 'peer';
+	if (this.destChannel == 'ParkedCalls')
+	{
+		type = 'park'
+		this.destChannel = $('transferSourceValueA').value
+		if (src == $('transferSourceValueA').value)
+			this.destChannel = $('transferSourceValueB').value
+	}
+	
+	transferCall(src, this.destChannel, type);
 	this.hide();
 }
 
 function showTransferDialog(idA, srcA, idB, srcB, dst)
 {
-	$('transferDestination').innerHTML = callerIDs[dst];
+	if (dst == 'ParkedCalls')
+	{
+		$('transferDestination').innerHTML = 'Park';
+	}
+	else
+		$('transferDestination').innerHTML = 'transfer to "' + callerIDs[dst] + '"';
+		
 	$('transferSourceValueA').value    = idA;
 	$('transferSourceValueB').value    = idB;
 	$('transferSourceValueA').checked  = true;

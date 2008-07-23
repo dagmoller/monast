@@ -775,7 +775,8 @@ class MonAst:
 							self.channelsLock.release()
 						elif msg.startswith('TransferCall'):
 							action, src, dst, type = msg.split(':::')
-							Context    = self.tranferContext
+							command      = None
+							Context      = self.tranferContext
 							SrcChannel   = None
 							ExtraChannel = None
 							if type == 'peer':
@@ -801,14 +802,26 @@ class MonAst:
 								self.channelsLock.release()
 								Context = self.meetmeContext
 								exten   = '%s%s' % (self.meetmePrefix, dst)
-							command = []
-							command.append('Action: Redirect')
-							command.append('Channel: %s' % SrcChannel)
-							if ExtraChannel:
-								command.append('ExtraChannel: %s' % ExtraChannel)
-							command.append('Exten: %s' % exten)
-							command.append('Context: %s' % Context)
-							command.append('Priority: 1')
+							elif type == 'park':
+								self.channelsLock.acquire()
+								ParkChannel   = self.channels[src]['Channel']
+								AnouceChannel = self.channels[dst]['Channel']
+								self.channelsLock.release()
+								command = []
+								command.append('Action: Park')
+								command.append('Channel: %s' % ParkChannel)
+								command.append('Channel2: %s' % AnouceChannel)
+								#command.append('Timeout: 45')
+							
+							if not command:
+								command = []
+								command.append('Action: Redirect')
+								command.append('Channel: %s' % SrcChannel)
+								if ExtraChannel:
+									command.append('ExtraChannel: %s' % ExtraChannel)
+								command.append('Exten: %s' % exten)
+								command.append('Context: %s' % Context)
+								command.append('Priority: 1')
 							self.send(command)
 						elif msg.startswith('MeetmeKick'):
 							action, Meetme, Usernum = msg.split(':::')
