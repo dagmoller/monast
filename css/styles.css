@@ -94,8 +94,21 @@
 }
 #trash {
 	z-index: 1;
-	margin-left: 25px;
-	float: left;
+	float: right; 
+	text-align: center; 
+	margin-right: 25px;
+}
+#record {
+	z-index: 1;
+	float: right; 
+	text-align: center; 
+	margin-right: 25px;
+}
+#park {
+	z-index: 1;
+	float: right; 
+	text-align: center; 
+	margin-right: 25px;
 }
 #debugMsg {
 	border: black 1px solid; 

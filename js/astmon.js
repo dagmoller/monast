@@ -540,7 +540,7 @@ function channelCallDrop(e, id)
 			transferCall(this.id.replace('call-', ''), id.replace('meetme-', ''), 'meetme');
 	}
 	
-	if (this.id.indexOf('call-') != -1 && id == 'parkedCallsDiv')
+	if (this.id.indexOf('call-') != -1 && id == 'park')
 	{
 		var ids  = this.id.substring(5).split('-');
 		var srcA = $('channel-' + ids[0]).innerHTML;
