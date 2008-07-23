@@ -232,7 +232,7 @@ var originateDialog = new YAHOO.widget.Dialog("originateDiv",
 </script>
 
 <div id="transferDiv">
-  <div class="hd">Please select channel to transfer to "<span id="transferDestination"></span>"</div>
+  <div class="hd">Please select channel to <span id="transferDestination"></span></div>
   <div class="bd">
     <input type="radio" name="transferSource" id="transferSourceValueA" value=""><span id="transferSourceTextA"></span><br>
     <input type="radio" name="transferSource" id="transferSourceValueB" value=""><span id="transferSourceTextB"></span>
@@ -297,6 +297,7 @@ if (_state.activeIndex == 0)
 }
 
 var _dTrash = new YAHOO.util.DDTarget("trash");
+var _dPark  = new YAHOO.util.DDTarget("parkedCallsDiv");
 
 <!-- START BLOCK : process -->
 Process('{json}');
