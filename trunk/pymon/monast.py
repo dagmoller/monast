@@ -705,7 +705,7 @@ class MonAst:
 									sock.send('Call: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s:::%d\r\n' % (c['Source'], c['Destination'], c['CallerID'], c['CallerIDName'], \
 																	self.channels[dst]['CallerIDNum'], c['SrcUniqueID'], c['DestUniqueID'], c['Status'], time.time() - c['startTime']))
 								except:
-									log.error(' -- GET STATUS (formatted Traceback on "for call in self.calls") --\n' + traceback.format_exc())
+									log.error('-- GET STATUS (formatted Traceback on "for call in self.calls") --\n' + traceback.format_exc())
 							meetmeRooms = self.meetme.keys()
 							meetmeRooms.sort()
 							for meetme in meetmeRooms:
