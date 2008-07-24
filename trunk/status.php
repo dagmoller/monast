@@ -233,6 +233,17 @@ function parseMsg($msg)
     	return $json->encode($saida);
 	}
 	
+	if (strpos($msg, 'CliResponse: ') !== false)
+	{
+	    list($Response) = explode(':::', substr($msg, 13));
+    	$saida = array
+    	(
+    		'Action'   => 'CliResponse',
+    		'Response' => rawurlencode($Response),  
+    	);
+    	return $json->encode($saida);
+	}
+	
 	return $json->encode(array('Action' => 'None'));
 }
 

@@ -165,3 +165,12 @@ BODY {
 	font-family: Verdana;
 	font-size: 0.9em;
 }
+
+#cliDiv textarea {
+	color: #ffffff;
+	background-color: #000000;
+}
+#cliDiv input {
+	color: #ffffff;
+	background-color: #000000;
+}

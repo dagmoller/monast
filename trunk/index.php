@@ -116,6 +116,18 @@ $template->prepare();
 
 $template->assign('MONAST_CALL_TIME', MONAST_CALL_TIME ? 'true' : 'false');
 
+if (MONAST_CLI_TAB)
+{
+	$template->newBlock('cli_tab');
+	$template->newBlock('cli_tab_div');
+}
+
+if (MONAST_DEBUG_TAB)
+{
+	$template->newBlock('debug_tab');
+	$template->newBlock('debug_tab_div');
+}
+
 foreach ($peerStatus as $idx => $peer)
 {
     list($peer, $status, $peerCalls, $CallerID) = explode(':::', $peer);

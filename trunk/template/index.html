@@ -94,7 +94,12 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
     <li><a href="#tab2"><em>Meetme Rooms</em></a></li>
     <li><a href="#tab3"><em>Channels/Calls</em></a></li>
     <li><a href="#tab4"><em>Parked Calls</em></a></li>
-    <li><a href="#tab5"><em>Debug</em></a></li>
+    <!-- START BLOCK : cli_tab -->
+    <li><a href="#tab5"><em>Asterisk CLI</em></a></li>
+    <!-- END BLOCK : cli_tab -->
+    <!-- START BLOCK : debug_tab -->
+    <li><a href="#tab6"><em>Debug</em></a></li>
+    <!-- END BLOCK : debug_tab -->
   </ul>
   
   <div class="yui-content"> 
@@ -223,8 +228,17 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
     </fieldset>
     </div>
 
+    <!-- START BLOCK : cli_tab_div -->
+	<div id="cliDiv">
+	  <textarea id="cliResponse" rows="40" cols="160" readonly="readonly"></textarea><br>
+	  <input id="cliCommand" type="text" size="60">&nbsp;<button onclick="sendCliCommand()">Send</button>
+	</div>
+	<!-- END BLOCK : cli_tab_div -->
+
+    <!-- START BLOCK : debug_tab_div -->
     <div id="debugMsg">
     </div>
+    <!-- END BLOCK : debug_tab_div -->
     
   </div>
 </div>
@@ -288,7 +302,7 @@ var _buttons = new Array(ocheckBoxTab1, ocheckBoxTab2, ocheckBoxTab3, ocheckBoxT
 
 var _tabPannel = new YAHOO.widget.TabView('TabPannel');
 _tabPannel.addListener('beforeActiveTabChange', function(e){
-	var pannels = new Array('peersDiv', 'meetmesDiv', 'chanCallDiv', 'parkedCallsDiv', 'debugMsg');
+	var pannels = new Array('peersDiv', 'meetmesDiv', 'chanCallDiv', 'parkedCallsDiv');
 	for (i = 0; i < pannels.length; i++)
 		$(pannels[i]).style.display = 'none';
 
