@@ -28,6 +28,8 @@
 * OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+ini_set('error_reporting', 'E_ALL & ~E_NOTICE & ~E_WARNING');
+
 set_time_limit(0);
 
 require_once 'lib/include.php';

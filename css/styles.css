@@ -52,7 +52,7 @@ BODY {
 	right: 25px; 
 	border: 1px solid #000000; 
 	background-color: #ffffff; 
-	z-index: 99;
+	z-index: 1;
 }
 #trash, #record, #park {
 	float: left; 
@@ -70,6 +70,7 @@ BODY {
 	float: left; 
 	margin: 5px;
 	background-color: #ffffff;
+	z-index: 1;
 }
 #meetmesDiv {
 	padding: 5px; 
@@ -83,7 +84,7 @@ BODY {
 	border: 1px solid #aaaaaa;
 	margin-bottom: 2px;
 	background-color: #ffffff;
-	z-index: 2;
+	z-index: 1;
 }
 #chanCallDiv {
 	padding: 5px; 
@@ -98,7 +99,7 @@ BODY {
 	border: 1px solid #aaaaaa;
 	margin-bottom: 2px;
 	background-color: #ffffff;
-	z-index: 2;
+	z-index: 1;
 }
 #callsDiv {
 	width: 600px;
@@ -111,7 +112,7 @@ BODY {
 	border: 1px solid #aaaaaa;
 	margin-bottom: 2px;
 	background-color: #ffffff;
-	z-index: 2;
+	z-index: 1;
 }
 #parkedCallsDiv {
 	padding: 5px; 
@@ -124,6 +125,7 @@ BODY {
 	border: 1px solid #aaaaaa;
 	margin-bottom: 2px;
 	background-color: #ffffff;
+	z-index: 1;
 }
 #debugMsg {
 	border: black 1px solid; 

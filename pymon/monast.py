@@ -832,10 +832,13 @@ class MonAst:
 						elif msg.startswith('ParkedHangup'):
 							action, Exten = msg.split(':::')
 							self.parkedLock.acquire()
-							command = []
-							command.append('Action: Hangup')
-							command.append('Channel: %s' % self.parked[Exten]['Channel'])
-							self.send(command)
+							try:
+								command = []
+								command.append('Action: Hangup')
+								command.append('Channel: %s' % self.parked[Exten]['Channel'])
+								self.send(command)
+							except:
+								log.error('Exten %s not found on self.parked' % Exten)
 							self.parkedLock.release()
 						else:
 							sock.send('NO SESSION\r\n')	
