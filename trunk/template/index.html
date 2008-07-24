@@ -231,7 +231,8 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
     <!-- START BLOCK : cli_tab_div -->
 	<div id="cliDiv">
 	  <textarea id="cliResponse" rows="40" cols="160" readonly="readonly"></textarea><br>
-	  <input id="cliCommand" type="text" size="60" onkeypress="sendCliCommandOnEnter(event)">&nbsp;<button onclick="sendCliCommand()">Send</button>
+	  <input id="cliCommand" type="text" size="60" onkeypress="sendCliCommandOnEnter(event)">
+	  &nbsp;<button onclick="sendCliCommand()">Send</button>&nbsp;<button onclick="$('cliResponse').value=''">Clear</button>
 	</div>
 	<!-- END BLOCK : cli_tab_div -->
 
