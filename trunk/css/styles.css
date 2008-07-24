@@ -167,6 +167,8 @@ BODY {
 }
 
 #cliDiv textarea {
+	font-family: 'courier new'; 
+	font-size: 0.8em;
 	color: #ffffff;
 	background-color: #000000;
 }
