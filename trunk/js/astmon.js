@@ -727,9 +727,15 @@ function stopChrono(id)
 		clearTimeout(_chrono[id].run);
 }
 
-
-function sendCliCommand()
+function sendCliCommandOnEnter(e)
 {
+	if (e.keyCode == 13 && $('cliCommand').value.trim()) //Enter
+		sendCliCommand();
+		
+	return true;
+}
+function sendCliCommand()
+{		
 	var command = $('cliCommand').value;
 	$('cliCommand').value = '';
 	
