@@ -33,7 +33,7 @@
  -->
 
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-<title>Asterisk Monitor (MonAst)</title>
+<title>MonAst: The Asterisk Monitor Web Panel</title>
 
 <!-- css --> 
 <link rel="stylesheet" type="text/css" href="lib/yui_2.5.2/fonts/fonts-min.css"> 
@@ -70,6 +70,23 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
 
 <iframe id="__frame" width="1024" height="350" style="display: none"></iframe>
 
+<div id="actionsDiv">
+  <div id="park">
+    <img src="image/park.png" width="32" height="32" title="Park Calls"><br>Park
+  </div>
+  <!-- <div id="record">
+    <img src="image/record.png" width="32" height="32" title="Record Channels/Calls"><br>Record
+  </div> -->
+  <div id="trash">
+    <img src="image/trash.png" width="32" height="32" title="Hangup Channels/Calls or Kick meetme users"><br>Trash
+  </div>
+</div>
+
+<div class="monast-logo">
+  <span class="monast-name">MonAst</span>&nbsp;
+  <span class="monast-text">The Asterisk Monitor Web Panel</span>
+</div>
+
 <div id="TabPannel" class="yui-navset">
   <ul class="yui-nav">
     <li><a href="#tab0"><em>Mixed Pannels</em></a></li>
@@ -84,23 +101,10 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
     <div id="mixed">
       <fieldset id="pannelsToShow">
         <legend>Pannels to Show</legend> 
-        <div style="float: left;">
         <input id="checkBoxTab1" type="checkbox" name="checkBoxTab1" value="peersDiv">
         <input id="checkBoxTab2" type="checkbox" name="checkBoxTab2" value="meetmesDiv">
         <input id="checkBoxTab3" type="checkbox" name="checkBoxTab3" value="chanCallDiv">
         <input id="checkBoxTab4" type="checkbox" name="checkBoxTab4" value="parkedCallsDiv">
-        </div>
-        
-        <div id="trash">
-          <img src="image/trash.png" width="32" height="32" title="Hangup Channels/Calls or Kick meetme users"><br>Trash
-        </div>
-        <!-- <div style="float:right; text-align: center; margin-right: 25px;" id="record">
-          <img src="image/record.png" width="32" height="32" title="Record Channels/Calls"><br>Record
-        </div> -->
-        <div style="float:right; text-align: center; margin-right: 25px;" id="park">
-          <img src="image/park.png" width="32" height="32" title="Park Calls"><br>Park
-        </div>
-        
       </fieldset>
       <script type="text/javascript">
         var ocheckBoxTab1 = new YAHOO.widget.Button("checkBoxTab1", { label: "Peers/Users" });
@@ -267,6 +271,11 @@ var transferDialog = new YAHOO.widget.Dialog("transferDiv",
 
 <script type="text/javascript">
 YAHOO.util.DDM.mode = YAHOO.util.DDM.POINT;
+
+window.onscroll = function()
+{
+	$('actionsDiv').style.top = (document.documentElement.scrollTop + 10) + 'px';
+}
 
 var _state = json.decode(YAHOO.util.Cookie.get("_state"));
 if (!_state)
