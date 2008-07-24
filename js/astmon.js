@@ -77,14 +77,22 @@ function blink(id, cor)
 
 function Process(o)
 {
-	//console.dir(o);
-	$('debugMsg').innerHTML += o + "<br>\r\n";
+	if ($('debugMsg'))
+		$('debugMsg').innerHTML += o + "<br>\r\n";
+		
 	o = json.decode(o);
 	
 	if (o['Action'] == 'Reload')
 	{
 		setTimeout("location.href = 'index.php'", o['time']);
 		return;
+	}
+	
+	if (o['Action'] == 'CliResponse')
+	{
+		$('cliResponse').value += unescape(decodeURI(o['Response'])).replace(/\<br\>/g, '\r\n');
+		$('cliResponse').scrollTop = $('cliResponse').scrollHeight - $('cliResponse').offsetHeight + 10;
+		return; 
 	}
 	
 	if (o['Action'] == 'PeerStatus')
@@ -717,4 +725,19 @@ function stopChrono(id)
 {
 	if (_chrono[id])
 		clearTimeout(_chrono[id].run);
+}
+
+
+function sendCliCommand()
+{
+	var command = $('cliCommand').value;
+	$('cliCommand').value = '';
+	
+	$('cliResponse').value += '\r\n> ' + command;
+	$('cliResponse').scrollTop = $('cliResponse').scrollHeight - $('cliResponse').offsetHeight + 10;
+	
+	var id = ajaxCall.init(false);
+	ajaxCall.setURL(id, 'action.php');
+	ajaxCall.addParam(id, 'action', 'CliCommand:::' + command);
+	ajaxCall.doCall(id);
 }

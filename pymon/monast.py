@@ -228,6 +228,16 @@ class MonAst:
 				if block.startswith('Response: Success\r\nCategory-'):
 					self.parseConfig(block.replace('Response: Success\r\n', ''), self.configFilesPop.pop(0))
 				
+				if block.startswith('Response: Follows\r\nPrivilege: Command\r\nActionID:'):
+					log.info('Command resposnse detected')
+					ActionID = re.compile('ActionID: ([^\r^\n^\s]*)').search(block).group(1)
+					Response = block[block.find(ActionID) + len(ActionID):block.find('--END COMMAND--')]
+					
+					self.clientQueuelock.acquire()
+					if self.clientQueues.has_key(ActionID):
+						self.clientQueues[ActionID]['q'].put('CliResponse: %s' % Response.replace('\r\n', '<br>'))
+					self.clientQueuelock.release()
+				
 				if block.startswith('Event: PeerEntry\r\n'):
 					Channeltype, ObjectName, IPaddress, IPport, Status = merge(rePeerEntry.findall(block))
 					
@@ -738,7 +748,7 @@ class MonAst:
 								except Queue.Empty:
 									break
 							sock.send('END CHANGES\r\n')
-						elif msg.startswith('OriginateCall'):
+						elif session and msg.startswith('OriginateCall'):
 							self.monitoredUsersLock.acquire()
 							action, src, dst, type = msg.split(':::')
 							Context = self.monitoredUsers[src]['Context']
@@ -756,7 +766,7 @@ class MonAst:
 								command.append('Variable: %s' % var)
 							self.send(command)
 							self.monitoredUsersLock.release()
-						elif msg.startswith('OriginateDial'):
+						elif session and msg.startswith('OriginateDial'):
 							action, src, dst, type = msg.split(':::')
 							command = []
 							command.append('Action: Originate')
@@ -765,7 +775,7 @@ class MonAst:
 							command.append('Data: %s|30|rTt' % dst)
 							command.append('CallerID: %s' % MONAST_CALLERID)
 							self.send(command)
-						elif msg.startswith('HangupChannel'):
+						elif session and msg.startswith('HangupChannel'):
 							self.channelsLock.acquire()
 							action, Uniqueid = msg.split(':::')
 							try:
@@ -776,7 +786,7 @@ class MonAst:
 							except:
 								log.error('Uniqueid %s not found on self.channels' % Uniqueid)
 							self.channelsLock.release()
-						elif msg.startswith('TransferCall'):
+						elif session and msg.startswith('TransferCall'):
 							action, src, dst, type = msg.split(':::')
 							Context      = self.tranferContext
 							SrcChannel   = None
@@ -814,7 +824,7 @@ class MonAst:
 							command.append('Context: %s' % Context)
 							command.append('Priority: 1')
 							self.send(command)
-						elif msg.startswith('ParkCall'):
+						elif session and msg.startswith('ParkCall'):
 							action, park, announce = msg.split(':::')
 							self.channelsLock.acquire()
 							ParkChannel   = self.channels[park]['Channel']
@@ -826,13 +836,13 @@ class MonAst:
 							command.append('Channel2: %s' % AnouceChannel)
 							#ommand.append('Timeout: 45')
 							self.send(command)							 
-						elif msg.startswith('MeetmeKick'):
+						elif session and msg.startswith('MeetmeKick'):
 							action, Meetme, Usernum = msg.split(':::')
 							command = []
 							command.append('Action: Command')
 							command.append('Command: meetme kick %s %s' % (Meetme, Usernum))
 							self.send(command)
-						elif msg.startswith('ParkedHangup'):
+						elif session and msg.startswith('ParkedHangup'):
 							action, Exten = msg.split(':::')
 							self.parkedLock.acquire()
 							try:
@@ -843,6 +853,13 @@ class MonAst:
 							except:
 								log.error('Exten %s not found on self.parked' % Exten)
 							self.parkedLock.release()
+						elif session and msg.startswith('CliCommand'):
+							action, cliCommand = msg.split(':::')
+							command = []
+							command.append('Action: Command')
+							command.append('Command: %s' % cliCommand)
+							command.append('ActionID: %s' % session)
+							self.send(command)
 						else:
 							sock.send('NO SESSION\r\n')	
 						self.clientQueuelock.release()
