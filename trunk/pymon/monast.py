@@ -442,8 +442,11 @@ class MonAst:
 					log.info('Evento MeetmeLeave detectado')
 					
 					self.meetmeLock.acquire()
-					del self.meetme[Meetme][Usernum]
-					enqueue.append('MeetmeLeave: %s:::%s:::%s:::%s' % (Meetme, Uniqueid, Usernum, Duration))
+					try:
+						del self.meetme[Meetme][Usernum]
+						enqueue.append('MeetmeLeave: %s:::%s:::%s:::%s' % (Meetme, Uniqueid, Usernum, Duration))
+					except Exception, e:
+						log.error('Meetme or Usernum not found in self.meetme[\'%s\'][\'%s\']' % (Meetme, Usernum))
 					self.meetmeLock.release()
 				
 				if block.startswith('Event: Reload'):
