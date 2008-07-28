@@ -1,0 +1,22 @@
+
+1 - Configure the asterisk manager to create an user to use with monast.
+    - Sample manager.conf user:
+      [monast_user]
+      secret=monast_secret
+      writetimeout=100
+      read=system,call,log,verbose,command,agent,user,config
+      write=system,call,log,verbose,command,agent,user,config
+
+2 - Configure apache to point to location where you extracted monast.
+
+3 - Copy pymon/monast.conf.sampe to /etc/monast.conf and edit it 
+    properly as documented inside of this file.
+
+4 - Run monast.py:
+    # cd pymon
+    # ./monast.py > monast.log 2>&1 &
+
+5 - Edit lib/config.php as documented inside this file.
+
+6 - Point your browser to location that was configured in apache.
+
