@@ -444,6 +444,7 @@ function originateCall(peer, number, type)
 		}
 	});
 }
+
 function originateDial(src, dst, type)
 {
 	new Ajax.Request('action.php', 
@@ -452,7 +453,7 @@ function originateDial(src, dst, type)
 		parameters: {
 			reqTime: new Date().getTime(),
 			action: 'OriginateDial:::' + src + ':::' + dst + ':::' + type
-		},
+		}
 	});
 }
 
@@ -475,7 +476,7 @@ function hangupCall(chanId)
 			parameters: {
 				reqTime: new Date().getTime(),
 				action: 'HangupChannel:::' + chanId
-			},
+			}
 		});
 	}
 }
@@ -509,7 +510,7 @@ function transferCall(src, dst, type)
 		parameters: {
 			reqTime: new Date().getTime(),
 			action: 'TransferCall:::' + src + ':::' + dst + ':::' + type
-		},
+		}
 	});
 }
 
@@ -522,7 +523,7 @@ function parkCall(park, announce)
 		parameters: {
 			reqTime: new Date().getTime(),
 			action: 'ParkCall:::' + park + ':::' + announce
-		},
+		}
 	});
 }
 
@@ -538,7 +539,7 @@ function meetmeKick(meetme, usernum)
 			parameters: {
 				reqTime: new Date().getTime(),
 				action: 'MeetmeKick:::' + meetme + ':::' + usernum
-			},
+			}
 		});
 	}
 }
@@ -555,7 +556,7 @@ function parkedHangup(exten)
 			parameters: {
 				reqTime: new Date().getTime(),
 				action: 'ParkedHangup:::' + exten
-			},
+			}
 		});
 	}
 }
