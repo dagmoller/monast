@@ -32,7 +32,7 @@ var ddDivs    = new Array();
 var callerIDs = new Array();
 
 String.prototype.trim = function() { return this.replace(/^\s*/, "").replace(/\s*$/, ""); }
-function $(id) { return document.getElementById(id); }
+//function $(id) { return document.getElementById(id); }
 
 function color(t)
 {
@@ -75,6 +75,51 @@ function blink(id, cor)
 	}
 }
 
+var _statusError  = false;
+var _statusReload = false; 
+function getStatus()
+{
+	if (_statusError)
+	{
+		$('_reqStatus').innerHTML = "<font color='red'>Reload needed, Press F5.</font>";
+		return;
+	}
+	if (_statusReload)
+	{
+		$('_reqStatus').innerHTML = "Reloading, please wait.";
+		return;
+	}
+		
+	new Ajax.Request('status.php', 
+	{
+		method: 'get',
+		parameters: {
+			reqTime: new Date().getTime()
+		},
+		
+		onCreate:        function() { $('_reqStatus').innerHTML = 'Create'; },
+		onUninitialized: function() { $('_reqStatus').innerHTML = 'Uninitialized'; },
+		onLoading:       function() { $('_reqStatus').innerHTML = 'Loading'; },
+		onLoaded:        function() { $('_reqStatus').innerHTML = 'Loaded'; },
+		onInteractive:   function() { $('_reqStatus').innerHTML = 'Interactive'; },
+		onComplete:      function() { $('_reqStatus').innerHTML = 'Complete'; getStatus(); },
+		
+		onSuccess: function(transport)
+		{
+			var events = json.decode(transport.responseText);
+			for (i = 0; i < events.length; i++)
+			{
+				Process(json.encode(events[i]));
+			}
+		},
+		onFailure: function()
+		{
+			_statusError = true;
+			alert('getStatus() ERROR');
+		}
+	});
+}
+
 function Process(o)
 {
 	if ($('debugMsg'))
@@ -82,8 +127,15 @@ function Process(o)
 		
 	o = json.decode(o);
 	
+	if (o['Action'] == 'Error')
+	{
+		_statusError = true;
+		alert(o['Message']);
+	}
+	
 	if (o['Action'] == 'Reload')
 	{
+		_statusReload = true;
 		setTimeout("location.href = 'index.php'", o['time']);
 		return;
 	}
@@ -351,16 +403,6 @@ function Process(o)
 	}
 }
 
-function initIFrame()
-{
-	var iframe = document.getElementById('__frame');
-	iframe.src = 'status.php';
-}
-function startIFrame() // deve ser chamado no final da index.html
-{
-	setTimeout('initIFrame()', 1000);
-}
-
 function showHidePannels(e)
 {
 	$(this.get('value')).style.display = (e.newValue ? 'block' : 'none');
@@ -385,18 +427,33 @@ function originateCall(peer, number, type)
 		}
 	}
 	
-	var id = ajaxCall.init(false);
-	ajaxCall.setResponseFunction(id, ret);
-	ajaxCall.setURL(id, 'action.php');
-	ajaxCall.addParam(id, 'action', 'OriginateCall:::' + peer + ':::' + number + ':::' + type);
-	ajaxCall.doCall(id);
+	new Ajax.Request('action.php', 
+	{
+		method: 'get',
+		parameters: {
+			reqTime: new Date().getTime(),
+			action: 'OriginateCall:::' + peer + ':::' + number + ':::' + type
+		},
+		onSuccess: function(transport)
+		{
+			if (transport.responseText == 'OK') 
+			{
+				$('originateNumber').value = '';
+				originateDialog.hide();
+			}
+		}
+	});
 }
 function originateDial(src, dst, type)
 {
-	var id = ajaxCall.init(false);
-	ajaxCall.setURL(id, 'action.php');
-	ajaxCall.addParam(id, 'action', 'OriginateDial:::' + src + ':::' + dst + ':::' + type);
-	ajaxCall.doCall(id);
+	new Ajax.Request('action.php', 
+	{
+		method: 'get',
+		parameters: {
+			reqTime: new Date().getTime(),
+			action: 'OriginateDial:::' + src + ':::' + dst + ':::' + type
+		},
+	});
 }
 
 //Hangup Call
@@ -412,10 +469,14 @@ function hangupCall(chanId)
 	var c = confirm(msg);
 	if (c)
 	{
-		var id = ajaxCall.init(false);
-		ajaxCall.setURL(id, 'action.php');
-		ajaxCall.addParam(id, 'action', 'HangupChannel:::' + chanId);
-		ajaxCall.doCall(id);
+		new Ajax.Request('action.php', 
+		{
+			method: 'get',
+			parameters: {
+				reqTime: new Date().getTime(),
+				action: 'HangupChannel:::' + chanId
+			},
+		});
 	}
 }
 
@@ -442,19 +503,27 @@ function transferCall(src, dst, type)
 	if (!c)
 		return;
 
-	var id = ajaxCall.init(false);
-	ajaxCall.setURL(id, 'action.php');
-	ajaxCall.addParam(id, 'action', 'TransferCall:::' + src + ':::' + dst + ':::' + type);
-	ajaxCall.doCall(id);
+	new Ajax.Request('action.php', 
+	{
+		method: 'get',
+		parameters: {
+			reqTime: new Date().getTime(),
+			action: 'TransferCall:::' + src + ':::' + dst + ':::' + type
+		},
+	});
 }
 
 // Park
 function parkCall(park, announce)
 {
-	var id = ajaxCall.init(false);
-	ajaxCall.setURL(id, 'action.php');
-	ajaxCall.addParam(id, 'action', 'ParkCall:::' + park + ':::' + announce);
-	ajaxCall.doCall(id);
+	new Ajax.Request('action.php', 
+	{
+		method: 'get',
+		parameters: {
+			reqTime: new Date().getTime(),
+			action: 'ParkCall:::' + park + ':::' + announce
+		},
+	});
 }
 
 // Meetme kick
@@ -463,10 +532,14 @@ function meetmeKick(meetme, usernum)
 	var c = confirm('Kick this user from meetme ' + meetme + '?');
 	if (c)
 	{
-		var id = ajaxCall.init(false);
-		ajaxCall.setURL(id, 'action.php');
-		ajaxCall.addParam(id, 'action', 'MeetmeKick:::' + meetme + ':::' + usernum);
-		ajaxCall.doCall(id);
+		new Ajax.Request('action.php', 
+		{
+			method: 'get',
+			parameters: {
+				reqTime: new Date().getTime(),
+				action: 'MeetmeKick:::' + meetme + ':::' + usernum
+			},
+		});
 	}
 }
 
@@ -476,10 +549,14 @@ function parkedHangup(exten)
 	var c = confirm('Hangup parked call on exten ' + exten + '?');
 	if (c)
 	{
-		var id = ajaxCall.init(false);
-		ajaxCall.setURL(id, 'action.php');
-		ajaxCall.addParam(id, 'action', 'ParkedHangup:::' + exten);
-		ajaxCall.doCall(id);
+		new Ajax.Request('action.php', 
+		{
+			method: 'get',
+			parameters: {
+				reqTime: new Date().getTime(),
+				action: 'ParkedHangup:::' + exten
+			},
+		});
 	}
 }
 
@@ -742,8 +819,12 @@ function sendCliCommand()
 	$('cliResponse').value += '\r\n> ' + command;
 	$('cliResponse').scrollTop = $('cliResponse').scrollHeight - $('cliResponse').offsetHeight + 10;
 	
-	var id = ajaxCall.init(false);
-	ajaxCall.setURL(id, 'action.php');
-	ajaxCall.addParam(id, 'action', 'CliCommand:::' + command);
-	ajaxCall.doCall(id);
+	new Ajax.Request('action.php', 
+	{
+		method: 'get',
+		parameters: {
+			reqTime: new Date().getTime(),
+			action: 'CliCommand:::' + command
+		}
+	});
 }
