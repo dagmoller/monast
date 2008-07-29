@@ -347,6 +347,7 @@ while (!feof($fp))
 	
 	if ($complete)
 	{
+		fwrite($fp, "BYE\r\n");
 		break;
 	}
 }
