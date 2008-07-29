@@ -57,6 +57,7 @@ function color(t)
         case 'link':
         case 'registered':
         case 'reachable':
+        case 'unmonitored':
             //return 'green';
             return '#b0ffb0';
     }
