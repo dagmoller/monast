@@ -40,6 +40,17 @@ function parseMsg($msg)
 {
 	global $json;
 	
+	if (strpos($msg, 'Reload: ') !== false)
+  	{
+  		$time = substr($msg, 8);
+  		$saida = array
+  		(
+  			'Action' => 'Reload',
+  			'time'   => ($time * 1000)
+  		);
+  		return $saida;
+  	}
+	
 	if (strpos($msg, 'PeerStatus: ') !== false)
 	{
 		list($Peer, $Status, $Calls) = explode(':::', substr($msg, 12));
@@ -50,7 +61,7 @@ function parseMsg($msg)
 			'Status' => $Status,
 			'Calls'  => $Calls
 		);
-		return $json->encode($saida);
+		return $saida;
 	}
 	
 	if (strpos($msg, 'NewChannel: ') !== false)
@@ -65,7 +76,7 @@ function parseMsg($msg)
 			'CallerIDName' => $CallerIDName, 
 			'Uniqueid'     => $Uniqueid
 		);
-		return $json->encode($saida);
+		return $saida;
 	}
 	
 	if (strpos($msg, 'NewState: ') !== false)
@@ -80,7 +91,7 @@ function parseMsg($msg)
 			'CallerIDName' => $CallerIDName, 
 			'Uniqueid'     => $Uniqueid
 		);
-		return $json->encode($saida);
+		return $saida;
 	}
 	
 	if (strpos($msg, 'Hangup: ') !== false)
@@ -94,7 +105,7 @@ function parseMsg($msg)
 			'Cause'     => $Cause, 
 			'Cause_txt' => $Cause_txt
 		);
-		return $json->encode($saida);
+		return $saida;
 	}
 	
 	if (strpos($msg, 'Dial: ') !== false)
@@ -110,7 +121,7 @@ function parseMsg($msg)
 			'SrcUniqueID'  => $SrcUniqueID, 
 			'DestUniqueID' => $DestUniqueID
 		);
-		return $json->encode($saida);
+		return $saida;
 	}
 	
 	if (strpos($msg, 'Link: ') !== false)
@@ -127,7 +138,7 @@ function parseMsg($msg)
 			'CallerID2' => $CallerID2,
 		    'Seconds'   => $Seconds
 		);
-		return $json->encode($saida);
+		return $saida;
 	}
 	
 	if (strpos($msg, 'Unlink: ') !== false)
@@ -143,7 +154,7 @@ function parseMsg($msg)
 			'CallerID1' => $CallerID1, 
 			'CallerID2' => $CallerID2
 		);
-		return $json->encode($saida);
+		return $saida;
 	}
 	
 	if (strpos($msg, 'NewCallerid: ') !== false)
@@ -158,7 +169,7 @@ function parseMsg($msg)
 			'Uniqueid'       => $Uniqueid,
 			'CIDCallingPres' => $CIDCallingPres
 		);
-		return $json->encode($saida);
+		return $saida;
 	}
 	
     if (strpos($msg, 'Rename: ') !== false)
@@ -173,7 +184,7 @@ function parseMsg($msg)
 		    'CallerIDName' => $CallerIDName,
 			'CallerID'     => $CallerID, 
 		);
-		return $json->encode($saida);
+		return $saida;
 	}
 	
 	if (strpos($msg, 'MeetmeJoin: ') !== false)
@@ -189,7 +200,7 @@ function parseMsg($msg)
             'CallerIDNum'  => $CallerIDNum, 
             'CallerIDName' => $CallerIDName
         );
-    	return $json->encode($saida);
+    	return $saida;
 	}
 	
     if (strpos($msg, 'MeetmeLeave: ') !== false)
@@ -203,7 +214,7 @@ function parseMsg($msg)
             'Usernum'      => $Usernum, 
             'Duration'     => $Duration 
         );
-    	return $json->encode($saida);
+    	return $saida;
 	}
 	
 	if (strpos($msg, 'ParkedCall: ') !== false)
@@ -219,7 +230,7 @@ function parseMsg($msg)
     	    'CallerID'     => $CallerID,
     		'CallerIDName' => $CallerIDName, 
     	);
-    	return $json->encode($saida);
+    	return $saida;
 	}
 	
     if (strpos($msg, 'UnparkedCall: ') !== false)
@@ -230,7 +241,7 @@ function parseMsg($msg)
     		'Action'       => 'UnparkedCall',
     		'Exten'        => $Exten, 
     	);
-    	return $json->encode($saida);
+    	return $saida;
 	}
 	
 	if (strpos($msg, 'CliResponse: ') !== false)
@@ -241,7 +252,7 @@ function parseMsg($msg)
     		'Action'   => 'CliResponse',
     		'Response' => rawurlencode($Response),  
     	);
-    	return $json->encode($saida);
+    	return $saida;
 	}
 	
 	return $json->encode(array('Action' => 'None'));
@@ -259,9 +270,9 @@ $fp     = @fsockopen(HOSTNAME, HOSTPORT, $errno, $errstr, 60);
 
 if ($errstr)
 {
-    $error  = "!! MonAst ERROR !!\\n\\nCould not connect to " . HOSTNAME . ":" . HOSTPORT . ": $errstr\\n";
+    $error  = "!! MonAst ERROR !!\n\nCould not connect to " . HOSTNAME . ":" . HOSTPORT . ": $errstr\n";
     $error .= "Make sure monast.py is running so the panel can connect to its port properly.";
-	echo "<script>alert('$error');</script>";
+	echo $json->encode(array(array('Action' => 'Error', 'Message' => $error)));
 	die;
 }
 
@@ -269,12 +280,12 @@ fwrite($fp, "SESSION: $sessid\r\n");
 
 $isStatus = false;
 $isOK     = false;
-$hasMsg   = array();
-$reload   = false;
+$events   = array();
+$complete = false;
 
 while (!feof($fp))
 {
-	if ($isOK && !$isStatus)
+	if ($isOK && !$isStatus && !$complete)
 	{
 		fwrite($fp, "GET CHANGES\r\n");
 		sleep(1);
@@ -299,43 +310,14 @@ while (!feof($fp))
 			elseif ($message == "END CHANGES")
 			{
 				$isStatus = false;
-			}
-			elseif (strpos($message, 'Reload: ') !== false)
-			{
-           	    $time = substr($message, 8);
-            	$saida = array
-        	    (
-        	        'Action' => 'Reload',
-        	        'time'   => ($time * 1000)
-        	    );
-        	    print "<script>parent.Process('" . $json->encode($saida) . "');</script>\r\n";
-        	    $reload = true;
-        	    break;
+				if (count($events) > 0)
+					$complete = true;
 			}
 			elseif ($isStatus)
 			{
-				$hasMsg = true;
-				print "<script>parent.Process('" . parseMsg($message) . "');</script>\r\n";
-				//print parseMsg($message);
-				ob_flush();
-				flush();
+				$events[] = parseMsg($message);
 			}
 		}
-	}
-	
-	if ($reload)
-	{
-	    fwrite($fp, "BYE\r\n");
-	    break;
-	}
-	
-	if ($hasMsg)
-	{
-		$hasMsg = false;
-		usleep(100);
-		print str_pad('', 4096);
-		ob_flush();
-		flush();
 	}
 	
 	session_start();
@@ -357,16 +339,20 @@ while (!feof($fp))
 		fwrite($fp, "BYE\r\n");
 		
 		if ($now >= (getValor('started', 'session') + MONAST_BROWSER_REFRESH))
-			print "<script>parent.location.href = 'index.php';</script>";
-		else		
-			print "<script>parent.startIFrame();</script>\r\n";
-			
-		ob_flush();
-		flush();
+		{
+			$events[] = array('Action' => 'Reload', 'time' => '5000');
+		}
+		break;
+	}
+	
+	if ($complete)
+	{
 		break;
 	}
 }
 
 fclose($fp);
+
+echo $json->encode($events);
 
 ?>

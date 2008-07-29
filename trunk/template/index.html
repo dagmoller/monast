@@ -54,6 +54,8 @@
 <script type="text/javascript" src="lib/yui_2.5.2/menu/menu-min.js"></script>
 <script type="text/javascript" src="lib/yui_2.5.2/cookie/cookie-beta-min.js"></script> 
 
+<script type="text/javascript" src="js/prototype-1.5.1.2.js"></script>
+
 <script type="text/javascript" src="js/json.js"></script>
 <script type="text/javascript" src="js/ajax.js"></script>
 <script type="text/javascript" src="js/astmon.js"></script>
@@ -67,8 +69,6 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
 
 </head>
 <body class="yui-skin-sam">
-
-<iframe id="__frame" width="1024" height="350" style="display: none"></iframe>
 
 <div id="actionsDiv">
   <div id="park">
@@ -85,6 +85,7 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
 <div class="monast-logo">
   <span class="monast-name">MonAst</span>&nbsp;
   <span class="monast-text">The Asterisk Monitor Web Panel</span>
+  <span id="_reqStatus" style="margin-left: 25px; padding-left: 5px; border-left: 2px solid #000000"></span>
 </div>
 
 <div id="TabPannel" class="yui-navset">
@@ -340,7 +341,7 @@ var _dPark  = new YAHOO.util.DDTarget("park");
 Process('{json}');
 <!-- END BLOCK : process -->
 
-startIFrame();
+getStatus();
 
 </script>
 
