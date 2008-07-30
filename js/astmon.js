@@ -590,7 +590,8 @@ function backToStartPosition(id)
 		YAHOO.util.Easing.easeOut
 	).animate();
 	$(id).setStyle({zIndex: ddDivs[id].origZindex});
-	$(ddDivs[id].lastOver).setStyle({opacity: 1});
+	if (ddDivs[id].lastOver)
+		$(ddDivs[id].lastOver).setStyle({opacity: 1});
 }
 function dragOver(e, id)
 {
