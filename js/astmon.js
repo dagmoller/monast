@@ -193,6 +193,8 @@ function Process(o)
 			ddDivs[o['Uniqueid']].onMouseDown   = setStartPosition;
 			ddDivs[o['Uniqueid']].onDragDrop    = channelCallDrop;
 			ddDivs[o['Uniqueid']].onInvalidDrop = invalidDrop;
+			ddDivs[o['Uniqueid']].onDragOver    = dragOver;
+			ddDivs[o['Uniqueid']].onDragOut     = dragOut;
 		}
 		
 		return;
@@ -226,6 +228,8 @@ function Process(o)
 		ddDivs[div.id].onMouseDown   = setStartPosition;
 		ddDivs[div.id].onDragDrop    = channelCallDrop;
 		ddDivs[div.id].onInvalidDrop = invalidDrop;
+		ddDivs[div.id].onDragOver    = dragOver;
+		ddDivs[div.id].onDragOut     = dragOut;
 
 		return;
 	}
@@ -343,6 +347,8 @@ function Process(o)
 			ddDivs[id].onMouseDown   = setStartPosition;
 			ddDivs[id].onDragDrop    = meetmeDrop;
 			ddDivs[id].onInvalidDrop = invalidDrop;
+			ddDivs[id].onDragOver    = dragOver;
+			ddDivs[id].onDragOut     = dragOut;
 		}
 		
 		return;
@@ -392,6 +398,8 @@ function Process(o)
 			ddDivs[id].onMouseDown   = setStartPosition;
 			ddDivs[id].onDragDrop    = parkedCallDrop;
 			ddDivs[id].onInvalidDrop = invalidDrop;
+			ddDivs[id].onDragOver    = dragOver;
+			ddDivs[id].onDragOut     = dragOut;
 		}
 	}
 	
@@ -565,7 +573,10 @@ function parkedHangup(exten)
 // Yahoo
 function setStartPosition(e)
 {
-	ddDivs[this.id].startPos = YAHOO.util.Dom.getXY(YAHOO.util.Dom.get(this.id));
+	this.startPos   = YAHOO.util.Dom.getXY(YAHOO.util.Dom.get(this.id));
+	var style       = this.getEl().style;
+	this.origZindex = style.zIndex;
+	style.zIndex    = 10;
 }
 function backToStartPosition(id)
 {
@@ -578,6 +589,17 @@ function backToStartPosition(id)
 		0.3,
 		YAHOO.util.Easing.easeOut
 	).animate();
+	$(id).setStyle({zIndex: ddDivs[id].origZindex});
+	$(ddDivs[id].lastOver).setStyle({opacity: 1});
+}
+function dragOver(e, id)
+{
+	$(id).setStyle({opacity: 0.5});
+	this.lastOver = id;
+}
+function dragOut(e, id)
+{
+	$(id).setStyle({opacity: 1});
 }
 
 function peerDrop(e, id) 
