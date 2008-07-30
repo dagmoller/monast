@@ -86,7 +86,7 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
   <span id="_reqStatus" style="margin-left: 25px; padding-left: 5px; border-left: 2px solid #000000"></span>
 </div>
 
-<div id="TabPannel" class="yui-navset" style="z-index: 2">
+<div id="TabPannel" class="yui-navset" >
   <ul class="yui-nav">
     <li><a href="#tab0"><em>Mixed Pannels</em></a></li>
     <li><a href="#tab1"><em>Peers/Users</em></a></li>
@@ -143,6 +143,8 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
 		ddDivs['peerDiv-{peer}'].onMouseDown   = setStartPosition;
 		ddDivs['peerDiv-{peer}'].onDragDrop    = peerDrop; 
 		ddDivs['peerDiv-{peer}'].onInvalidDrop = invalidDrop;
+		ddDivs['peerDiv-{peer}'].onDragOver    = dragOver;
+		ddDivs['peerDiv-{peer}'].onDragOut     = dragOut;
       </script>
       <!-- END BLOCK : peer -->
       <div style="clear: both;"></div>
