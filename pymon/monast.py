@@ -700,13 +700,18 @@ class MonAst:
 							self.clientQueues[session]['t'] = time.time()
 							sock.send('BEGIN STATUS\r\n')
 							
-							users = self.monitoredUsers.keys()
-							users.sort()
-							for user in users:
+							usersWithCid    = []
+							usersWithoutCid = []
+							for user in self.monitoredUsers:
+								if self.monitoredUsers[user]['CallerID'] != '--':
+									usersWithCid.append((user, self.monitoredUsers[user]['CallerID']))
+								else:
+									usersWithoutCid.append((user, user))
+							usersWithCid.sort(lambda x, y: cmp(x[1].lower(), y[1].lower()))
+							usersWithoutCid.sort(lambda x, y: cmp(x[1].lower(), y[1].lower()))
+							users = usersWithCid + usersWithoutCid
+							for user, CallerID in users:
 								mu = self.monitoredUsers[user]
-								CallerID = mu['CallerID']
-								if CallerID == '--':
-									CallerID = user
 								sock.send('PeerStatus: %s:::%s:::%s:::%s\r\n' % (user, mu['Status'], mu['Calls'], CallerID))
 							for Uniqueid in self.channels:
 								ch = self.channels[Uniqueid]
