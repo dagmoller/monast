@@ -573,10 +573,10 @@ function parkedHangup(exten)
 // Yahoo
 function setStartPosition(e)
 {
+	var el          = $(this.id);
 	this.startPos   = YAHOO.util.Dom.getXY(YAHOO.util.Dom.get(this.id));
-	var style       = this.getEl().style;
-	this.origZindex = style.zIndex;
-	style.zIndex    = 10;
+	this.origZindex = el.getStyle('z-index');
+	el.setStyle({'z-index': 10});
 }
 function backToStartPosition(id)
 {
