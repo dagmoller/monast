@@ -171,7 +171,7 @@ class MonAst:
 				self.connected = False
 				time.sleep(10)
 			except:
-				log.error('\n' + traceback.format_exc())
+				log.error('Thread read :: Formatted Traceback follows:\n--' + traceback.format_exc().replace('\n', '\n-- '))
 				self.connected = False
 				time.sleep(10)
 	
@@ -627,7 +627,8 @@ class MonAst:
 					else:
 						user = None
 
-				newUsers.append(user)
+				if user:
+					newUsers.append(user)
 				
 				if user and line.startswith('Line-'):
 					tmp, param = line.split(': ')
@@ -639,6 +640,7 @@ class MonAst:
 					if param.startswith('setvar'):
 						self.monitoredUsers[user]['Variables'].append(param[param.find('=')+1:])
 			for user in [i for i in oldUsers if i not in newUsers]:
+				log.log('User/Peer removed: %s' % user)
 				del self.monitoredUsers[user]
 			self.monitoredUsersLock.release()
 		
@@ -723,7 +725,7 @@ class MonAst:
 									sock.send('Call: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s:::%d\r\n' % (c['Source'], c['Destination'], c['CallerID'], c['CallerIDName'], \
 																	self.channels[dst]['CallerIDNum'], c['SrcUniqueID'], c['DestUniqueID'], c['Status'], time.time() - c['startTime']))
 								except:
-									log.error('-- GET STATUS (formatted Traceback on "for call in self.calls") --\n-- ' + traceback.format_exc().replace('\n', '\n-- '))
+									log.error('GET STATUS :: Formatted Traceback on "for call in self.calls" follows:\n-- ' + traceback.format_exc().replace('\n', '\n-- '))
 							meetmeRooms = self.meetme.keys()
 							meetmeRooms.sort()
 							for meetme in meetmeRooms:
