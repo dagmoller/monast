@@ -100,7 +100,7 @@ function getStatus()
 		
 		onCreate:        function() { $('_reqStatus').innerHTML = 'Create'; },
 		onUninitialized: function() { $('_reqStatus').innerHTML = 'Uninitialized'; },
-		onLoading:       function() { $('_reqStatus').innerHTML = 'On-Line'; },
+		onLoading:       function() { $('_reqStatus').innerHTML = 'On Line'; },
 		onLoaded:        function() { $('_reqStatus').innerHTML = 'Loaded'; },
 		onInteractive:   function() { $('_reqStatus').innerHTML = 'Interactive'; },
 		onComplete:      function() { $('_reqStatus').innerHTML = 'Complete'; getStatus(); },
