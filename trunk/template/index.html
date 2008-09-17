@@ -260,7 +260,8 @@ var originateDialog = new YAHOO.widget.Dialog("originateDiv",
 		{ text:"Originate", handler: handleOriginate },
 		{ text:"Cancel", handler: handleOriginateCancel, isDefault: true }
 	],
-	width: '300px'
+	width: '300px',
+	zIndex: '999'
 });
 </script>
 
@@ -281,7 +282,8 @@ var transferDialog = new YAHOO.widget.Dialog("transferDiv",
 	],
 	visible: false,
 	constraintoviewport : true,
-	width: '500px'
+	width: '500px',
+	zIndex: '999'
 });
 </script>
 
