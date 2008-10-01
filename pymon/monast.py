@@ -167,7 +167,7 @@ class MonAst:
 	def list2Dict(self, lines):
 		dic = {}
 		for line in lines:
-			tmp = line.split(': ')
+			tmp = line.split(':')
 			if len(tmp) == 1:
 				dic[tmp[0].strip()] = ''
 			elif len(tmp) == 2:
