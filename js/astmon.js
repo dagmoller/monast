@@ -143,7 +143,7 @@ function Process(o)
 	
 	if (o['Action'] == 'CliResponse')
 	{
-		$('cliResponse').value += unescape(decodeURI(o['Response'])).replace(/\<br\>/g, '\r\n');
+		$('cliResponse').value += '\r\n' + unescape(decodeURI(o['Response'])).replace(/\<br\>/g, '\r\n');
 		$('cliResponse').scrollTop = $('cliResponse').scrollHeight - $('cliResponse').offsetHeight + 10;
 		return; 
 	}
