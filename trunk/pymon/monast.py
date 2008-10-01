@@ -166,12 +166,15 @@ class MonAst:
 	
 	def list2Dict(self, lines):
 		dic = {}
-		try:
-			for key, value in [line.strip().split(':') for line in lines]:
-				dic[key] = value.strip()
-		except Exception, e:
-			log.error('MonAst.list2Dict :: Cannot convert list to dictionary: %s' % e)
-					
+		for line in lines:
+			tmp = line.split(': ')
+			if len(tmp) == 1:
+				dic[tmp[0].strip()] = ''
+			elif len(tmp) == 2:
+				dic[tmp[0].strip()] = tmp[1].strip()
+			elif len(tmp) >= 3:
+				dic[tmp[0].strip()] = ''.join(tmp[1:])
+									
 		return dic
 	
 	
@@ -308,6 +311,7 @@ class MonAst:
 		log.info('MonAst.threadChannelChecker :: Starting Thread...')
 		time.sleep(10)
 		while self.running:
+			log.info('MonAst.threadChannelChecker :: Requesting Status...')
 			self.AMI.send(['Action: Status'], self.handlerStatusFollow)
 			time.sleep(60)
 	
