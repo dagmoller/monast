@@ -36,6 +36,9 @@ password = password
 # Bind client connetions on port
 bind_port = 5039
 
+# Default user context
+default_context = default
+
 # Context to use in transfer calls
 transfer_context = default
 
