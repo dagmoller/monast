@@ -29,12 +29,12 @@ import sys
 import time
 import socket
 
+DEBUG = False
+INFO  = False
+
 def __write(msg):
 	sys.stdout.write('[%s] %s\n' % (time.ctime(), msg))
 	sys.stdout.flush()
-	
-def info(msg):
-	__write('INFO  :: %s' % msg)
 
 def error(msg):
 	__write('ERROR :: %s' % msg)
@@ -42,6 +42,14 @@ def error(msg):
 def log(msg):
 	__write('LOG   :: %s' % msg)
 
-def show(msg):
-	__write('SHOW  :: %s' % msg.encode('string_escape'))
+def info(msg):
+	if INFO:
+		__write('INFO  :: %s' % msg)
+
+def debug(msg):
+	if DEBUG:
+		__write('DEBUG :: %s' % msg.encode('string_escape'))
+		
+def formatTraceback(trace, prefix = '>>'):
+	return '  %s %s ' % (prefix, ''.join(trace.format_exception(sys.exc_type, sys.exc_value, sys.exc_traceback)).replace('\n', '\n  %s ' % prefix))
 	
