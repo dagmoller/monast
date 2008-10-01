@@ -716,7 +716,7 @@ class MonAst:
 		CallerIDNum  = dic['CallerIDNum']
 		CallerIDName = dic['CallerIDName']
 		State        = dic['State']
-		Seconds      = dic.get('Seconds', '')
+		Seconds      = dic.get('Seconds', 0)
 		Link         = dic.get('Link', '')
 		Uniqueid     = dic['Uniqueid']
 					
