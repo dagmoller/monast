@@ -105,26 +105,28 @@ class AsteriskManager(threading.Thread):
 		time.sleep(60)
 		count = 0
 		while self.running:
-			if self.ping and self.pong:
-				log.log('AsteriskManager.threadPing :: PONG')
-				self.ping = False
-				self.pong = False
-				time.sleep(60)
-			
-			if not self.ping and not self.pong:
-				log.log('AsteriskManager.threadPing :: PING')
-				count     = 0
-				self.ping = True
-				self.send(['Action: PING'])
-			
-			if self.ping and not self.pong:
-				time.sleep(1)
-				if count == 60:
-					log.log('AsteriskManager.threadPing :: Ping timeout after 60 seconds. Reconnecting...')
-					self.isConnected = False
-					self.ping        = False
-					self.disconnect()
-				count += 1
+			if self.isConnected:
+				if self.ping and self.pong:
+					log.log('AsteriskManager.threadPing :: PONG')
+					self.ping = False
+					self.pong = False
+					time.sleep(60)
+				
+				if not self.ping and not self.pong:
+					log.log('AsteriskManager.threadPing :: PING')
+					count     = 0
+					self.ping = True
+					self.send(['Action: PING'])
+				
+				if self.ping and not self.pong:
+					if count == 60:
+						log.log('AsteriskManager.threadPing :: Ping timeout after 60 seconds. Reconnecting...')
+						self.isConnected = False
+						self.ping        = False
+						self.disconnect()
+					count += 1
+					
+			time.sleep(1)
 			
 				
 	def threadMsgQueue(self, name, params):
