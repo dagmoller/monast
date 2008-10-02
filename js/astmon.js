@@ -121,6 +121,9 @@ function getStatus()
 	});
 }
 
+var _countMembers = 0;
+var _countClients = 0;
+
 function Process(o)
 {
 	if ($('debugMsg'))
@@ -401,6 +404,8 @@ function Process(o)
 			ddDivs[id].onDragOver    = dragOver;
 			ddDivs[id].onDragOut     = dragOut;
 		}
+		
+		return;
 	}
 	
 	if (o['Action'] == 'UnparkedCall')
@@ -409,6 +414,91 @@ function Process(o)
 		var div = $(id);
 		if (div)
 			$('parkedsDiv').removeChild(div);
+			
+		return;
+	}
+	
+	if (o['Action'] == 'AddQueueMember')
+	{
+		var id  = 'queueMember-' + o['Queue'] + '-' + o['Member'];
+		var div = $(id);
+		if (!div)
+		{
+			div           = document.createElement('div');
+			div.id        = id;
+			div.className = 'queueMembersDiv';
+			
+			var template = "<table width='250'><tr>";
+			template    += "<td class='status' align='center'>{MemberName}</td>";
+			template    += "</tr></table>";
+			template     = template.replace(/\{MemberName\}/g, o['MemberName']);
+			
+			div.innerHTML = template;
+			
+			$('queueMembers-' + o['Queue']).appendChild(div);
+			
+			_countMembers += 1;
+		}
+		
+		$('queueMembersCount-' + o['Queue']).innerHTML = _countMembers;
+		 
+		return;
+	}
+	
+	if (o['Action'] == 'RemoveQueueMember')
+	{
+		var id  = 'queueMember-' + o['Queue'] + '-' + o['Member'];
+		var div = $(id);
+		if (div)
+		{
+			$('queueMembers-' + o['Queue']).removeChild(div);
+			_countMembers -= 1;
+		}
+		
+		$('queueMembersCount-' + o['Queue']).innerHTML = _countMembers;
+		
+		return;
+	}
+	
+	if (o['Action'] == 'AddQueueClient')
+	{
+		var id  = 'queueClient-' + o['Queue'] + '-' + o['Uniqueid'];
+		var div = $(id);
+		if (!div)
+		{
+			div           = document.createElement('div');
+			div.id        = id;
+			div.className = 'queueClientsDiv';
+			
+			UserInfo = o['Channel'];
+			if (o['CallerID'])
+				UserInfo = o['CallerIDName'] + ' <' + o['CallerID'] + '>'; 
+			
+			var template = "<table width='250'><tr>";
+			template    += "<td class='status' align='center'>{UserInfo}</td>";
+			template    += "</tr></table>";
+			template     = template.replace(/\{UserInfo\}/g, UserInfo);
+			
+			div.innerHTML = template;
+			
+			$('queueClients-' + o['Queue']).appendChild(div);
+		}
+		
+		$('queueClientsCount-' + o['Queue']).innerHTML = o['Count'];
+		 
+		return;
+	}
+	
+	if (o['Action'] == 'RemoveQueueClient')
+	{
+		var id  = 'queueClient-' + o['Queue'] + '-' + o['Uniqueid'];
+		var div = $(id);
+		if (div)
+			$('queueClients-' + o['Queue']).removeChild(div);
+		
+		$('queueClientsCount-' + o['Queue']).innerHTML = o['Count'];
+		
+		return;
 	}
 }
 

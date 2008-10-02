@@ -93,11 +93,12 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
     <li><a href="#tab2"><em>Meetme Rooms</em></a></li>
     <li><a href="#tab3"><em>Channels/Calls</em></a></li>
     <li><a href="#tab4"><em>Parked Calls</em></a></li>
+    <li><a href="#tab5"><em>Queues</em></a></li>
     <!-- START BLOCK : cli_tab -->
-    <li><a href="#tab5"><em>Asterisk CLI</em></a></li>
+    <li><a href="#tab6"><em>Asterisk CLI</em></a></li>
     <!-- END BLOCK : cli_tab -->
     <!-- START BLOCK : debug_tab -->
-    <li><a href="#tab6"><em>Debug</em></a></li>
+    <li><a href="#tab7"><em>Debug</em></a></li>
     <!-- END BLOCK : debug_tab -->
   </ul>
   
@@ -109,6 +110,7 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
         <input id="checkBoxTab2" type="checkbox" name="checkBoxTab2" value="meetmesDiv">
         <input id="checkBoxTab3" type="checkbox" name="checkBoxTab3" value="chanCallDiv">
         <input id="checkBoxTab4" type="checkbox" name="checkBoxTab4" value="parkedCallsDiv">
+        <input id="checkBoxTab5" type="checkbox" name="checkBoxTab5" value="queuesDiv">
       </fieldset>
       <script type="text/javascript">
         var ocheckBoxTab1 = new YAHOO.widget.Button("checkBoxTab1", { label: "Peers/Users" });
@@ -119,6 +121,8 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
             ocheckBoxTab3.addListener('checkedChange', showHidePannels);
         var ocheckBoxTab4 = new YAHOO.widget.Button("checkBoxTab4", { label:"Parked Calls" });
             ocheckBoxTab4.addListener('checkedChange', showHidePannels);
+        var ocheckBoxTab5 = new YAHOO.widget.Button("checkBoxTab5", { label:"Queues" });
+            ocheckBoxTab5.addListener('checkedChange', showHidePannels);
       </script>
     </div>
   
@@ -228,6 +232,77 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
       </div>
     </fieldset>
     </div>
+    
+    <div id="queuesDiv">
+    <fieldset>
+      <legend>Queues</legend>
+      <!-- START BLOCK : queue -->
+      <div class="queueDiv">
+        <fieldset>
+          <legend>Queue: {queue}</legend>
+          <div class="queueStatisticsDiv">
+            <table width="100%">
+              <tr>
+                <td class="tableTitle" colspan="8" align="center">Statistics</td>
+              </tr>
+              <tr>
+                <td class="statusHeader" align="right">Max:&nbsp;</td>
+                <td class="status"><span id="queueStatsMax-{queue}">0</span></td>
+                
+                <td class="statusHeader" align="right">Calls:&nbsp;</td>
+                <td class="status"><span id="queueStatsCalls-{queue}">0</span></td>
+                
+                <td class="statusHeader" align="right">Holdtime:&nbsp;</td>
+                <td class="status"><span id="queueStatsHoldtime-{queue}">0</span></td>
+                
+                <td class="statusHeader" align="right">Completed:&nbsp;</td>
+                <td class="status"><span id="queueStatsCompleted-{queue}">0</span></td>
+              </tr>
+              <tr>
+                <td class="statusHeader" align="right">Abandoned:&nbsp;</td>
+                <td class="status"><span id="queueStatsAbandoned-{queue}">0</span></td>
+                
+                <td class="statusHeader" align="right">Service Level:&nbsp;</td>
+                <td class="status"><span id="queueStatsServiceLevel-{queue}">0</span></td>
+                
+                <td class="statusHeader" align="right">Service level Perf.:&nbsp;</td>
+                <td class="status"><span id="queueStatsServicelevelPerf.-{queue}">0.0</span></td>
+                
+                <td class="statusHeader" align="right">Weight:&nbsp;</td>
+                <td class="status"><span id="queueStatsWeight-{queue}">0</span></td>
+              </tr>
+            </table>
+          </div>
+          <div class="queueMembersDivWrap" id="queueMembers-{queue}">
+            <div class="queueMembersDiv">
+              <table width="250">
+                <tr>
+                  <td class="tableTitle" align="center">On-Line Members (<span id="queueMembersCount-{queue}">0</span>)</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+          <div class="queueClientsDivWrap" id="queueClients-{queue}">
+            <div class="queueClientsDiv">
+              <table width="250">
+                <tr>
+                  <td class="tableTitle" align="center">Clients in Queue (<span id="queueClientsCount-{queue}">0</span>)</td>
+                </tr>
+              </table>
+            </div>
+            <!-- <div class="queueClientsDiv">
+              <table width="250">
+                <tr>
+                  <td class="status" align="center">Diego Aguirre &lt;2652&gt;</td>
+                </tr>
+              </table>
+            </div>  -->
+          </div>
+        </fieldset>
+      </div>
+      <!-- END BLOCK : queue -->
+    </fieldset>
+    </div>
 
     <!-- START BLOCK : cli_tab_div -->
 	<div id="cliDiv">
@@ -298,15 +373,15 @@ window.onscroll = function()
 var _state = json.decode(YAHOO.util.Cookie.get("_state"));
 if (!_state)
 {
-	_state = {activeIndex: 1, buttons: {'checkBoxTab1': false, 'checkBoxTab2': false, 'checkBoxTab3': false, 'checkBoxTab4': false}}
+	_state = {activeIndex: 1, buttons: {'checkBoxTab1': false, 'checkBoxTab2': false, 'checkBoxTab3': false, 'checkBoxTab4': false, 'checkBoxTab5': false}}
 	YAHOO.util.Cookie.set('_state', json.encode(_state));
 }
 
-var _buttons = new Array(ocheckBoxTab1, ocheckBoxTab2, ocheckBoxTab3, ocheckBoxTab4);
+var _buttons = new Array(ocheckBoxTab1, ocheckBoxTab2, ocheckBoxTab3, ocheckBoxTab4, ocheckBoxTab5);
 
 var _tabPannel = new YAHOO.widget.TabView('TabPannel');
 _tabPannel.addListener('beforeActiveTabChange', function(e){
-	var pannels = new Array('peersDiv', 'meetmesDiv', 'chanCallDiv', 'parkedCallsDiv');
+	var pannels = new Array('peersDiv', 'meetmesDiv', 'chanCallDiv', 'parkedCallsDiv', 'queuesDiv');
 	for (i = 0; i < pannels.length; i++)
 		$(pannels[i]).style.display = 'none';
 
