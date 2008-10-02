@@ -185,7 +185,6 @@ class AsteriskManager(threading.Thread):
 	def send(self, lines, handler = None, ActionID = None):
 		
 		if self.isConnected:
-			log.debug('AsteriskManager.send :: %s' % '\r\n'.join(lines))
 			if handler:
 				if not ActionID:
 					ActionID = self.getNextActionID()
@@ -193,6 +192,7 @@ class AsteriskManager(threading.Thread):
 				log.info('AsteriskManager.send :: Register ActionHandler for ActionID: %s' % ActionID)
 				self.actionHandlers[ActionID] = handler
 			try:
+				log.debug('AsteriskManager.send :: %s' % '\r\n'.join(lines))
 				self.socket.send('%s\r\n\r\n' % '\r\n'.join(lines))
 			except socket.error, e:
 				log.error('AsteriskManager.send :: Error sendind data: %s' % e)

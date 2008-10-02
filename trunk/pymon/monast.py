@@ -82,6 +82,7 @@ class MonAst:
 	calls          = {}
 	channels       = {}
 	monitoredUsers = {}
+	queues         = {}
 
 	clientSockLock     = threading.RLock()
 	clientQueuelock    = threading.RLock()
@@ -90,6 +91,7 @@ class MonAst:
 	callsLock          = threading.RLock()
 	channelsLock       = threading.RLock()
 	monitoredUsersLock = threading.RLock()
+	queuesLock         = threading.RLock()
 	
 	channelStatus = []
 	
@@ -162,6 +164,10 @@ class MonAst:
 		self.AMI.registerEventHandler('ParkedCallGiveUp', self.handlerParkedCallGiveUp)
 		self.AMI.registerEventHandler('Status', self.handlerStatus)
 		self.AMI.registerEventHandler('StatusComplete', self.handlerStatusComplete)
+		self.AMI.registerEventHandler('QueueMemberAdded', self.handlerQueueMemberAdded)
+		self.AMI.registerEventHandler('QueueMemberRemoved', self.handlerQueueMemberRemoved)
+		self.AMI.registerEventHandler('Join', self.handlerJoin) # Queue Join
+		self.AMI.registerEventHandler('Leave', self.handlerLeave) # Queue Leave
 	
 	
 	def list2Dict(self, lines):
@@ -789,7 +795,79 @@ class MonAst:
 			self.monitoredUsersLock.release()
 		self.callsLock.release()
 		self.channelsLock.release()
+		
+		
+	def handlerQueueMemberAdded(self, lines):
+		
+		log.info('MonAst.handlerQueueMemberAdded :: Running...')
+		dic = self.list2Dict(lines)
+		
+		Queue      = dic['Queue']
+		Location   = dic['Location']
+		MemberName = dic['MemberName']
+		Penalty    = dic['Penalty']
+		
+		self.queuesLock.acquire()
+		self.queues[Queue]['members'][Location] = {'penalty': Penalty, 'name': MemberName}
+		self.enqueue('AddQueueMember: %s:::%s:::%s' % (Queue, Location, MemberName))
+		self.queuesLock.release()
+		
+		
+	def handlerQueueMemberRemoved(self, lines):
+		
+		log.info('MonAst.handlerQueueMemberRemoved :: Running...')
+		dic = self.list2Dict(lines)
+		
+		Queue      = dic['Queue']
+		Location   = dic['Location']
+		MemberName = dic['MemberName']
+		
+		self.queuesLock.acquire()
+		try:
+			del self.queues[Queue]['members'][Location]
+			self.enqueue('RemoveQueueMember: %s:::%s:::%s' % (Queue, Location, MemberName))
+		except KeyError:
+			log.error("MonAst.handlerQueueMemberRemoved :: Queue or Member not found in self.queues['%s']['members']['%s']" % (Queue, Location))
+		self.queuesLock.release()
+		
+		
+	def handlerJoin(self, lines): # Queue Join
+		
+		log.info('MonAst.handlerJoin :: Running...')
+		dic = self.list2Dict(lines)
+		
+		Channel      = dic['Channel']
+		CallerID     = dic['CallerID']
+		CallerIDName = dic['CallerIDName']
+		Queue        = dic['Queue']
+		Position     = dic['Position']
+		Count        = dic['Count']
+		Uniqueid     = dic['Uniqueid']
+		
+		self.queuesLock.acquire()
+		self.queues[Queue]['clients'][Uniqueid] = {'Uniqueid': Uniqueid, 'Channel': Channel, 'CallerID': CallerID, 'CallerIDName': CallerIDName, 'Position': Position}
+		self.enqueue('AddQueueClient: %s:::%s:::%s:::%s:::%s:::%s:::%s' % (Queue, Uniqueid, Channel, CallerID, CallerIDName, Position, Count))
+		self.queuesLock.release()
+		
 	
+	def handlerLeave(self, lines): # Queue Leave
+		
+		log.info('MonAst.handlerLeave :: Running...')
+		dic = self.list2Dict(lines)
+	
+		Channel      = dic['Channel']
+		Queue        = dic['Queue']
+		Count        = dic['Count']
+		Uniqueid     = dic['Uniqueid']
+		
+		self.queuesLock.acquire()
+		try:
+			del self.queues[Queue]['clients'][Uniqueid]
+			self.enqueue('RemoveQueueClient: %s:::%s:::%s:::%s' % (Queue, Uniqueid, Channel, Count))
+		except KeyError:
+			log.error("MonAst.handlerLeave :: Queue or Client not found in self.queues['%s']['clients']['%s']" % (Queue, Uniqueid))
+		self.queuesLock.release()
+		
 	
 	##
 	## AMI handlers for Actions/Commands
@@ -864,7 +942,39 @@ class MonAst:
 		for session in self.clientQueues:
 			self.clientQueues[session]['q'].put('Reload: 10')
 		self.clientQueuelock.release()
-			
+		
+		
+	def handlerGetConfigQueues(self, lines):
+		
+		log.info('MonAst.handlerGetConfigQueues :: Parsing config...')
+		
+		self.queuesLock.acquire()
+		
+		queue     = None
+		oldQueues = self.queues.keys()
+		for line in lines:
+			if line.startswith('Category-') and not line.endswith(': general'):
+				queue = line[line.find(': ') + 2:]
+				self.queues[queue] = {'members': {}, 'clients': {}}
+				if queue in oldQueues:
+					oldQueues.remove(queue)
+				
+			if queue and line.startswith('Line-'):
+				tmp, param = line.split(': ')
+				if param.startswith('member') and param.find('Agent/') == -1:
+					member = param[param.find('=')+1:].split(',')
+					if len(member) == 3:
+						self.queues[queue]['members'][member[0]] = {'penalty': member[1], 'name': member[2]}
+					elif len(member) == 2:
+						self.queues[queue]['members'][member[0]] = {'penalty': member[1], 'name': member[0]}
+					elif len(member) == 1:
+						self.queues[queue]['members'][member[0]] = {'penalty': 0, 'name': member[0]}			
+		
+		for queue in oldQueues:
+			del self.queues[queue]
+		
+		self.queuesLock.release()
+		
 	
 	def handlerStatusFollow(self, lines):
 		
@@ -897,6 +1007,7 @@ class MonAst:
 		self.callsLock.acquire()
 		self.meetmeLock.acquire()
 		self.parkedLock.acquire()
+		self.queuesLock.acquire()
 		
 		try:
 			self.clientQueues[session]['t'] = time.time()
@@ -940,11 +1051,28 @@ class MonAst:
 			for Exten in parkedCalls:
 				pc = self.parked[Exten]
 				output.append('ParkedCall: %s:::%s:::%s:::%s:::%s:::%s' % (Exten, pc['Channel'], pc['From'], pc['Timeout'], pc['CallerID'], pc['CallerIDName']))
+				
+			queues = self.queues.keys()
+			queues.sort()
+			for queue in queues:
+				q = self.queues[queue]
+				output.append('Queue: %s' % queue)
+				members = q['members'].keys()
+				members.sort()
+				for member in members:
+					output.append('AddQueueMember: %s:::%s:::%s' % (queue, member, q['members'][member]['name']))
+					
+				clients = q['clients'].values()
+				clients.sort(lambda x, y: cmp(x['Position'], y['Position']))
+				for i in xrange(len(clients)):
+					c = clients[i]
+					output.append('AddQueueClient: %s:::%s:::%s:::%s:::%s:::%s:::%s' % (queue, c['Uniqueid'], c['Channel'], c['CallerID'], c['CallerIDName'], c['Position'], i))
 			
 			output.append('END STATUS')
 		except:
 			log.error('MonAst.clientGetStatus (%s) :: Unhandled Exception \n%s' % (threadId, log.formatTraceback(traceback)))
 		
+		self.queuesLock.release()
 		self.parkedLock.release()
 		self.meetmeLock.release()
 		self.callsLock.release()
@@ -1144,6 +1272,7 @@ class MonAst:
 		self.AMI.send(['Action: GetConfig', 'Filename: sip.conf'], self.handlerGetConfigSIP)
 		self.AMI.send(['Action: GetConfig', 'Filename: iax.conf'], self.handlerGetConfigIAX)
 		self.AMI.send(['Action: GetConfig', 'Filename: meetme.conf'], self.handlerGetConfigMeetme)
+		self.AMI.send(['Action: GetConfig', 'Filename: queues.conf'], self.handlerGetConfigQueues)
 		
 	
 	def start(self):

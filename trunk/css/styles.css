@@ -127,6 +127,38 @@ BODY {
 	background-color: #ffffff;
 	z-index: 1;
 }
+
+#queuesDiv {
+	padding: 5px;
+}
+.queueDiv {
+	float: left;
+	margin-right: 10px;
+	margin-bottom: 10px;
+}
+.queueStatisticsDiv {
+	border: 1px solid #aaaaaa; 
+	background-color: #ffffff; 
+	margin-bottom: 5px;
+}
+.queueMembersDivWrap {
+	float: left;
+	margin-right: 10px;
+}
+.queueMembersDiv {
+	border: 1px solid #aaaaaa;
+	background-color: #ffffff;
+	margin-bottom: 2px;
+}
+.queueClientsDivWrap {
+	float: left;
+}
+.queueClientsDiv {
+	border: 1px solid #aaaaaa;
+	background-color: #ffffff;
+	margin-bottom: 2px;
+}
+
 #debugMsg {
 	border: black 1px solid; 
 	width: 100%; 

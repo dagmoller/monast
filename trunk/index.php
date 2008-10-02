@@ -40,15 +40,18 @@ setValor('Actions', array());
 $sessionId = session_id();
 session_write_close();
 
-$json        = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
-$template    = new TemplatePower('template/index.html');
-$peerStatus  = array();
-$channels    = array();
-$calls       = array();
-$meetmeRooms = array();
-$meetmeJoins = array();
-$parkedCalls = array();
-$isStatus    = false;
+$json         = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
+$template     = new TemplatePower('template/index.html');
+$peerStatus   = array();
+$channels     = array();
+$calls        = array();
+$meetmeRooms  = array();
+$meetmeJoins  = array();
+$parkedCalls  = array();
+$queues       = array();
+$queueMembers = array();
+$queueClients = array();
+$isStatus     = false;
 
 $errno  = null;
 $errstr = null;
@@ -105,6 +108,15 @@ while (!feof($fp))
 				    
 				if (strpos($message, 'ParkedCall: ') === 0)
 				    $parkedCalls[] = substr($message, strlen('ParkedCall: '));
+				    
+				if (strpos($message, 'Queue: ') === 0)
+				    $queues[] = substr($message, strlen('Queue: '));
+				    
+				if (strpos($message, 'AddQueueMember: ') === 0)
+				    $queueMembers[] = substr($message, strlen('AddQueueMember: '));
+				    
+				if (strpos($message, 'AddQueueClient: ') === 0)
+				    $queueClients[] = substr($message, strlen('AddQueueClient: '));
 			}
 		}
 	}
@@ -215,6 +227,46 @@ foreach ($parkedCalls as $park)
 		'Timeout'      => $Timeout, 
 	    'CallerID'     => $CallerID,
 		'CallerIDName' => $CallerIDName, 
+	);
+	
+	$template->newBlock('process');
+	$template->assign('json', $json->encode($tmp));
+}
+
+foreach ($queues as $queue)
+{
+	$template->newBlock('queue');
+	$template->assign('queue', $queue);
+}
+
+foreach ($queueMembers as $member)
+{
+	list($Queue, $Member, $MemberName) = explode(':::', $member);
+	$tmp = array
+	(
+		'Action'     => 'AddQueueMember',
+		'Queue'      => $Queue,
+		'Member'     => $Member,
+		'MemberName' => $MemberName
+	);
+	
+	$template->newBlock('process');
+	$template->assign('json', $json->encode($tmp));
+}
+
+foreach ($queueClients as $client)
+{
+	list($Queue, $Uniqueid, $Channel, $CallerID, $CallerIDName, $Position, $Count) = explode(':::', $client);
+	$tmp = array
+	(
+		'Action'       => 'AddQueueClient',
+		'Queue'        => $Queue,
+		'Uniqueid'     => $Uniqueid, 
+		'Channel'      => $Channel, 
+		'CallerID'     => $CallerID, 
+		'CallerIDName' => $CallerIDName, 
+		'Position'     => $Position, 
+		'Count'        => $Count
 	);
 	
 	$template->newBlock('process');

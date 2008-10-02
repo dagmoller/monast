@@ -255,6 +255,63 @@ function parseMsg($msg)
     	return $saida;
 	}
 	
+	if (strpos($msg, 'AddQueueMember: ') !== false)
+	{
+	    list($Queue, $Member, $MemberName) = explode(':::', substr($msg, 16));
+    	$saida = array
+    	(
+    		'Action'     => 'AddQueueMember',
+    		'Queue'      => $Queue,
+			'Member'     => $Member,
+			'MemberName' => $MemberName
+    	);
+    	return $saida;
+	}
+	
+	if (strpos($msg, 'RemoveQueueMember: ') !== false)
+	{
+	    list($Queue, $Member, $MemberName) = explode(':::', substr($msg, 19));
+    	$saida = array
+    	(
+    		'Action'     => 'RemoveQueueMember',
+    		'Queue'      => $Queue,
+			'Member'     => $Member,
+			'MemberName' => $MemberName
+    	);
+    	return $saida;
+	}
+	
+	if (strpos($msg, 'AddQueueClient: ') !== false)
+	{
+	    list($Queue, $Uniqueid, $Channel, $CallerID, $CallerIDName, $Position, $Count) = explode(':::', substr($msg, 16));
+    	$saida = array
+    	(
+    		'Action'       => 'AddQueueClient',
+			'Queue'        => $Queue,
+			'Uniqueid'     => $Uniqueid, 
+			'Channel'      => $Channel, 
+			'CallerID'     => $CallerID, 
+			'CallerIDName' => $CallerIDName, 
+			'Position'     => $Position, 
+			'Count'        => $Count
+    	);
+    	return $saida;
+	}
+	
+	if (strpos($msg, 'RemoveQueueClient: ') !== false)
+	{
+	    list($Queue, $Uniqueid, $Channel, $Count) = explode(':::', substr($msg, 19));
+    	$saida = array
+    	(
+    		'Action'       => 'RemoveQueueClient',
+			'Queue'        => $Queue,
+			'Uniqueid'     => $Uniqueid, 
+			'Channel'      => $Channel, 
+			'Count'        => $Count
+    	);
+    	return $saida;
+	}
+	
 	return $json->encode(array('Action' => 'None'));
 }
 
