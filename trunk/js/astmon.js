@@ -121,11 +121,6 @@ function getStatus()
 	});
 }
 
-var _countMembers   = 0;
-var _countClients   = 0;
-var _countCompleted = 0;
-var _countAbandoned = 0
-
 function Process(o)
 {
 	if ($('debugMsg'))
@@ -439,10 +434,10 @@ function Process(o)
 			
 			$('queueMembers-' + o['Queue']).appendChild(div);
 			
-			_countMembers += 1;
+			_countMembers[o['Queue']] += 1;
 		}
 		
-		$('queueMembersCount-' + o['Queue']).innerHTML = _countMembers;
+		$('queueMembersCount-' + o['Queue']).innerHTML = _countMembers[o['Queue']];
 		 
 		return;
 	}
@@ -454,10 +449,10 @@ function Process(o)
 		if (div)
 		{
 			$('queueMembers-' + o['Queue']).removeChild(div);
-			_countMembers -= 1;
+			_countMembers[o['Queue']] -= 1;
 		}
 		
-		$('queueMembersCount-' + o['Queue']).innerHTML = _countMembers;
+		$('queueMembersCount-' + o['Queue']).innerHTML = _countMembers[o['Queue']];
 		
 		return;
 	}
@@ -502,15 +497,15 @@ function Process(o)
 		$('queueClientsCount-' + o['Queue']).innerHTML = o['Count'];
 		$('queueStatsCalls-' + o['Queue']).innerHTML = o['Count'];
 		
-		if (o['Cause'] == 'Completed')
+		/*if (o['Cause'] == 'Completed')
 		{
-			_countCompleted += 1;
-			$('queueStatsCompleted-' + o['Queue']).innerHTML = _countCompleted;
-		}
-		else if (o['Cause'] == 'Abandoned')
+			_countCompleted[o['Queue']] += 1;
+			$('queueStatsCompleted-' + o['Queue']).innerHTML = _countCompleted[o['Queue']];
+		}*/
+		if (o['Cause'] == 'Abandoned')
 		{
-			_countAbandoned += 1;
-			$('queueStatsAbandoned-' + o['Queue']).innerHTML = _countAbandoned;
+			_countAbandoned[o['Queue']] += 1;
+			$('queueStatsAbandoned-' + o['Queue']).innerHTML = _countAbandoned[o['Queue']];
 		}
 		
 		return;
@@ -518,8 +513,8 @@ function Process(o)
 	
 	if (o['Action'] == 'QueueParams')
 	{
-		_countCompleted = o['Completed'];
-		_countAbandoned = o['Abandoned'];
+		_countCompleted[o['Queue']] = parseInt(o['Completed']);
+		_countAbandoned[o['Queue']] = parseInt(o['Abandoned']);
 		
 		$('queueStatsMax-' + o['Queue']).innerHTML              = o['Max'];
 		$('queueStatsCalls-' + o['Queue']).innerHTML            = o['Calls'];
