@@ -234,9 +234,21 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
     </div>
     
     <div id="queuesDiv">
+    <script type="text/javascript">
+    var _countMembers   = {};
+    var _countClients   = {};
+    var _countCompleted = {};
+    var _countAbandoned = {};
+    </script>
     <fieldset>
       <legend>Queues</legend>
       <!-- START BLOCK : queue -->
+      <script type="text/javascript">
+      _countMembers['{queue}']   = 0;
+      _countClients['{queue}']   = 0;
+      _countCompleted['{queue}'] = 0;
+      _countAbandoned['{queue}'] = 0;
+      </script>
       <div class="queueDiv">
         <fieldset>
           <legend>Queue: {queue}</legend>
