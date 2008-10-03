@@ -136,6 +136,7 @@ class MonAst:
 				
 		try:
 			self.socketClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			self.socketClient.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 			self.socketClient.bind(('0.0.0.0', self.bindPort))
 			self.socketClient.listen(10)
 		except socket.error, e:
@@ -1373,9 +1374,13 @@ class MonAst:
 			while self.running:
 				time.sleep(1)
 		except KeyboardInterrupt:
+			log.info('MonAst.start :: Received KeyboardInterrupt -- Shutting Down')
 			self.running = False
 			
 		self.AMI.close()
+		
+		time.sleep(2)
+		log.log('Monast :: Finished...')
 	
 	
 def _usage():
