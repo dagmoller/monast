@@ -168,6 +168,8 @@ class MonAst:
 		self.AMI.registerEventHandler('QueueMemberRemoved', self.handlerQueueMemberRemoved)
 		self.AMI.registerEventHandler('Join', self.handlerJoin) # Queue Join
 		self.AMI.registerEventHandler('Leave', self.handlerLeave) # Queue Leave
+		self.AMI.registerEventHandler('QueueCallerAbandon', self.handlerQueueCallerAbandon)
+		self.AMI.registerEventHandler('QueueParams', self.handlerQueueParams)
 	
 	
 	def list2Dict(self, lines):
@@ -312,13 +314,19 @@ class MonAst:
 			self.clientQueuelock.release()
 			
 			
-	def threadChannelChecker(self, name, params):
+	def threadCheckStatus(self, name, params):
 		
 		log.info('MonAst.threadChannelChecker :: Starting Thread...')
 		time.sleep(10)
 		while self.running:
 			log.info('MonAst.threadChannelChecker :: Requesting Status...')
 			self.AMI.send(['Action: Status'], self.handlerStatusFollow)
+			
+			self.queuesLock.acquire()
+			for queue in self.queues:
+				self.AMI.send(['Action: QueueStatus', 'Queue: %s' % queue])
+			self.queuesLock.release()
+			
 			time.sleep(60)
 	
 	
@@ -846,6 +854,7 @@ class MonAst:
 		
 		self.queuesLock.acquire()
 		self.queues[Queue]['clients'][Uniqueid] = {'Uniqueid': Uniqueid, 'Channel': Channel, 'CallerID': CallerID, 'CallerIDName': CallerIDName, 'Position': Position}
+		self.queues[Queue]['stats']['Calls'] += 1
 		self.enqueue('AddQueueClient: %s:::%s:::%s:::%s:::%s:::%s:::%s' % (Queue, Uniqueid, Channel, CallerID, CallerIDName, Position, Count))
 		self.queuesLock.release()
 		
@@ -862,13 +871,67 @@ class MonAst:
 		
 		self.queuesLock.acquire()
 		try:
+			cause = ''
+			if self.queues[Queue]['clients'][Uniqueid].has_key('Abandoned'):
+				cause = 'Abandoned'
+				self.queues[Queue]['stats']['Abandoned'] += 1
+			else:
+				cause = 'Completed'
+				self.queues[Queue]['stats']['Completed'] += 1
+			self.queues[Queue]['stats']['Calls'] -= 1
+			
 			del self.queues[Queue]['clients'][Uniqueid]
-			self.enqueue('RemoveQueueClient: %s:::%s:::%s:::%s' % (Queue, Uniqueid, Channel, Count))
+			self.enqueue('RemoveQueueClient: %s:::%s:::%s:::%s:::%s' % (Queue, Uniqueid, Channel, Count, cause))
 		except KeyError:
 			log.error("MonAst.handlerLeave :: Queue or Client not found in self.queues['%s']['clients']['%s']" % (Queue, Uniqueid))
 		self.queuesLock.release()
 		
-	
+		
+	def handlerQueueCallerAbandon(self, lines):
+		
+		log.info('MonAst.handlerQueueCallerAbandon :: Running...')
+		dic = self.list2Dict(lines)
+		
+		Queue    = dic['Queue']
+		Uniqueid = dic['Uniqueid']
+		
+		self.queuesLock.acquire()
+		self.queues[Queue]['clients'][Uniqueid]['Abandoned'] = True
+		self.queuesLock.release()
+		
+		self.enqueue('AbandonedQueueClient: %s' % Uniqueid)
+		
+		
+	def handlerQueueParams(self, lines):
+		
+		log.info('MonAst.handlerQueueParams :: Running...')
+		dic = self.list2Dict(lines)
+		
+		Queue            = dic['Queue']
+		Max              = dic['Max']
+		Calls            = dic['Calls']
+		Holdtime         = dic['Holdtime']
+		Completed        = dic['Completed']
+		Abandoned        = dic['Abandoned']
+		ServiceLevel     = dic['ServiceLevel']
+		ServicelevelPerf = dic['ServicelevelPerf']
+		Weight           = dic['Weight']
+		
+		self.queuesLock.acquire()
+		self.queues[Queue]['stats']['Max'] = int(dic['Max'])
+		self.queues[Queue]['stats']['Calls'] = int(dic['Calls'])
+		self.queues[Queue]['stats']['Holdtime'] = int(dic['Holdtime'])
+		self.queues[Queue]['stats']['Completed'] = int(dic['Completed'])
+		self.queues[Queue]['stats']['Abandoned'] = int(dic['Abandoned'])
+		self.queues[Queue]['stats']['ServiceLevel'] = int(dic['ServiceLevel'])
+		self.queues[Queue]['stats']['ServicelevelPerf'] = float(dic['ServicelevelPerf'])
+		self.queues[Queue]['stats']['Weight'] = int(dic['Weight'])
+		self.queuesLock.release()
+		
+		self.enqueue('QueueParams: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % \
+					(Queue, Max, Calls, Holdtime, Completed, Abandoned, ServiceLevel, ServicelevelPerf, Weight))
+	   
+		
 	##
 	## AMI handlers for Actions/Commands
 	##
@@ -955,7 +1018,13 @@ class MonAst:
 		for line in lines:
 			if line.startswith('Category-') and not line.endswith(': general'):
 				queue = line[line.find(': ') + 2:]
-				self.queues[queue] = {'members': {}, 'clients': {}}
+				self.queues[queue] = {
+					'members': {}, 
+					'clients': {}, 
+					'stats': {
+						'Max': 0, 'Calls': 0, 'Holdtime': 0, 'Completed': 0, 'Abandoned': 0, 'ServiceLevel': 0, 'ServicelevelPerf': 0.0, 'Weight': 0
+					}
+				}
 				if queue in oldQueues:
 					oldQueues.remove(queue)
 				
@@ -1067,6 +1136,18 @@ class MonAst:
 				for i in xrange(len(clients)):
 					c = clients[i]
 					output.append('AddQueueClient: %s:::%s:::%s:::%s:::%s:::%s:::%s' % (queue, c['Uniqueid'], c['Channel'], c['CallerID'], c['CallerIDName'], c['Position'], i))
+					
+				Max              = q['stats']['Max']
+				Calls            = q['stats']['Calls']
+				Holdtime         = q['stats']['Holdtime']
+				Completed        = q['stats']['Completed']
+				Abandoned        = q['stats']['Abandoned']
+				ServiceLevel     = q['stats']['ServiceLevel']
+				ServicelevelPerf = q['stats']['ServicelevelPerf']
+				Weight           = q['stats']['Weight']
+				
+				output.append('QueueParams: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % \
+							(queue, Max, Calls, Holdtime, Completed, Abandoned, ServiceLevel, ServicelevelPerf, Weight))
 			
 			output.append('END STATUS')
 		except:
@@ -1277,7 +1358,7 @@ class MonAst:
 	
 	def start(self):
 		
-		self.tcc  = thread.start_new_thread(self.threadChannelChecker, ('threadChannelChecker', 2))
+		self.tcc  = thread.start_new_thread(self.threadCheckStatus, ('threadCheckStatus', 2))
 		self.tcs  = thread.start_new_thread(self.threadSocketClient, ('threadSocketClient', 2))
 		self.tcqr = thread.start_new_thread(self.threadClientQueueRemover, ('threadClientQueueRemover', 2))
 		

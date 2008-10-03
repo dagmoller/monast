@@ -300,16 +300,36 @@ function parseMsg($msg)
 	
 	if (strpos($msg, 'RemoveQueueClient: ') !== false)
 	{
-	    list($Queue, $Uniqueid, $Channel, $Count) = explode(':::', substr($msg, 19));
+	    list($Queue, $Uniqueid, $Channel, $Count, $Cause) = explode(':::', substr($msg, 19));
     	$saida = array
     	(
     		'Action'       => 'RemoveQueueClient',
 			'Queue'        => $Queue,
 			'Uniqueid'     => $Uniqueid, 
 			'Channel'      => $Channel, 
-			'Count'        => $Count
+			'Count'        => $Count,
+    		'Cause'        => $Cause
     	);
     	return $saida;
+	}
+	
+	if (strpos($msg, 'QueueParams: ') !== false)
+	{
+		list($Queue, $Max, $Calls, $Holdtime, $Completed, $Abandoned, $ServiceLevel, $ServicelevelPerf, $Weight) = explode(':::', substr($msg, 13));
+		$saida = array
+		(
+			'Action'           => 'QueueParams',
+			'Queue'            => $Queue,
+			'Max'              => $Max, 
+			'Calls'            => $Calls, 
+			'Holdtime'         => $Holdtime, 
+			'Completed'        => $Completed, 
+			'Abandoned'        => $Abandoned, 
+			'ServiceLevel'     => $ServiceLevel,
+			'ServicelevelPerf' => $ServicelevelPerf,
+			'Weight'           => $Weight
+		);
+		return $saida;
 	}
 	
 	return $json->encode(array('Action' => 'None'));

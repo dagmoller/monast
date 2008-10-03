@@ -49,6 +49,7 @@ $meetmeRooms  = array();
 $meetmeJoins  = array();
 $parkedCalls  = array();
 $queues       = array();
+$queueParams  = array();
 $queueMembers = array();
 $queueClients = array();
 $isStatus     = false;
@@ -117,6 +118,9 @@ while (!feof($fp))
 				    
 				if (strpos($message, 'AddQueueClient: ') === 0)
 				    $queueClients[] = substr($message, strlen('AddQueueClient: '));
+				    
+				if (strpos($message, 'QueueParams: ') === 0)
+				    $queueParams[] = substr($message, strlen('QueueParams: '));
 			}
 		}
 	}
@@ -267,6 +271,27 @@ foreach ($queueClients as $client)
 		'CallerIDName' => $CallerIDName, 
 		'Position'     => $Position, 
 		'Count'        => $Count
+	);
+	
+	$template->newBlock('process');
+	$template->assign('json', $json->encode($tmp));
+}
+
+foreach ($queueParams as $params)
+{
+	list($Queue, $Max, $Calls, $Holdtime, $Completed, $Abandoned, $ServiceLevel, $ServicelevelPerf, $Weight) = explode(':::', $params);
+	$tmp = array
+	(
+		'Action'           => 'QueueParams',
+		'Queue'            => $Queue,
+		'Max'              => $Max, 
+		'Calls'            => $Calls, 
+		'Holdtime'         => $Holdtime, 
+		'Completed'        => $Completed, 
+		'Abandoned'        => $Abandoned, 
+		'ServiceLevel'     => $ServiceLevel,
+		'ServicelevelPerf' => $ServicelevelPerf,
+		'Weight'           => $Weight
 	);
 	
 	$template->newBlock('process');
