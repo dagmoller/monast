@@ -193,7 +193,7 @@ class MonAst:
 		while self.running:
 			try:
 				(sc, addr) = self.socketClient.accept()
-				log.log('MonAst.threadSocketClient :: New client connection: %s' % str(addr))
+				log.info('MonAst.threadSocketClient :: New client connection: %s' % str(addr))
 				self.clientSockLock.acquire()
 				threadId  = 'threadClient-%s' % random.random()
 				self.clientSocks[threadId] = thread.start_new_thread(self.threadClient, (threadId, sc, addr))
@@ -228,6 +228,7 @@ class MonAst:
 							except KeyError:
 								self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time()}
 								output.append('NEW SESSION')
+								log.log('MonAst.threadClient (%s) :: New client session: %s' % (threadId, session))
 							self.clientQueuelock.release()
 						
 						elif session and message.upper() == 'GET STATUS':
@@ -310,7 +311,7 @@ class MonAst:
 				if int(now - past) > 600:
 					dels.append(session)
 			for session in dels:
-				log.info('MonAst.threadClientQueueRemover :: Removing dead client session: %s' % session)
+				log.log('MonAst.threadClientQueueRemover :: Removing dead client session: %s' % session)
 				del self.clientQueues[session]
 			self.clientQueuelock.release()
 			
