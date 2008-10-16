@@ -107,13 +107,13 @@ class AsteriskManager(threading.Thread):
 		while self.running:
 			if self.isConnected:
 				if self.ping and self.pong:
-					log.log('AsteriskManager.threadPing :: PONG')
+					log.info('AsteriskManager.threadPing :: PONG')
 					self.ping = False
 					self.pong = False
 					time.sleep(60)
 				
 				if not self.ping and not self.pong:
-					log.log('AsteriskManager.threadPing :: PING')
+					log.info('AsteriskManager.threadPing :: PING')
 					count     = 0
 					self.ping = True
 					self.send(['Action: PING'])
@@ -245,13 +245,13 @@ class AsteriskManager(threading.Thread):
 				
 	def registerEventHandler(self, event, handler):
 		
-		log.log('AsteriskManager.registerEventHandler :: Register EnventHandler: %s' % event)
+		log.info('AsteriskManager.registerEventHandler :: Register EnventHandler: %s' % event)
 		self.eventHandlers[event] = handler
 		
 		
 	def unregisterEventHandler(self, event):
 		
-		log.log('AsteriskManager.unregisterEventHandler :: Unregister EnventHandler: %s' % event)
+		log.info('AsteriskManager.unregisterEventHandler :: Unregister EnventHandler: %s' % event)
 		try:
 			del self.eventHandlers[event]
 		except:
