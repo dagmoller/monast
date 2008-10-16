@@ -1360,16 +1360,20 @@ class MonAst:
 	
 	def start(self):
 		
-		self.tcc  = thread.start_new_thread(self.threadCheckStatus, ('threadCheckStatus', 2))
-		self.tcs  = thread.start_new_thread(self.threadSocketClient, ('threadSocketClient', 2))
-		self.tcqr = thread.start_new_thread(self.threadClientQueueRemover, ('threadClientQueueRemover', 2))
+		#self.tcc  = thread.start_new_thread(self.threadCheckStatus, ('threadCheckStatus', 2))
+		#self.tcs  = thread.start_new_thread(self.threadSocketClient, ('threadSocketClient', 2))
+		#self.tcqr = thread.start_new_thread(self.threadClientQueueRemover, ('threadClientQueueRemover', 2))
 		
 		self.AMI.start()
 		
 		try:
-			while not self.AMI.isConnected:
+			while not self.AMI.isConnected or not self.AMI.isAuthenticated:
 				time.sleep(1)
-				
+			
+			self.tcc  = thread.start_new_thread(self.threadCheckStatus, ('threadCheckStatus', 2))
+			self.tcs  = thread.start_new_thread(self.threadSocketClient, ('threadSocketClient', 2))
+			self.tcqr = thread.start_new_thread(self.threadClientQueueRemover, ('threadClientQueueRemover', 2))
+			
 			self._GetConfig()
 				
 			while self.running:
