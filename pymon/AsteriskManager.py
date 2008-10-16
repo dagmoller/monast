@@ -43,8 +43,11 @@ class AsteriskManager(threading.Thread):
 	username = None
 	password = None
 	
-	running     = True
-	isConnected = False
+	running         = True
+	isConnected     = False
+	isAuthenticated = False
+	
+	AMIVersion = None
 	
 	socket = None
 	
@@ -76,7 +79,7 @@ class AsteriskManager(threading.Thread):
 	
 	def threadRead(self, name, params):
 		
-		log.log('AsteriskManager.threadRead :: Starting Thread...')
+		log.info('AsteriskManager.threadRead :: Starting Thread...')
 		while self.running:
 			try:
 				buffer = ""
@@ -101,7 +104,7 @@ class AsteriskManager(threading.Thread):
 	
 	def threadPing(self, name, params):
 		
-		log.log('AsteriskManager.threadPing :: Starting Thread...')
+		log.info('AsteriskManager.threadPing :: Starting Thread...')
 		time.sleep(60)
 		count = 0
 		while self.running:
@@ -131,7 +134,7 @@ class AsteriskManager(threading.Thread):
 				
 	def threadMsgQueue(self, name, params):
 		
-		log.log('AsteriskManager.threadMsgQueue :: Starting Thread...')
+		log.info('AsteriskManager.threadMsgQueue :: Starting Thread...')
 		while self.running:
 			msg = self.msgQueue.get()
 			msg = msg.strip()
@@ -140,6 +143,19 @@ class AsteriskManager(threading.Thread):
 			if msg == 'Response: Pong':
 				self.pong = True
 				continue
+			
+			gAuth = re.compile('Asterisk Call Manager/([^\s^\r^\n]*)\r\nResponse: ([^\s^\r^\n]*)\r\nMessage: (.*)$').match(msg)
+			if gAuth:
+				self.AMIVersion = gAuth.group(1)
+				response        = gAuth.group(2)
+				message         = gAuth.group(3)
+				
+				if response == 'Error' and message == 'Authentication failed':
+					log.error('AsteriskManager.threadMsgQueue :: Authentication failed')
+				
+				if response == 'Success' and message == 'Authentication accepted':
+					log.log('AsteriskManager.threadMsgQueue :: Authentication accepted')
+					self.isAuthenticated = True									
 			
 			# Event Handlers
 			gEvent = re.compile('^Event:[\s]([^\r^\n^\s]*)').match(msg)
@@ -205,12 +221,14 @@ class AsteriskManager(threading.Thread):
 		
 	def logoff(self):
 		log.log('AsteriskManager.logoff :: Logging off...')
+		self.isAuthenticated = False
 		self.send(['Action: logoff'])
 				
 	
 	def connect(self):
 		
 		while not self.isConnected:
+			self.isAuthenticated = False
 			try:
 				log.log('AsteriskManager.connect :: Trying to connect to %s:%s' % (self.host, self.port))
 				self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -270,6 +288,7 @@ class AsteriskManager(threading.Thread):
 			self.running = False
 		
 		self.running = False
-		self.logoff()
+		if self.isAuthenticated:
+			self.logoff()
 		self.disconnect()
 		
