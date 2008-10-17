@@ -95,6 +95,9 @@ class MonAst:
 	
 	channelStatus = []
 	
+	queueMemberStatus = {}
+	queueClientStatus = {}
+	
 	##
 	## Class Initialization
 	##
@@ -171,6 +174,9 @@ class MonAst:
 		self.AMI.registerEventHandler('Leave', self.handlerLeave) # Queue Leave
 		self.AMI.registerEventHandler('QueueCallerAbandon', self.handlerQueueCallerAbandon)
 		self.AMI.registerEventHandler('QueueParams', self.handlerQueueParams)
+		self.AMI.registerEventHandler('QueueMember', self.handlerQueueMember)
+		self.AMI.registerEventHandler('QueueEntry', self.handlerQueueEntry)
+		self.AMI.registerEventHandler('QueueStatusComplete', self.handlerQueueStatusComplete)
 	
 	
 	def list2Dict(self, lines):
@@ -326,6 +332,8 @@ class MonAst:
 			
 			self.queuesLock.acquire()
 			for queue in self.queues:
+				self.queueMemberStatus[queue] = []
+				self.queueClientStatus[queue] = []
 				self.AMI.send(['Action: QueueStatus', 'Queue: %s' % queue])
 			self.queuesLock.release()
 			
@@ -805,6 +813,67 @@ class MonAst:
 			self.monitoredUsersLock.release()
 		self.callsLock.release()
 		self.channelsLock.release()
+	
+	
+	def handlerQueueMember(self, lines):
+		
+		log.info('MonAst.handlerQueueMember :: Running...')
+		dic = self.list2Dict(lines)
+		
+		Queue      = dic['Queue']
+		Name       = dic['Name']
+		Location   = dic['Location']
+		Penalty    = dic['Penalty']
+		CallsTaken = dic['CallsTaken']
+		LastCall   = dic['LastCall']
+		Status     = dic['Status']
+		Paused     = dic['Paused']
+		
+		self.queuesLock.acquire()
+		try:
+			self.queues[Queue]['members'][Location]['Penalty']    = Penalty
+			self.queues[Queue]['members'][Location]['CallsTaken'] = CallsTaken
+			self.queues[Queue]['members'][Location]['LastCall']   = LastCall
+			self.queues[Queue]['members'][Location]['Status']     = Status
+			self.queues[Queue]['members'][Location]['Paused']     = Paused
+		except KeyError:
+			self.queues[Queue]['members'][Location] = {
+				'Name': Name, 'Penalty': Penalty, 'CallsTaken': CallsTaken, 'LastCall': LastCall, 'Status': Status, 'Paused': Paused
+			}
+			self.enqueue('AddQueueMember: %s:::%s:::%s' % (Queue, Location, Name))
+		self.queueMemberStatus[Queue].append(Location)
+		self.queuesLock.release()
+		
+		
+	def handlerQueueEntry(self, lines):
+		
+		log.info('MonAst.handlerQueueEntry :: Running...')
+		dic = self.list2Dict(lines)
+		
+		Queue        = dic['Queue']
+		Position     = dic['Position']
+		Channel      = dic['Channel']
+		CallerID     = dic['CallerID']
+		CallerIDName = dic['CallerIDName']
+		Wait         = dic['Wait']
+		Uniqueid     = None
+		
+		# I need to get Uniqueid from this entry
+		self.channelsLock.acquire()
+		for Uniqueid in self.channels:
+			if self.channels[Uniqueid]['Channel'] == Channel:
+				break
+		self.channelsLock.release()
+		
+		self.queuesLock.acquire()
+		self.queueClientStatus[Queue].append(Uniqueid)
+		Count = len(self.queueClientStatus[Queue])
+		try:
+			self.queues[Queue]['clients'][Uniqueid]['Position'] = Position			
+		except KeyError:
+			self.queues[Queue]['clients'][Uniqueid] = {'Uniqueid': Uniqueid, 'Channel': Channel, 'CallerID': CallerID, 'CallerIDName': CallerIDName, 'Position': Position}
+			self.enqueue('AddQueueClient: %s:::%s:::%s:::%s:::%s:::%s:::%s' % (Queue, Uniqueid, Channel, CallerID, CallerIDName, Position, Count))
+		self.queuesLock.release()
 		
 		
 	def handlerQueueMemberAdded(self, lines):
@@ -818,7 +887,7 @@ class MonAst:
 		Penalty    = dic['Penalty']
 		
 		self.queuesLock.acquire()
-		self.queues[Queue]['members'][Location] = {'penalty': Penalty, 'name': MemberName}
+		self.queues[Queue]['members'][Location] = {'Name': MemberName, 'Penalty': Penalty, 'CallsTaken': 0, 'LastCall': 0, 'Status': -1, 'Paused': 0} 
 		self.enqueue('AddQueueMember: %s:::%s:::%s' % (Queue, Location, MemberName))
 		self.queuesLock.release()
 		
@@ -932,7 +1001,29 @@ class MonAst:
 		
 		self.enqueue('QueueParams: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % \
 					(Queue, Max, Calls, Holdtime, Completed, Abandoned, ServiceLevel, ServicelevelPerf, Weight))
-	   
+		
+		
+	def handlerQueueStatusComplete(self, lines):
+		
+		log.info('MonAst.handlerQueueStatusComplete :: Running...')
+		
+		self.queuesLock.acquire()
+		for queue in self.queues:
+			lostMembers = [i for i in self.queues[queue]['members'].keys() if i not in self.queueMemberStatus[queue]]
+			for member in lostMembers:
+				log.log('MonAst.handlerQueueStatusComplete :: Removing lost member: %s' % member)
+				del self.queues[queue]['members'][member]
+				self.enqueue('RemoveQueueMember: %s:::%s:::FAKE' % (queue, member))
+			
+			lostClients = [i for i in self.queues[queue]['clients'].keys() if i not in self.queueClientStatus[queue]]
+			for client in lostClients:
+				log.log('MonAst.handlerQueueStatusComplete :: Removing lost client: %s' % client)
+				Channel = self.queues[queue]['clients'][client]['Channel']
+				del self.queues[queue]['clients'][client]
+				Count = len(self.queues[queue]['clients'])
+				self.enqueue('RemoveQueueClient: %s:::%s:::%s:::%s:::FAKE' % (queue, client, Channel, Count))
+		self.queuesLock.release()
+		
 		
 	##
 	## AMI handlers for Actions/Commands
@@ -1035,11 +1126,17 @@ class MonAst:
 				if param.startswith('member') and param.find('Agent/') == -1:
 					member = param[param.find('=')+1:].split(',')
 					if len(member) == 3:
-						self.queues[queue]['members'][member[0]] = {'penalty': member[1], 'name': member[2]}
+						self.queues[queue]['members'][member[0]] = {
+							'Name': member[2], 'Penalty': member[1], 'CallsTaken': 0, 'LastCall': 0, 'Status': -1, 'Paused': 0
+						} 
 					elif len(member) == 2:
-						self.queues[queue]['members'][member[0]] = {'penalty': member[1], 'name': member[0]}
+						self.queues[queue]['members'][member[0]] = {
+							'Name': member[0], 'Penalty': member[1], 'CallsTaken': 0, 'LastCall': 0, 'Status': -1, 'Paused': 0
+						} 
 					elif len(member) == 1:
-						self.queues[queue]['members'][member[0]] = {'penalty': 0, 'name': member[0]}			
+						self.queues[queue]['members'][member[0]] = {
+							'Name': member[0], 'Penalty': 0, 'CallsTaken': 0, 'LastCall': 0, 'Status': -1, 'Paused': 0
+						} 
 		
 		for queue in oldQueues:
 			del self.queues[queue]
@@ -1050,6 +1147,7 @@ class MonAst:
 	def handlerStatusFollow(self, lines):
 		
 		log.info('MonAst.handlerStatusFollow :: Running...')
+		
 		self.channelStatus = []
 		
 		
@@ -1131,7 +1229,7 @@ class MonAst:
 				members = q['members'].keys()
 				members.sort()
 				for member in members:
-					output.append('AddQueueMember: %s:::%s:::%s' % (queue, member, q['members'][member]['name']))
+					output.append('AddQueueMember: %s:::%s:::%s' % (queue, member, q['members'][member]['Name']))
 					
 				clients = q['clients'].values()
 				clients.sort(lambda x, y: cmp(x['Position'], y['Position']))
