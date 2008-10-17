@@ -66,9 +66,15 @@ BODY {
 #peersDiv {
 	padding: 5px; 
 }
+#peersDivWraper {
+	margin-left: 5px;
+}
 .peerTable {
 	float: left; 
-	margin: 5px;
+	/*margin: 5px;*/
+	margin-right: 10px;
+	margin-bottom: 5px;
+	margin-top: 5px;
 	background-color: #ffffff;
 	z-index: 1;
 }

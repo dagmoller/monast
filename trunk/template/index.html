@@ -128,7 +128,8 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
   
     <div id="peersDiv">
     <fieldset>
-      <legend>Peers/Users</legend> 
+      <legend>Peers/Users</legend>
+      <div id="peersDivWraper"> 
       <!-- START BLOCK : peer -->
       <div id="peerDiv-{peer}" class="peerTable">
         <table class="status" width="175px">
@@ -151,6 +152,7 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
 		ddDivs['peerDiv-{peer}'].onDragOut     = dragOut;
       </script>
       <!-- END BLOCK : peer -->
+      </div>
       <div style="clear: both;"></div>
     </fieldset>
     </div>
@@ -253,7 +255,7 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
         <fieldset>
           <legend>Queue: {queue}</legend>
           <div class="queueStatisticsDiv">
-            <table width="100%">
+            <table width="512">
               <tr>
                 <td class="tableTitle" colspan="8" align="center">Statistics</td>
               </tr>
@@ -302,13 +304,6 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
                 </tr>
               </table>
             </div>
-            <!-- <div class="queueClientsDiv">
-              <table width="250">
-                <tr>
-                  <td class="status" align="center">Diego Aguirre &lt;2652&gt;</td>
-                </tr>
-              </table>
-            </div>  -->
           </div>
         </fieldset>
       </div>
