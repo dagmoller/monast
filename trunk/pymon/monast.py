@@ -1099,12 +1099,6 @@ class MonAst:
 				self.meetme[params[0]] = {}
 		self.meetmeLock.release()
 		
-		# deve ser executado no parser do ultimo arquivo chamado pelo _GetConfig
-		self.clientQueuelock.acquire()
-		for session in self.clientQueues:
-			self.clientQueues[session]['q'].put('Reload: 10')
-		self.clientQueuelock.release()
-		
 		
 	def handlerGetConfigQueues(self, lines):
 		
@@ -1148,6 +1142,12 @@ class MonAst:
 			del self.queues[queue]
 		
 		self.queuesLock.release()
+		
+		# must be executed after last handler called from _GetConfig
+		self.clientQueuelock.acquire()
+		for session in self.clientQueues:
+			self.clientQueues[session]['q'].put('Reload: 10')
+		self.clientQueuelock.release()
 		
 	
 	def handlerStatusFollow(self, lines):
