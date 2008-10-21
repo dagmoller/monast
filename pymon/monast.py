@@ -1464,10 +1464,6 @@ class MonAst:
 	
 	def start(self):
 		
-		#self.tcc  = thread.start_new_thread(self.threadCheckStatus, ('threadCheckStatus', 2))
-		#self.tcs  = thread.start_new_thread(self.threadSocketClient, ('threadSocketClient', 2))
-		#self.tcqr = thread.start_new_thread(self.threadClientQueueRemover, ('threadClientQueueRemover', 2))
-		
 		self.AMI.start()
 		
 		try:
