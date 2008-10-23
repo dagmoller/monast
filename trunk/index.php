@@ -245,13 +245,18 @@ foreach ($queues as $queue)
 
 foreach ($queueMembers as $member)
 {
-	list($Queue, $Member, $MemberName) = explode(':::', $member);
+	list($Queue, $Member, $MemberName, $Penalty, $CallsTaken, $LastCall, $Status, $Paused) = explode(':::', $member);
 	$tmp = array
 	(
 		'Action'     => 'AddQueueMember',
 		'Queue'      => $Queue,
 		'Member'     => $Member,
-		'MemberName' => $MemberName
+		'MemberName' => $MemberName,
+		'Penalty'    => $Penalty, 
+		'CallsTaken' => $CallsTaken, 
+		'LastCall'   => $LastCall, 
+		'Status'     => $Status, 
+		'Paused'     => $Paused
 	);
 	
 	$template->newBlock('process');

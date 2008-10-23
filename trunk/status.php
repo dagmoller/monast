@@ -257,13 +257,18 @@ function parseMsg($msg)
 	
 	if (strpos($msg, 'AddQueueMember: ') !== false)
 	{
-	    list($Queue, $Member, $MemberName) = explode(':::', substr($msg, 16));
+	    list($Queue, $Member, $MemberName, $Penalty, $CallsTaken, $LastCall, $Status, $Paused) = explode(':::', substr($msg, 16));
     	$saida = array
     	(
     		'Action'     => 'AddQueueMember',
     		'Queue'      => $Queue,
 			'Member'     => $Member,
-			'MemberName' => $MemberName
+			'MemberName' => $MemberName,
+    		'Penalty'    => $Penalty, 
+			'CallsTaken' => $CallsTaken, 
+			'LastCall'   => $LastCall, 
+			'Status'     => $Status, 
+			'Paused'     => $Paused
     	);
     	return $saida;
 	}
@@ -277,6 +282,23 @@ function parseMsg($msg)
     		'Queue'      => $Queue,
 			'Member'     => $Member,
 			'MemberName' => $MemberName
+    	);
+    	return $saida;
+	}
+	
+	if (strpos($msg, 'QueueMemberStatus: ') !== false)
+	{
+	    list($Queue, $Member, $Penalty, $CallsTaken, $LastCall, $Status, $Paused) = explode(':::', substr($msg, 19));
+    	$saida = array
+    	(
+    		'Action'     => 'QueueMemberStatus',
+    		'Queue'      => $Queue,
+			'Member'     => $Member,
+    		'Penalty'    => $Penalty, 
+			'CallsTaken' => $CallsTaken, 
+			'LastCall'   => $LastCall, 
+			'Status'     => $Status, 
+			'Paused'     => $Paused
     	);
     	return $saida;
 	}

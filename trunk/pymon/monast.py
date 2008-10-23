@@ -44,6 +44,18 @@ from ConfigParser import SafeConfigParser
 
 MONAST_CALLERID = "MonAst WEB"
 
+AST_DEVICE_STATES = { # copied from include/asterisk/devicestate.h
+	'0': 'Unknown',
+	'1': 'Not In Use',
+	'2': 'In Use',
+	'3': 'Busy',
+	'4': 'Invalid',
+	'5': 'Unavailable',
+	'6': 'Ringing',
+	'7': 'Ring, In Use',
+	'8': 'On Hold'
+}
+
 
 class MyConfigParser(SafeConfigParser):
 	def optionxform(self, optionstr):
@@ -177,6 +189,7 @@ class MonAst:
 		self.AMI.registerEventHandler('QueueCallerAbandon', self.handlerQueueCallerAbandon)
 		self.AMI.registerEventHandler('QueueParams', self.handlerQueueParams)
 		self.AMI.registerEventHandler('QueueMember', self.handlerQueueMember)
+		self.AMI.registerEventHandler('QueueMemberStatus', self.handlerQueueMemberStatus)
 		self.AMI.registerEventHandler('QueueEntry', self.handlerQueueEntry)
 		self.AMI.registerEventHandler('QueueStatusComplete', self.handlerQueueStatusComplete)
 	
@@ -839,13 +852,23 @@ class MonAst:
 			self.queues[Queue]['members'][Location]['LastCall']   = LastCall
 			self.queues[Queue]['members'][Location]['Status']     = Status
 			self.queues[Queue]['members'][Location]['Paused']     = Paused
+			self.enqueue('QueueMemberStatus: %s:::%s:::%s:::%s:::%s:::%s:::%s' % (Queue, Location, Penalty, CallsTaken, LastCall, AST_DEVICE_STATES[Status], Paused))
 		except KeyError:
 			self.queues[Queue]['members'][Location] = {
 				'Name': Name, 'Penalty': Penalty, 'CallsTaken': CallsTaken, 'LastCall': LastCall, 'Status': Status, 'Paused': Paused
 			}
-			self.enqueue('AddQueueMember: %s:::%s:::%s' % (Queue, Location, Name))
+			self.enqueue('AddQueueMember: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % (Queue, Location, Name, Penalty, CallsTaken, LastCall, AST_DEVICE_STATES[Status], Paused))
 		self.queueMemberStatus[Queue].append(Location)
 		self.queuesLock.release()
+		
+		
+	def handlerQueueMemberStatus(self, lines):
+		
+		log.info('MonAst.handlerQueueMemberStatus :: Running...')
+		dic = self.list2Dict(lines)
+		
+		lines.append('Name: %s' % dic['MemberName'])
+		self.handlerQueueMember(lines)
 		
 		
 	def handlerQueueEntry(self, lines):
@@ -890,8 +913,8 @@ class MonAst:
 		Penalty    = dic['Penalty']
 		
 		self.queuesLock.acquire()
-		self.queues[Queue]['members'][Location] = {'Name': MemberName, 'Penalty': Penalty, 'CallsTaken': 0, 'LastCall': 0, 'Status': -1, 'Paused': 0} 
-		self.enqueue('AddQueueMember: %s:::%s:::%s' % (Queue, Location, MemberName))
+		self.queues[Queue]['members'][Location] = {'Name': MemberName, 'Penalty': Penalty, 'CallsTaken': 0, 'LastCall': 0, 'Status': '0', 'Paused': 0} 
+		self.enqueue('AddQueueMember: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % (Queue, Location, MemberName, Penalty, 0, 0, AST_DEVICE_STATES['0'], 0))
 		self.queuesLock.release()
 		
 		
@@ -1235,7 +1258,9 @@ class MonAst:
 				members = q['members'].keys()
 				members.sort()
 				for member in members:
-					output.append('AddQueueMember: %s:::%s:::%s' % (queue, member, q['members'][member]['Name']))
+					m = q['members'][member]
+					output.append('AddQueueMember: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % (queue, member, m['Name'], \
+						m['Penalty'], m['CallsTaken'], m['LastCall'], AST_DEVICE_STATES[m['Status']], m['Paused']))
 					
 				clients = q['clients'].values()
 				clients.sort(lambda x, y: cmp(x['Position'], y['Position']))
