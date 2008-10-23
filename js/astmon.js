@@ -272,8 +272,15 @@ function Process(o)
 		if (td)
 		{
 			td.style.backgroundColor = color('Link');
-			td.innerHTML = 'Link<br><span style="font-family: monospace;" id="chrono-' + td.id + '"></span>';
-			chrono(td.id, o['Seconds']);
+			if (MONAST_CALL_TIME)
+			{
+				td.innerHTML = 'Link<br><span style="font-family: monospace;" id="chrono-' + td.id + '"></span>';
+				chrono(td.id, o['Seconds']);
+			}
+			else
+			{
+				td.innerHTML = 'Link';
+			}
 		}
 		else
 		{
@@ -425,10 +432,16 @@ function Process(o)
 			div.id        = id;
 			div.className = 'queueMembersDiv';
 			
-			var template = "<table width='250'><tr>";
-			template    += "<td class='status' align='center'>{MemberName}</td>";
+			var template = "<table width='300'><tr>";
+			template    += "<td class='status' width='170' align='center'>{MemberName}</td>";
+			template    += "<td class='status' width='40' align='center' id='queueMemberCallsTaken-{Queue}-{Member}'>{CallsTaken}</td>";
+			template    += "<td class='status' width='90' align='center' id='queueMemberStatus-{Queue}-{Member}'>{Status}</td>";
 			template    += "</tr></table>";
+			template     = template.replace(/\{Queue\}/g, o['Queue']);
+			template     = template.replace(/\{Member\}/g, o['Member']);
 			template     = template.replace(/\{MemberName\}/g, o['MemberName']);
+			template     = template.replace(/\{CallsTaken\}/g, o['CallsTaken']);
+			template     = template.replace(/\{Status\}/g, o['Status']);
 			
 			div.innerHTML = template;
 			
@@ -457,6 +470,19 @@ function Process(o)
 		return;
 	}
 	
+	if (o['Action'] == 'QueueMemberStatus')
+	{
+		var td = $('queueMemberCallsTaken-' + o['Queue'] + '-' + o['Member']);
+		if (td)
+			td.innerHTML = o['CallsTaken'];
+			
+		var td = $('queueMemberStatus-' + o['Queue'] + '-' + o['Member']);
+		if (td)
+			td.innerHTML = o['Status'];
+			
+		return;
+	}
+	
 	if (o['Action'] == 'AddQueueClient')
 	{
 		var id  = 'queueClient-' + o['Queue'] + '-' + o['Uniqueid'];
@@ -471,8 +497,8 @@ function Process(o)
 			if (o['CallerID'])
 				UserInfo = o['CallerIDName'] + ' <' + o['CallerID'] + '>'; 
 			
-			var template = "<table width='250'><tr>";
-			template    += "<td class='status' align='center'>{UserInfo}</td>";
+			var template = "<table width='220'><tr>";
+			template    += "<td class='status' align='center'>{UserInfo}<br>00:00:00</td>";
 			template    += "</tr></table>";
 			template     = template.replace(/\{UserInfo\}/g, UserInfo);
 			

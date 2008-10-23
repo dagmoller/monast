@@ -255,7 +255,7 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
         <fieldset>
           <legend>Queue: {queue}</legend>
           <div class="queueStatisticsDiv">
-            <table width="512">
+            <table width="532">
               <tr>
                 <td class="tableTitle" colspan="8" align="center">Statistics</td>
               </tr>
@@ -289,18 +289,23 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
           </div>
           <div class="queueMembersDivWrap" id="queueMembers-{queue}">
             <div class="queueMembersDiv">
-              <table width="250">
+              <table width="300">
                 <tr>
-                  <td class="tableTitle" align="center">Members (<span id="queueMembersCount-{queue}">0</span>)</td>
+                  <td class="tableTitle" colspan="3" align="center">Members (<span id="queueMembersCount-{queue}">0</span>)</td>
+                </tr>
+                <tr>
+                  <td class="statusHeader" width="170" align="center">Location/Name</td>
+                  <td class="statusHeader" width="40" align="center">Calls Taken</td>
+                  <td class="statusHeader" width="90" align="center">Status</td>
                 </tr>
               </table>
             </div>
           </div>
           <div class="queueClientsDivWrap" id="queueClients-{queue}">
             <div class="queueClientsDiv">
-              <table width="250">
+              <table width="220">
                 <tr>
-                  <td class="tableTitle" align="center">Clients in Queue (<span id="queueClientsCount-{queue}">0</span>)</td>
+                  <td class="tableTitle" align="center">Clients (<span id="queueClientsCount-{queue}">0</span>)</td>
                 </tr>
               </table>
             </div>
