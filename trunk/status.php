@@ -355,7 +355,7 @@ function parseMsg($msg)
 		return $saida;
 	}
 	
-	return $json->encode(array('Action' => 'None'));
+	return $json->encode(array('Action' => 'None', 'Message' => $msg));
 }
 
 session_start();

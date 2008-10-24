@@ -1004,7 +1004,7 @@ class MonAst:
 		self.queues[Queue]['clients'][Uniqueid]['Abandoned'] = True
 		self.queuesLock.release()
 		
-		self.enqueue('AbandonedQueueClient: %s' % Uniqueid)
+		#self.enqueue('AbandonedQueueClient: %s' % Uniqueid)
 		
 		
 	def handlerQueueParams(self, lines):
