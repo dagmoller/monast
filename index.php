@@ -265,7 +265,7 @@ foreach ($queueMembers as $member)
 
 foreach ($queueClients as $client)
 {
-	list($Queue, $Uniqueid, $Channel, $CallerID, $CallerIDName, $Position, $Count) = explode(':::', $client);
+	list($Queue, $Uniqueid, $Channel, $CallerID, $CallerIDName, $Position, $Count, $Wait) = explode(':::', $client);
 	$tmp = array
 	(
 		'Action'       => 'AddQueueClient',
@@ -275,7 +275,8 @@ foreach ($queueClients as $client)
 		'CallerID'     => $CallerID, 
 		'CallerIDName' => $CallerIDName, 
 		'Position'     => $Position, 
-		'Count'        => $Count
+		'Count'        => $Count,
+		'Wait'         => $Wait
 	);
 	
 	$template->newBlock('process');

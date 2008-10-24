@@ -43,13 +43,19 @@ function color(t)
         case 'unregistered':
         case 'unreachable':
         case 'unknown':
+        case 'unavailable':
+        case 'invalid':
+        case 'busy':
         	//return 'red';
             return '#ffb0b0';
             
         case 'ring':
         case 'ringing':
+        case 'ring, in use':
+        case 'in use':
         case 'dial':
         case 'lagged':
+        case 'on hold':
             //return 'yellow';
             return '#ffffb0';
             
@@ -58,6 +64,7 @@ function color(t)
         case 'registered':
         case 'reachable':
         case 'unmonitored':
+        case 'not in use':
             //return 'green';
             return '#b0ffb0';
     }
@@ -435,13 +442,14 @@ function Process(o)
 			var template = "<table width='300'><tr>";
 			template    += "<td class='status' width='170' align='center'>{MemberName}</td>";
 			template    += "<td class='status' width='40' align='center' id='queueMemberCallsTaken-{Queue}-{Member}'>{CallsTaken}</td>";
-			template    += "<td class='status' width='90' align='center' id='queueMemberStatus-{Queue}-{Member}'>{Status}</td>";
+			template    += "<td class='status' width='90' align='center' id='queueMemberStatus-{Queue}-{Member}' bgcolor='{color}'>{Status}</td>";
 			template    += "</tr></table>";
 			template     = template.replace(/\{Queue\}/g, o['Queue']);
 			template     = template.replace(/\{Member\}/g, o['Member']);
 			template     = template.replace(/\{MemberName\}/g, o['MemberName']);
 			template     = template.replace(/\{CallsTaken\}/g, o['CallsTaken']);
 			template     = template.replace(/\{Status\}/g, o['Status']);
+			template     = template.replace(/\{color\}/g, color(o['Status']));
 			
 			div.innerHTML = template;
 			
@@ -478,7 +486,10 @@ function Process(o)
 			
 		var td = $('queueMemberStatus-' + o['Queue'] + '-' + o['Member']);
 		if (td)
+		{
 			td.innerHTML = o['Status'];
+			td.style.backgroundColor = color(o['Status']);
+		}
 			
 		return;
 	}
@@ -498,13 +509,17 @@ function Process(o)
 				UserInfo = o['CallerIDName'] + ' <' + o['CallerID'] + '>'; 
 			
 			var template = "<table width='220'><tr>";
-			template    += "<td class='status' align='center'>{UserInfo}<br>00:00:00</td>";
+			template    += "<td class='status' align='center'>{UserInfo}<br><span style='font-family: monospace;' id='chrono-{ID}'></span></td>";
 			template    += "</tr></table>";
 			template     = template.replace(/\{UserInfo\}/g, UserInfo);
+			template     = template.replace(/\{ID\}/g, div.id);
 			
 			div.innerHTML = template;
 			
 			$('queueClients-' + o['Queue']).appendChild(div);
+			
+			if (MONAST_CALL_TIME)
+				chrono(div.id, o['Wait']);
 		}
 		
 		$('queueClientsCount-' + o['Queue']).innerHTML = o['Count'];
@@ -533,6 +548,8 @@ function Process(o)
 			_countAbandoned[o['Queue']] += 1;
 			$('queueStatsAbandoned-' + o['Queue']).innerHTML = _countAbandoned[o['Queue']];
 		}
+		
+		stopChrono(id);
 		
 		return;
 	}
