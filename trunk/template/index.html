@@ -288,7 +288,7 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
             </table>
           </div>
           <div class="queueMembersDivWrap" id="queueMembers-{queue}">
-            <div class="queueMembersDiv">
+            <div class="queueMembersDiv" id="queueMembersDrop-{queue}">
               <table width="300">
                 <tr>
                   <td class="tableTitle" colspan="3" align="center">Members (<span id="queueMembersCount-{queue}">0</span>)</td>
@@ -312,6 +312,9 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
           </div>
         </fieldset>
       </div>
+      <script type="text/javascript">
+      new YAHOO.util.DDTarget("queueMembersDrop-{queue}");
+      </script>
       <!-- END BLOCK : queue -->
     </fieldset>
     </div>
