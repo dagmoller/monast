@@ -305,7 +305,7 @@ function parseMsg($msg)
 	
 	if (strpos($msg, 'AddQueueClient: ') !== false)
 	{
-	    list($Queue, $Uniqueid, $Channel, $CallerID, $CallerIDName, $Position, $Count) = explode(':::', substr($msg, 16));
+	    list($Queue, $Uniqueid, $Channel, $CallerID, $CallerIDName, $Position, $Count, $Wait) = explode(':::', substr($msg, 16));
     	$saida = array
     	(
     		'Action'       => 'AddQueueClient',
@@ -315,7 +315,8 @@ function parseMsg($msg)
 			'CallerID'     => $CallerID, 
 			'CallerIDName' => $CallerIDName, 
 			'Position'     => $Position, 
-			'Count'        => $Count
+			'Count'        => $Count,
+    		'Wait'         => $Wait
     	);
     	return $saida;
 	}

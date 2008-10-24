@@ -897,8 +897,9 @@ class MonAst:
 		try:
 			self.queues[Queue]['clients'][Uniqueid]['Position'] = Position			
 		except KeyError:
-			self.queues[Queue]['clients'][Uniqueid] = {'Uniqueid': Uniqueid, 'Channel': Channel, 'CallerID': CallerID, 'CallerIDName': CallerIDName, 'Position': Position}
-			self.enqueue('AddQueueClient: %s:::%s:::%s:::%s:::%s:::%s:::%s' % (Queue, Uniqueid, Channel, CallerID, CallerIDName, Position, Count))
+			self.queues[Queue]['clients'][Uniqueid] = {'Uniqueid': Uniqueid, 'Channel': Channel, 'CallerID': CallerID, 'CallerIDName': CallerIDName, \
+													'Position': Position, 'JoinTime': time.time() - int(Wait)}
+			self.enqueue('AddQueueClient: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % (Queue, Uniqueid, Channel, CallerID, CallerIDName, Position, Count, Wait))
 		self.queuesLock.release()
 		
 		
@@ -950,9 +951,10 @@ class MonAst:
 		Uniqueid     = dic['Uniqueid']
 		
 		self.queuesLock.acquire()
-		self.queues[Queue]['clients'][Uniqueid] = {'Uniqueid': Uniqueid, 'Channel': Channel, 'CallerID': CallerID, 'CallerIDName': CallerIDName, 'Position': Position}
+		self.queues[Queue]['clients'][Uniqueid] = {'Uniqueid': Uniqueid, 'Channel': Channel, 'CallerID': CallerID, 'CallerIDName': CallerIDName, \
+												'Position': Position, 'JoinTime': time.time()}
 		self.queues[Queue]['stats']['Calls'] += 1
-		self.enqueue('AddQueueClient: %s:::%s:::%s:::%s:::%s:::%s:::%s' % (Queue, Uniqueid, Channel, CallerID, CallerIDName, Position, Count))
+		self.enqueue('AddQueueClient: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % (Queue, Uniqueid, Channel, CallerID, CallerIDName, Position, Count, 0))
 		self.queuesLock.release()
 		
 	
@@ -1150,15 +1152,15 @@ class MonAst:
 					member = param[param.find('=')+1:].split(',')
 					if len(member) == 3:
 						self.queues[queue]['members'][member[0]] = {
-							'Name': member[2], 'Penalty': member[1], 'CallsTaken': 0, 'LastCall': 0, 'Status': -1, 'Paused': 0
+							'Name': member[2], 'Penalty': member[1], 'CallsTaken': 0, 'LastCall': 0, 'Status': '0', 'Paused': 0
 						} 
 					elif len(member) == 2:
 						self.queues[queue]['members'][member[0]] = {
-							'Name': member[0], 'Penalty': member[1], 'CallsTaken': 0, 'LastCall': 0, 'Status': -1, 'Paused': 0
+							'Name': member[0], 'Penalty': member[1], 'CallsTaken': 0, 'LastCall': 0, 'Status': '0', 'Paused': 0
 						} 
 					elif len(member) == 1:
 						self.queues[queue]['members'][member[0]] = {
-							'Name': member[0], 'Penalty': 0, 'CallsTaken': 0, 'LastCall': 0, 'Status': -1, 'Paused': 0
+							'Name': member[0], 'Penalty': 0, 'CallsTaken': 0, 'LastCall': 0, 'Status': '0', 'Paused': 0
 						} 
 		
 		for queue in oldQueues:
@@ -1266,7 +1268,8 @@ class MonAst:
 				clients.sort(lambda x, y: cmp(x['Position'], y['Position']))
 				for i in xrange(len(clients)):
 					c = clients[i]
-					output.append('AddQueueClient: %s:::%s:::%s:::%s:::%s:::%s:::%s' % (queue, c['Uniqueid'], c['Channel'], c['CallerID'], c['CallerIDName'], c['Position'], i))
+					output.append('AddQueueClient: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % (queue, c['Uniqueid'], c['Channel'], c['CallerID'], \
+									c['CallerIDName'], c['Position'], i, time.time() - c['JoinTime']))
 					
 				Max              = q['stats']['Max']
 				Calls            = q['stats']['Calls']
