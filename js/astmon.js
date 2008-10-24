@@ -431,7 +431,7 @@ function Process(o)
 	
 	if (o['Action'] == 'AddQueueMember')
 	{
-		var id  = 'queueMember-' + o['Queue'] + '-' + o['Member'];
+		var id  = 'queueMember-' + o['Queue'] + ':::' + o['Member'];
 		var div = $(id);
 		if (!div)
 		{
@@ -456,6 +456,13 @@ function Process(o)
 			$('queueMembers-' + o['Queue']).appendChild(div);
 			
 			_countMembers[o['Queue']] += 1;
+			
+			ddDivs[id]               = new YAHOO.util.DD(id);
+			ddDivs[id].onMouseDown   = setStartPosition;
+			ddDivs[id].onDragDrop    = queueMemberDrop;
+			ddDivs[id].onInvalidDrop = invalidDrop;
+			ddDivs[id].onDragOver    = dragOver;
+			ddDivs[id].onDragOut     = dragOut;
 		}
 		
 		$('queueMembersCount-' + o['Queue']).innerHTML = _countMembers[o['Queue']];
@@ -465,7 +472,7 @@ function Process(o)
 	
 	if (o['Action'] == 'RemoveQueueMember')
 	{
-		var id  = 'queueMember-' + o['Queue'] + '-' + o['Member'];
+		var id  = 'queueMember-' + o['Queue'] + ':::' + o['Member'];
 		var div = $(id);
 		if (div)
 		{
@@ -730,6 +737,71 @@ function parkedHangup(exten)
 	}
 }
 
+// Add/Remove Pause/Unpause Queue members
+function queueMemberAdd(queue, member)
+{
+	var c = confirm('Add member ' + callerIDs[member] + ' to queue ' + queue + '?');
+	if (c)
+	{
+		new Ajax.Request('action.php', 
+		{
+			method: 'get',
+			parameters: {
+				reqTime: new Date().getTime(),
+				action: 'AddQueueMember:::' + queue + ':::' + member
+			}
+		});
+	}
+}
+
+function queueMemberRemove(queue, member)
+{
+	var c = confirm('Remove member ' + callerIDs[member] + ' from queue ' + queue + '?');
+	if (c)
+	{
+		new Ajax.Request('action.php', 
+		{
+			method: 'get',
+			parameters: {
+				reqTime: new Date().getTime(),
+				action: 'RemoveQueueMember:::' + queue + ':::' + member
+			}
+		});
+	}
+}
+
+function queueMemberPause(queue, member)
+{
+	var c = confirm('Pause member ' + member + ' in queue ' + queue + '?');
+	if (c)
+	{
+		new Ajax.Request('action.php', 
+		{
+			method: 'get',
+			parameters: {
+				reqTime: new Date().getTime(),
+				action: 'PauseQueueMember:::' + queue + ':::' + member
+			}
+		});
+	}
+}
+
+function queueMemberUnpause(queue, member)
+{
+	var c = confirm('Unpause member ' + member + ' in queue ' + queue + '?');
+	if (c)
+	{
+		new Ajax.Request('action.php', 
+		{
+			method: 'get',
+			parameters: {
+				reqTime: new Date().getTime(),
+				action: 'UnpauseQueueMember:::' + queue + ':::' + member
+			}
+		});
+	}
+}
+
 // Yahoo
 function setStartPosition(e)
 {
@@ -783,6 +855,12 @@ function peerDrop(e, id)
 		if (c)
 			originateCall(src, dst, 'meetme');
 	}
+	if (id.indexOf('queueMembersDrop-') != -1)
+	{
+		var member = this.id.replace('peerDiv-', '');
+		var queue  = id.replace('queueMembersDrop-', '');
+		queueMemberAdd(queue, member);
+	}
 	
 	backToStartPosition(this.id);
 }
@@ -826,7 +904,7 @@ function meetmeDrop(e, id)
 {
 	if (id == 'trash')
 	{
-		var info = this.id.replace('meetme-', '').split('-')
+		var info = this.id.replace('meetme-', '').split('-');
 		meetmeKick(info[0], info[1]);
 	}
 		
@@ -845,6 +923,17 @@ function parkedCallDrop(e, id)
 		var c = confirm('Transfer Parked Call on exten ' + parked + ' to ' + callerIDs[source] + '?');
 		if (c)
 			originateCall(source, parked, 'default');
+	}
+	
+	backToStartPosition(this.id);
+}
+
+function queueMemberDrop(e, id)
+{
+	if (id == 'trash')
+	{
+		var info = this.id.replace('queueMember-', '').split(':::');
+		queueMemberRemove(info[0], info[1]);
 	}
 	
 	backToStartPosition(this.id);

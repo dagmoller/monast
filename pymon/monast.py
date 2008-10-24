@@ -278,6 +278,12 @@ class MonAst:
 						
 						elif session and message.startswith('ParkedHangup'):
 							self.clientParkedHangup(threadId, message)
+							
+						elif session and message.startswith('AddQueueMember'):
+							self.clientAddQueueMember(threadId, message)
+							
+						elif session and message.startswith('RemoveQueueMember'):
+							self.clientRemoveQueueMember(threadId, message)
 						
 						elif session and message.startswith('CliCommand'):
 							self.clientCliCommand(threadId, message, session)
@@ -1467,6 +1473,36 @@ class MonAst:
 		except:
 			log.error('MonAst.clientParkedHangup (%s) :: Exten %s not found on self.parked' % (threadId, Exten))
 		self.parkedLock.release()
+		
+		
+	def clientAddQueueMember(self, threadId, message):
+		
+		log.info('MonAst.clientAddQueueMember (%s) :: Running...' % threadId)
+		action, queue, member = message.split(':::')
+		
+		self.monitoredUsersLock.acquire()
+		command = []
+		command.append('Action: QueueAdd')
+		command.append('Queue: %s' % queue)
+		command.append('Interface: %s' % member)
+		#command.append('Penalty: 10')
+		command.append('MemberName: %s' % self.monitoredUsers[member]['CallerID'])
+		log.debug('MonAst.clientAddQueueMember (%s) :: Adding member %s to queue %s' % (threadId, member, queue))
+		self.AMI.send(command)
+		self.monitoredUsersLock.release()
+		
+		
+	def clientRemoveQueueMember(self, threadId, message):
+		
+		log.info('MonAst.clientRemoveQueueMember (%s) :: Running...' % threadId)
+		action, queue, member = message.split(':::')
+		
+		command = []
+		command.append('Action: QueueRemove')
+		command.append('Queue: %s' % queue)
+		command.append('Interface: %s' % member)
+		log.debug('MonAst.clientRemoveQueueMember (%s) :: Removing member %s from queue %s' % (threadId, member, queue))
+		self.AMI.send(command)
 		
 	
 	def clientCliCommand(self, threadId, message, session):
