@@ -440,7 +440,7 @@ function Process(o)
 			div.className = 'queueMembersDiv';
 			
 			var template = "<table width='300'><tr>";
-			template    += "<td class='status' width='170' align='center'>{MemberName}</td>";
+			template    += "<td class='status' width='170' align='center'><a href='javascript:void(0)' title='Options' onClick='showMemberOptionsMenu(\"{Queue}:::{Member}\")'>{MemberName}</a></td>";
 			template    += "<td class='status' width='40' align='center' id='queueMemberCallsTaken-{Queue}-{Member}'>{CallsTaken}</td>";
 			template    += "<td class='status' width='90' align='center' id='queueMemberStatus-{Queue}-{Member}' bgcolor='{color}'>{Status}</td>";
 			template    += "</tr></table>";
@@ -772,10 +772,18 @@ function queueMemberRemove(queue, member)
 		});
 	}
 }
-
-function queueMemberPause(queue, member)
+function queueMemberRemove2(p_sType, p_aArgs, id)
 {
-	var c = confirm('Pause member ' + member + ' in queue ' + queue + '?');
+	var tmp = id.split(':::');
+	queueMemberRemove(tmp[0], tmp[1]);
+}
+
+function queueMemberPause(p_sType, p_aArgs, id)
+{
+	var tmp    = id.split(':::');
+	var queue  = tmp[0];
+	var member = tmp[1];
+	var c      = confirm('Pause member ' + callerIDs[member] + ' in queue ' + queue + '?');
 	if (c)
 	{
 		new Ajax.Request('action.php', 
@@ -789,9 +797,12 @@ function queueMemberPause(queue, member)
 	}
 }
 
-function queueMemberUnpause(queue, member)
+function queueMemberUnpause(p_sType, p_aArgs, id)
 {
-	var c = confirm('Unpause member ' + member + ' in queue ' + queue + '?');
+	var tmp    = id.split(':::');
+	var queue  = tmp[0];
+	var member = tmp[1];
+	var c      = confirm('Unpause member ' + callerIDs[member] + ' in queue ' + queue + '?');
 	if (c)
 	{
 		new Ajax.Request('action.php', 
@@ -976,6 +987,22 @@ function showPeerOptionsMenu(id)
 		]);
 		_POMENU[id].setItemGroupTitle('Options for "' + callerIDs[id] + '"', 0);
 		_POMENU[id].render("peerDiv-" + id);
+	}
+	_POMENU[id].show(); 
+}
+
+// Queue Member Options MENU
+function showMemberOptionsMenu(id)
+{
+	if (!_POMENU[id])
+	{
+		_POMENU[id] = new YAHOO.widget.Menu("queueMemberOptionsMenu-" + id, { xy: ddDivs['queueMember-' + id].startPos });
+		_POMENU[id].addItems([
+			{text: 'Pause Member', onclick: {fn: queueMemberPause, obj: id}},
+			{text: 'Unpause Member', onclick: {fn: queueMemberUnpause, obj: id}},
+			{text: 'Remove Member', onclick: {fn: queueMemberRemove2, obj: id}}
+		]);
+		_POMENU[id].render("queueMember-" + id);
 	}
 	_POMENU[id].show(); 
 }

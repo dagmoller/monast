@@ -285,6 +285,12 @@ class MonAst:
 							
 						elif session and message.startswith('RemoveQueueMember'):
 							self.clientRemoveQueueMember(threadId, message)
+							
+						elif session and message.startswith('PauseQueueMember'):
+							self.clientPauseQueueMember(threadId, message)
+							
+						elif session and message.startswith('UnpauseQueueMember'):
+							self.clientUnpauseQueueMember(threadId, message)
 						
 						elif session and message.startswith('CliCommand'):
 							self.clientCliCommand(threadId, message, session)
@@ -1522,6 +1528,33 @@ class MonAst:
 		command.append('Queue: %s' % queue)
 		command.append('Interface: %s' % member)
 		log.debug('MonAst.clientRemoveQueueMember (%s) :: Removing member %s from queue %s' % (threadId, member, queue))
+		self.AMI.send(command)
+		
+		
+	def clientPauseQueueMember(self, threadId, message):
+		
+		log.info('MonAst.clientPauseQueueMember (%s) :: Running...' % threadId)
+		action, queue, member = message.split(':::')
+		
+		command = []
+		command.append('Action: QueuePause')
+		command.append('Queue: %s' % queue)
+		command.append('Interface: %s' % member)
+		command.append('Paused: 1')
+		log.debug('MonAst.clientAddQueueMember (%s) :: Pausing member %s on queue %s' % (threadId, member, queue))
+		self.AMI.send(command)
+		
+	def clientUnpauseQueueMember(self, threadId, message):
+		
+		log.info('MonAst.clientPauseQueueMember (%s) :: Running...' % threadId)
+		action, queue, member = message.split(':::')
+		
+		command = []
+		command.append('Action: QueuePause')
+		command.append('Queue: %s' % queue)
+		command.append('Interface: %s' % member)
+		command.append('Paused: 0')
+		log.debug('MonAst.clientUnpauseQueueMember (%s) :: Unpausing member %s on queue %s' % (threadId, member, queue))
 		self.AMI.send(command)
 		
 	
