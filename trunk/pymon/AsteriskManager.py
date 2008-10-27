@@ -165,6 +165,9 @@ class AsteriskManager(threading.Thread):
 					if self.eventHandlers.has_key(event):
 						log.info('AsteriskManager.threadMsgQueue :: Executing EventHandler for Event: %s' % event)
 						self.eventHandlers[event](msg.split('\r\n'))
+					elif self.eventHandlers.has_key('_DEFAULT'):
+						log.info('AsteriskManager.threadMsgQueue :: Executing _DEFAULT handler for Event: %s' % event)
+						self.eventHandlers['_DEFAULT'](msg.split('\r\n'))
 					else:
 						log.info('AsteriskManager.threadMsgQueue :: Unhandled Event %s' % event)
 				except:
