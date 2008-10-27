@@ -11,7 +11,7 @@
 #     * Redistributions in binary form must reproduce the above copyright notice, 
 #       this list of conditions and the following disclaimer in the documentation 
 #       and/or other materials provided with the distribution.
-#     * Neither the name of the <ORGANIZATION> nor the names of its contributors
+#     * Neither the name of DagMoller nor the names of its contributors
 #       may be used to endorse or promote products derived from this software 
 #       without specific prior written permission.
 # 
@@ -190,6 +190,7 @@ class MonAst:
 		self.AMI.registerEventHandler('QueueParams', self.handlerQueueParams)
 		self.AMI.registerEventHandler('QueueMember', self.handlerQueueMember)
 		self.AMI.registerEventHandler('QueueMemberStatus', self.handlerQueueMemberStatus)
+		self.AMI.registerEventHandler('QueueMemberPaused', self.handlerQueueMemberPaused)
 		self.AMI.registerEventHandler('QueueEntry', self.handlerQueueEntry)
 		self.AMI.registerEventHandler('QueueStatusComplete', self.handlerQueueStatusComplete)
 	
@@ -874,6 +875,25 @@ class MonAst:
 		dic = self.list2Dict(lines)
 		
 		lines.append('Name: %s' % dic['MemberName'])
+		self.handlerQueueMember(lines)
+		
+		
+	def handlerQueueMemberPaused(self, lines):
+		
+		log.info('MonAst.handlerQueueMemberPaused :: Running...')
+		dic = self.list2Dict(lines)
+		
+		Queue    = dic['Queue']
+		Location = dic['Location']
+		
+		self.queuesLock.acquire()
+		lines.append('Penalty: %s' % self.queues[Queue]['members'][Location]['Penalty'])
+		lines.append('CallsTaken: %s' % self.queues[Queue]['members'][Location]['CallsTaken'])
+		lines.append('LastCall: %s' % self.queues[Queue]['members'][Location]['LastCall'])
+		lines.append('Status: %s' % self.queues[Queue]['members'][Location]['Status'])
+		lines.append('Name: %s' % dic['MemberName'])
+		self.queuesLock.release()
+		
 		self.handlerQueueMember(lines)
 		
 		
