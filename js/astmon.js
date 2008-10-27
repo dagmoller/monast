@@ -11,7 +11,7 @@
 *     * Redistributions in binary form must reproduce the above copyright notice, 
 *       this list of conditions and the following disclaimer in the documentation 
 *       and/or other materials provided with the distribution.
-*     * Neither the name of the <ORGANIZATION> nor the names of its contributors
+*     * Neither the name of DagMoller nor the names of its contributors
 *       may be used to endorse or promote products derived from this software 
 *       without specific prior written permission.
 * 
@@ -494,6 +494,9 @@ function Process(o)
 		var td = $('queueMemberStatus-' + o['Queue'] + '-' + o['Member']);
 		if (td)
 		{
+			if (o['Paused'] == '1')
+				o['Status'] = 'Paused';
+				
 			td.innerHTML = o['Status'];
 			td.style.backgroundColor = color(o['Status']);
 		}
