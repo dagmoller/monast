@@ -380,9 +380,19 @@ var transferDialog = new YAHOO.widget.Dialog("transferDiv",
 <script type="text/javascript">
 YAHOO.util.DDM.mode = YAHOO.util.DDM.POINT;
 
-window.onscroll = function()
+if (window.addEventListener)
 {
-	$('actionsDiv').style.top = (document.documentElement.scrollTop + 10) + 'px';
+	window.addEventListener('scroll', function()
+	{
+		$('actionsDiv').style.top = (document.documentElement.scrollTop + 10) + 'px';
+	}, false);
+}
+else
+{
+	window.onscroll = function()
+	{
+		$('actionsDiv').style.top = (document.documentElement.scrollTop + 10) + 'px';
+	}
 }
 
 var _state = json.decode(YAHOO.util.Cookie.get("_state"));
