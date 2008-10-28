@@ -835,8 +835,10 @@ function backToStartPosition(id)
 		0.3,
 		YAHOO.util.Easing.easeOut
 	).animate();
+
 	if (ddDivs[id].origZindex)
 		$(id).setStyle({zIndex: ddDivs[id].origZindex});
+
 	if (ddDivs[id].lastOver)
 		$(ddDivs[id].lastOver).setStyle({opacity: 1});
 }
@@ -1000,7 +1002,7 @@ function showMemberOptionsMenu(id)
 {
 	if (!_POMENU[id])
 	{
-		_POMENU[id] = new YAHOO.widget.Menu("queueMemberOptionsMenu-" + id, { xy: YAHOO.util.Dom.getXY(YAHOO.util.Dom.get('queueMember-' + id)) });
+		_POMENU[id] = new YAHOO.widget.Menu("queueMemberOptionsMenu-" + id, { xy: YAHOO.util.Dom.getXY(YAHOO.util.Dom.get('queueMember-' + id)), zindex: 2 });
 		_POMENU[id].addItems([
 			{text: 'Pause Member', onclick: {fn: queueMemberPause, obj: id}},
 			{text: 'Unpause Member', onclick: {fn: queueMemberUnpause, obj: id}},
@@ -1012,7 +1014,8 @@ function showMemberOptionsMenu(id)
 	{
 		_POMENU[id].cfg.queueProperty("xy", YAHOO.util.Dom.getXY(YAHOO.util.Dom.get('queueMember-' + id)));
 	}
-	_POMENU[id].show(); 
+	_POMENU[id].show();
+	backToStartPosition('queueMember-' + id);
 }
 
 // Transfer Dialog
