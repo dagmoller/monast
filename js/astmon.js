@@ -439,6 +439,9 @@ function Process(o)
 			div.id        = id;
 			div.className = 'queueMembersDiv';
 			
+			if (o['Paused'] == '1')
+				o['Status'] = 'Paused';
+			
 			var template = "<table width='300'><tr>";
 			template    += "<td class='status' width='170' align='center'><a href='javascript:void(0)' title='Options' onClick='showMemberOptionsMenu(\"{Queue}:::{Member}\")'>{MemberName}</a></td>";
 			template    += "<td class='status' width='40' align='center' id='queueMemberCallsTaken-{Queue}-{Member}'>{CallsTaken}</td>";
