@@ -981,12 +981,16 @@ function showPeerOptionsMenu(id)
 {
 	if (!_POMENU[id])
 	{
-		_POMENU[id] = new YAHOO.widget.Menu("peerOptionsMenu-" + id, { xy: ddDivs['peerDiv-' + id].startPos });
+		_POMENU[id] = new YAHOO.widget.Menu("peerOptionsMenu-" + id, { xy: YAHOO.util.Dom.getXY(YAHOO.util.Dom.get('peerDiv-' + id)) });
 		_POMENU[id].addItems([
 			{text: 'Originate Call', onclick: {fn: showOriginateDialog, obj: id}}
 		]);
 		_POMENU[id].setItemGroupTitle('Options for "' + callerIDs[id] + '"', 0);
 		_POMENU[id].render("peerDiv-" + id);
+	}
+	else
+	{
+		_POMENU[id].cfg.queueProperty("xy", YAHOO.util.Dom.getXY(YAHOO.util.Dom.get('peerDiv-' + id)));
 	}
 	_POMENU[id].show(); 
 }
@@ -996,13 +1000,17 @@ function showMemberOptionsMenu(id)
 {
 	if (!_POMENU[id])
 	{
-		_POMENU[id] = new YAHOO.widget.Menu("queueMemberOptionsMenu-" + id, { xy: ddDivs['queueMember-' + id].startPos });
+		_POMENU[id] = new YAHOO.widget.Menu("queueMemberOptionsMenu-" + id, { xy: YAHOO.util.Dom.getXY(YAHOO.util.Dom.get('queueMember-' + id)) });
 		_POMENU[id].addItems([
 			{text: 'Pause Member', onclick: {fn: queueMemberPause, obj: id}},
 			{text: 'Unpause Member', onclick: {fn: queueMemberUnpause, obj: id}},
 			{text: 'Remove Member', onclick: {fn: queueMemberRemove2, obj: id}}
 		]);
-		_POMENU[id].render("queueMember-" + id);
+		_POMENU[id].render(document.body);
+	}
+	else
+	{
+		_POMENU[id].cfg.queueProperty("xy", YAHOO.util.Dom.getXY(YAHOO.util.Dom.get('queueMember-' + id)));
 	}
 	_POMENU[id].show(); 
 }
