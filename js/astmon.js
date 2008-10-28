@@ -1002,7 +1002,7 @@ function showMemberOptionsMenu(id)
 {
 	if (!_POMENU[id])
 	{
-		_POMENU[id] = new YAHOO.widget.Menu("queueMemberOptionsMenu-" + id, { xy: YAHOO.util.Dom.getXY(YAHOO.util.Dom.get('queueMember-' + id)), zindex: 2 });
+		_POMENU[id] = new YAHOO.widget.Menu("queueMemberOptionsMenu-" + id, { xy: YAHOO.util.Dom.getXY(YAHOO.util.Dom.get('queueMember-' + id)), zindex: 15 });
 		_POMENU[id].addItems([
 			{text: 'Pause Member', onclick: {fn: queueMemberPause, obj: id}},
 			{text: 'Unpause Member', onclick: {fn: queueMemberUnpause, obj: id}},
