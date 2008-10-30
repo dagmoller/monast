@@ -302,9 +302,6 @@ class MonAst:
 							output.append('NO SESSION')
 							
 						## Send messages to client
-						#for msg in output:
-						#	log.debug('MonAst.threadClient (%s) :: Sending: %s' % (threadId, msg))
-						#	sock.send('%s\r\n' % msg)
 						if len(output) > 0:
 							log.debug('MonAst.threadClient (%s) :: Sending: %s\r\n' % (threadId, '\r\n'.join(output)))
 							sock.send('%s\r\n' % '\r\n'.join(output))
@@ -356,7 +353,9 @@ class MonAst:
 		time.sleep(10)
 		while self.running:
 			log.info('MonAst.threadChannelChecker :: Requesting Status...')
-			self.AMI.send(['Action: Status'], self.handlerStatusFollow)
+			
+			self.channelStatus = []
+			self.AMI.send(['Action: Status'])
 			
 			self.queuesLock.acquire()
 			for queue in self.queues:
@@ -416,8 +415,17 @@ class MonAst:
 		
 		self.monitoredUsersLock.acquire()
 		user = '%s/%s' % (Channeltype, ObjectName)
-		if self.monitoredUsers.has_key(user):
-			self.monitoredUsers[user]['Status'] = Status
+		
+		if self.userDisplay['DEFAULT'] and not self.userDisplay.has_key(user):
+			self.monitoredUsers[user] = {'Channeltype': Channeltype, 'Status': Status, 'Calls': 0, 'CallerID': '--', 'Context': 'default', 'Variables': []}
+		elif not self.userDisplay['DEFAULT'] and self.userDisplay.has_key(user):
+			self.monitoredUsers[user] = {'Channeltype': Channeltype, 'Status': Status, 'Calls': 0, 'CallerID': '--', 'Context': 'default', 'Variables': []}
+		else:
+			user = None
+			
+		if user:
+			self.AMI.send(['Action: Command', 'Command: %s show peer %s' % (Channeltype.lower(), ObjectName)], self._defaultParseConfigPeers, user)
+		
 		self.monitoredUsersLock.release()
 		
 	
@@ -1039,24 +1047,37 @@ class MonAst:
 		dic = self.list2Dict(lines)
 		
 		Queue            = dic['Queue']
-		Max              = dic['Max']
-		Calls            = dic['Calls']
-		Holdtime         = dic['Holdtime']
-		Completed        = dic['Completed']
-		Abandoned        = dic['Abandoned']
-		ServiceLevel     = dic['ServiceLevel']
-		ServicelevelPerf = dic['ServicelevelPerf']
-		Weight           = dic['Weight']
+		Max              = int(dic['Max'])
+		Calls            = int(dic['Calls'])
+		Holdtime         = int(dic['Holdtime'])
+		Completed        = int(dic['Completed'])
+		Abandoned        = int(dic['Abandoned'])
+		ServiceLevel     = int(dic['ServiceLevel'])
+		ServicelevelPerf = float(dic['ServicelevelPerf'])
+		Weight           = int(dic['Weight'])
 		
 		self.queuesLock.acquire()
-		self.queues[Queue]['stats']['Max'] = int(dic['Max'])
-		self.queues[Queue]['stats']['Calls'] = int(dic['Calls'])
-		self.queues[Queue]['stats']['Holdtime'] = int(dic['Holdtime'])
-		self.queues[Queue]['stats']['Completed'] = int(dic['Completed'])
-		self.queues[Queue]['stats']['Abandoned'] = int(dic['Abandoned'])
-		self.queues[Queue]['stats']['ServiceLevel'] = int(dic['ServiceLevel'])
-		self.queues[Queue]['stats']['ServicelevelPerf'] = float(dic['ServicelevelPerf'])
-		self.queues[Queue]['stats']['Weight'] = int(dic['Weight'])
+		if self.queues.has_key(Queue):
+			self.queues[Queue]['stats']['Max']              = Max
+			self.queues[Queue]['stats']['Calls']            = Calls
+			self.queues[Queue]['stats']['Holdtime']         = Holdtime
+			self.queues[Queue]['stats']['Completed']        = Completed
+			self.queues[Queue]['stats']['Abandoned']        = Abandoned
+			self.queues[Queue]['stats']['ServiceLevel']     = ServiceLevel
+			self.queues[Queue]['stats']['ServicelevelPerf'] = ServicelevelPerf
+			self.queues[Queue]['stats']['Weight']           = Weight
+		else:
+			self.queues[Queue] = {
+				'members': {}, 
+				'clients': {}, 
+				'stats': {
+					'Max': Max, 'Calls': Calls, 'Holdtime': Holdtime, 'Completed': Completed, 'Abandoned': Abandoned, 'ServiceLevel': ServiceLevel, \
+					'ServicelevelPerf': ServicelevelPerf, 'Weight': Weight
+				}
+			}
+			self.queueMemberStatus[Queue] = []
+			self.queueClientStatus[Queue] = []
+			self.queueStatusOrder.append(Queue)
 		self.queuesLock.release()
 		
 		self.enqueue('QueueParams: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % \
@@ -1091,58 +1112,42 @@ class MonAst:
 	##
 	## AMI handlers for Actions/Commands
 	##
-	def _defaultParseConfig(self, lines, type):
+	def _defaultParseConfigPeers(self, lines):
 		
-		log.info('MonAst._defaultParseConfig :: Parsing %s...' % type)
+		log.info('MonAst._defaultParseConfigPeers :: Running...')
+		result = lines[3]
 		
-		user = None
-		tech = None
-		if type == 'sip.conf':
-			tech = 'SIP'
-			self.AMI.send(['Action: SIPPeers'])
-		if type == 'iax.conf':
-			tech = 'IAX2'
-			self.AMI.send(['Action: IAXPeers'])
+		user = lines[2].split(': ')[1]
+		
+		CallerID = re.compile("['\"]").sub("", re.search('Callerid[\s]+:[\s](.*)\n', result).group(1))
+		if CallerID == ' <>':
+			CallerID = '--'
+		Context  = re.search('Context[\s]+:[\s](.*)\n', result).group(1)
+		
+		tmp  = result[result.find('Variables'):]
+		tmp  = tmp[tmp.find(':\n') + 2:]
+		vars = re.compile('^[\s]+(.*)\n', re.MULTILINE)
+		vars = vars.findall(tmp)
+		vars = [i.replace(' = ', '=') for i in vars]
+		
 		self.monitoredUsersLock.acquire()
-		oldUsers = []
-		newUsers = []
-		# get actual users
-		for user in self.monitoredUsers:
-			if user.startswith(tech):
-				oldUsers.append(user)
-		for line in lines:
-			if line.startswith('Category-') and not line.endswith(': general') and not line.endswith(': authentication'):
-				user = '%s/%s' % (tech, line[line.find(': ') + 2:]) 
-				if self.userDisplay['DEFAULT'] and not self.userDisplay.has_key(user):
-					self.monitoredUsers[user] = {'Channeltype': tech, 'Status': '--', 'Calls': 0, 'CallerID': '--', 'Context': 'default', 'Variables': []}
-				elif not self.userDisplay['DEFAULT'] and self.userDisplay.has_key(user):
-					self.monitoredUsers[user] = {'Channeltype': tech, 'Status': '--', 'Calls': 0, 'CallerID': '--', 'Context': 'default', 'Variables': []}
-				else:
-					user = None
-	
-			if user:
-				newUsers.append(user)
-			
-			if user and line.startswith('Line-'):
-				tmp, param = line.split(': ')
-				if param.startswith('callerid'):
-					quotes = re.compile("['\"]")
-					self.monitoredUsers[user]['CallerID'] = quotes.sub("", param[param.find('=')+1:])
-				if param.startswith('context'):
-					self.monitoredUsers[user]['Context'] = param[param.find('=')+1:]
-				if param.startswith('setvar'):
-					self.monitoredUsers[user]['Variables'].append(param[param.find('=')+1:])
-		for user in [i for i in oldUsers if i not in newUsers]:
-			log.log('User/Peer removed: %s' % user)
-			del self.monitoredUsers[user]
+		if self.monitoredUsers.has_key(user):
+			self.monitoredUsers[user]['CallerID']  = CallerID
+			self.monitoredUsers[user]['Context']   = Context
+			self.monitoredUsers[user]['Variables'] = vars
 		self.monitoredUsersLock.release()
 		
-	
-	def handlerGetConfigSIP(self, lines):
-		self._defaultParseConfig(lines, 'sip.conf')
-	
-	def handlerGetConfigIAX(self, lines):
-		self._defaultParseConfig(lines, 'iax.conf')
+		
+	def handlerParseIAXPeers(self, lines):
+		
+		log.info('MonAst.handlerParseIAXPeers :: Running...')
+		
+		for line in lines[2:-1]:
+			name = re.search('^([^\s]*).*', line).group(1)
+			if name.find('/') != -1:
+				name = name[:name.find('/')]
+			
+			self.handlerPeerEntry(['Channeltype: IAX2', 'ObjectName: %s' % name, 'Status: --'])
 	
 	
 	def handlerGetConfigMeetme(self, lines):
@@ -1155,63 +1160,6 @@ class MonAst:
 				params = line[line.find('conf=')+5:].split(',')
 				self.meetme[params[0]] = {}
 		self.meetmeLock.release()
-		
-		
-	def handlerGetConfigQueues(self, lines):
-		
-		log.info('MonAst.handlerGetConfigQueues :: Parsing config...')
-		
-		self.queuesLock.acquire()
-		
-		queue     = None
-		oldQueues = self.queues.keys()
-		for line in lines:
-			if line.startswith('Category-') and not line.endswith(': general'):
-				queue = line[line.find(': ') + 2:]
-				self.queues[queue] = {
-					'members': {}, 
-					'clients': {}, 
-					'stats': {
-						'Max': 0, 'Calls': 0, 'Holdtime': 0, 'Completed': 0, 'Abandoned': 0, 'ServiceLevel': 0, 'ServicelevelPerf': 0.0, 'Weight': 0
-					}
-				}
-				if queue in oldQueues:
-					oldQueues.remove(queue)
-				
-			if queue and line.startswith('Line-'):
-				tmp, param = line.split(': ')
-				if param.startswith('member') and param.find('Agent/') == -1:
-					member = param[param.find('=')+1:].split(',')
-					if len(member) == 3:
-						self.queues[queue]['members'][member[0]] = {
-							'Name': member[2], 'Penalty': member[1], 'CallsTaken': 0, 'LastCall': 0, 'Status': '0', 'Paused': 0
-						} 
-					elif len(member) == 2:
-						self.queues[queue]['members'][member[0]] = {
-							'Name': member[0], 'Penalty': member[1], 'CallsTaken': 0, 'LastCall': 0, 'Status': '0', 'Paused': 0
-						} 
-					elif len(member) == 1:
-						self.queues[queue]['members'][member[0]] = {
-							'Name': member[0], 'Penalty': 0, 'CallsTaken': 0, 'LastCall': 0, 'Status': '0', 'Paused': 0
-						} 
-		
-		for queue in oldQueues:
-			del self.queues[queue]
-		
-		self.queuesLock.release()
-		
-		# must be executed after last handler called from _GetConfig
-		self.clientQueuelock.acquire()
-		for session in self.clientQueues:
-			self.clientQueues[session]['q'].put('Reload: 10')
-		self.clientQueuelock.release()
-		
-	
-	def handlerStatusFollow(self, lines):
-		
-		log.info('MonAst.handlerStatusFollow :: Running...')
-		
-		self.channelStatus = []
 		
 		
 	def handlerCliCommand(self, lines):
@@ -1573,10 +1521,27 @@ class MonAst:
 	
 	def _GetConfig(self):
 		
-		self.AMI.send(['Action: GetConfig', 'Filename: sip.conf'], self.handlerGetConfigSIP)
-		self.AMI.send(['Action: GetConfig', 'Filename: iax.conf'], self.handlerGetConfigIAX)
+		self.monitoredUsersLock.acquire()
+		self.monitoredUsers = {}
+		self.monitoredUsersLock.release()
+		
+		self.meetmeLock.acquire()
+		self.meetme = {}
+		self.meetmeLock.release()
+		
+		self.queuesLock.acquire()
+		self.queues = {}
+		self.queuesLock.release()
+		
+		self.AMI.send(['Action: SIPpeers'])
+		self.AMI.send(['Action: IAXpeers'], self.handlerParseIAXPeers)
 		self.AMI.send(['Action: GetConfig', 'Filename: meetme.conf'], self.handlerGetConfigMeetme)
-		self.AMI.send(['Action: GetConfig', 'Filename: queues.conf'], self.handlerGetConfigQueues)
+		self.AMI.send(['Action: QueueStatus'])
+		
+		self.clientQueuelock.acquire()
+		for session in self.clientQueues:
+			self.clientQueues[session]['q'].put('Reload: 10')
+		self.clientQueuelock.release()
 		
 	
 	def start(self):
