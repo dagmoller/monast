@@ -110,6 +110,7 @@ class MonAst:
 	queueMemberStatus = {}
 	queueClientStatus = {}
 	
+	queueStatusFirst = False
 	queueStatusOrder = []
 	
 	##
@@ -1077,6 +1078,7 @@ class MonAst:
 			}
 			self.queueMemberStatus[Queue] = []
 			self.queueClientStatus[Queue] = []
+			self.queueStatusFirst         = True
 			self.queueStatusOrder.append(Queue)
 		self.queuesLock.release()
 		
@@ -1089,23 +1091,30 @@ class MonAst:
 		log.info('MonAst.handlerQueueStatusComplete :: Running...')
 		
 		self.queuesLock.acquire()
-		try:
-			queue = self.queueStatusOrder.pop(0)
-			lostMembers = [i for i in self.queues[queue]['members'].keys() if i not in self.queueMemberStatus[queue]]
-			for member in lostMembers:
-				log.log('MonAst.handlerQueueStatusComplete :: Removing lost member %s from queue %s' % (member, queue))
-				del self.queues[queue]['members'][member]
-				self.enqueue('RemoveQueueMember: %s:::%s:::FAKE' % (queue, member))
-			
-			lostClients = [i for i in self.queues[queue]['clients'].keys() if i not in self.queueClientStatus[queue]]
-			for client in lostClients:
-				log.log('MonAst.handlerQueueStatusComplete :: Removing lost client %s from queue %s' % (client, queue))
-				Channel = self.queues[queue]['clients'][client]['Channel']
-				del self.queues[queue]['clients'][client]
-				Count = len(self.queues[queue]['clients'])
-				self.enqueue('RemoveQueueClient: %s:::%s:::%s:::%s:::FAKE' % (queue, client, Channel, Count))
-		except:
-			log.error('MonAst.handlerQueueStatusComplete :: Unhandled Exception: \n%s' % log.formatTraceback(traceback))
+		
+		size = 1
+		if self.queueStatusFirst:
+			size = len(self.queueStatusOrder)
+			self.queueStatusFirst = False
+		
+		for i in xrange(size):
+			try:
+				queue       = self.queueStatusOrder.pop(0)
+				lostMembers = [i for i in self.queues[queue]['members'].keys() if i not in self.queueMemberStatus[queue]]
+				for member in lostMembers:
+					log.log('MonAst.handlerQueueStatusComplete :: Removing lost member %s from queue %s' % (member, queue))
+					del self.queues[queue]['members'][member]
+					self.enqueue('RemoveQueueMember: %s:::%s:::FAKE' % (queue, member))
+				
+				lostClients = [i for i in self.queues[queue]['clients'].keys() if i not in self.queueClientStatus[queue]]
+				for client in lostClients:
+					log.log('MonAst.handlerQueueStatusComplete :: Removing lost client %s from queue %s' % (client, queue))
+					Channel = self.queues[queue]['clients'][client]['Channel']
+					del self.queues[queue]['clients'][client]
+					Count = len(self.queues[queue]['clients'])
+					self.enqueue('RemoveQueueClient: %s:::%s:::%s:::%s:::FAKE' % (queue, client, Channel, Count))
+			except:
+				log.error('MonAst.handlerQueueStatusComplete :: Unhandled Exception: \n%s' % log.formatTraceback(traceback))
 		self.queuesLock.release()
 		
 		
