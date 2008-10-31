@@ -1092,10 +1092,12 @@ class MonAst:
 		
 		self.queuesLock.acquire()
 		
-		size = 1
+		size = 0
 		if self.queueStatusFirst:
 			size = len(self.queueStatusOrder)
 			self.queueStatusFirst = False
+		elif len(self.queueStatusOrder) > 0:
+			size = 1			
 		
 		for i in xrange(size):
 			try:
@@ -1128,16 +1130,30 @@ class MonAst:
 		
 		user = lines[2].split(': ')[1]
 		
-		CallerID = re.compile("['\"]").sub("", re.search('Callerid[\s]+:[\s](.*)\n', result).group(1))
-		if CallerID == ' <>':
-			CallerID = '--'
-		Context  = re.search('Context[\s]+:[\s](.*)\n', result).group(1)
+		CallerID  = None
+		Context   = None
+		Variables = None
 		
-		tmp  = result[result.find('Variables'):]
-		tmp  = tmp[tmp.find(':\n') + 2:]
-		vars = re.compile('^[\s]+(.*)\n', re.MULTILINE)
-		vars = vars.findall(tmp)
-		vars = [i.replace(' = ', '=') for i in vars]
+		try:
+			CallerID = re.compile("['\"]").sub("", re.search('Callerid[\s]+:[\s](.*)\n', result).group(1))
+			if CallerID == ' <>':
+				CallerID = '--'
+		except:
+			CallerID = '--'
+		
+		try:
+			Context = re.search('Context[\s]+:[\s](.*)\n', result).group(1)
+		except:
+			Context = 'default'
+		
+		try:
+			tmp       = result[result.find('Variables'):]
+			tmp       = tmp[tmp.find(':\n') + 2:]
+			Variables = re.compile('^[\s]+(.*)\n', re.MULTILINE)
+			Variables = Variables.findall(tmp)
+			Variables = [i.replace(' = ', '=') for i in vars]
+		except:
+			Variables = []
 		
 		self.monitoredUsersLock.acquire()
 		if self.monitoredUsers.has_key(user):

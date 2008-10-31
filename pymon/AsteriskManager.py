@@ -215,6 +215,8 @@ class AsteriskManager(threading.Thread):
 				self.socket.send('%s\r\n\r\n' % '\r\n'.join(lines))
 			except socket.error, e:
 				log.error('AsteriskManager.send :: Error sendind data: %s' % e)
+		
+		time.sleep(0.01)
 	
 	
 	def login(self):
