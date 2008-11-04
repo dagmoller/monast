@@ -356,14 +356,14 @@ class MonAst:
 			log.info('MonAst.threadChannelChecker :: Requesting Status...')
 			
 			self.channelStatus = []
-			self.AMI.send(['Action: Status'])
+			self.AMI.execute(['Action: Status'])
 			
 			self.queuesLock.acquire()
 			for queue in self.queues:
 				self.queueStatusOrder.append(queue)
 				self.queueMemberStatus[queue] = []
 				self.queueClientStatus[queue] = []
-				self.AMI.send(['Action: QueueStatus', 'Queue: %s' % queue])
+				self.AMI.execute(['Action: QueueStatus', 'Queue: %s' % queue])
 			self.queuesLock.release()
 			
 			time.sleep(60)
@@ -425,7 +425,7 @@ class MonAst:
 			user = None
 			
 		if user:
-			self.AMI.send(['Action: Command', 'Command: %s show peer %s' % (Channeltype.lower(), ObjectName)], self._defaultParseConfigPeers, user)
+			self.AMI.execute(['Action: Command', 'Command: %s show peer %s' % (Channeltype.lower(), ObjectName)], self._defaultParseConfigPeers, user)
 		
 		self.monitoredUsersLock.release()
 		
@@ -1344,7 +1344,7 @@ class MonAst:
 		for var in self.monitoredUsers[src]['Variables']:
 			command.append('Variable: %s' % var)
 		log.debug('MonAst.clientOriginateCall (%s) :: From %s to exten %s@%s' % (threadId, src, dst, Context))
-		self.AMI.send(command)
+		self.AMI.execute(command)
 		self.monitoredUsersLock.release()
 		
 	
@@ -1361,7 +1361,7 @@ class MonAst:
 		command.append('CallerID: %s' % MONAST_CALLERID)
 		
 		log.debug('MonAst.clientOriginateDial (%s) :: From %s to %s' % (threadId, src, dst))
-		self.AMI.send(command)
+		self.AMI.execute(command)
 		
 		
 	def clientHangupChannel(self, threadId, message):
@@ -1376,7 +1376,7 @@ class MonAst:
 			command.append('Action: Hangup')
 			command.append('Channel: %s' % Channel)
 			log.debug('MonAst.clientHangupChannel (%s) :: Hangup channel %s' % (threadId, Channel))
-			self.AMI.send(command)
+			self.AMI.execute(command)
 		except:
 			log.error('MonAst.clientHangupChannel (%s) :: Uniqueid %s not found on self.channels' % (threadId, Uniqueid))
 		self.channelsLock.release()
@@ -1424,7 +1424,7 @@ class MonAst:
 		command.append('Priority: 1')
 		
 		log.debug('MonAst.clientTransferCall (%s) :: Transferring %s and %s to %s@%s' % (threadId, SrcChannel, ExtraChannel, exten, Context))
-		self.AMI.send(command)
+		self.AMI.execute(command)
 	
 	
 	def clientParkCall(self, threadId, message):
@@ -1442,7 +1442,7 @@ class MonAst:
 		command.append('Channel2: %s' % AnouceChannel)
 		#ommand.append('Timeout: 45')
 		log.debug('MonAst.clientParkCall (%s) :: Parking Channel %s and announcing to %s' % (threadId, ParkChannel, AnouceChannel))
-		self.AMI.send(command)	
+		self.AMI.execute(command)	
 	
 	
 	def clientMeetmeKick(self, threadId, message):
@@ -1454,7 +1454,7 @@ class MonAst:
 		command.append('Action: Command')
 		command.append('Command: meetme kick %s %s' % (Meetme, Usernum))
 		log.debug('MonAst.clientMeetmeKick (%s) :: Kiking usernum %s from meetme %s' % (threadId, Usernum, Meetme))
-		self.AMI.send(command)
+		self.AMI.execute(command)
 	
 	def clientParkedHangup(self, threadId, message):
 		
@@ -1468,7 +1468,7 @@ class MonAst:
 			command.append('Action: Hangup')
 			command.append('Channel: %s' % Channel)
 			log.debug('MonAst.clientParkedHangup (%s) :: Hangup parcked channel %s' % (threadId, Channel))
-			self.AMI.send(command)
+			self.AMI.execute(command)
 		except:
 			log.error('MonAst.clientParkedHangup (%s) :: Exten %s not found on self.parked' % (threadId, Exten))
 		self.parkedLock.release()
@@ -1487,7 +1487,7 @@ class MonAst:
 		#command.append('Penalty: 10')
 		command.append('MemberName: %s' % self.monitoredUsers[member]['CallerID'])
 		log.debug('MonAst.clientAddQueueMember (%s) :: Adding member %s to queue %s' % (threadId, member, queue))
-		self.AMI.send(command)
+		self.AMI.execute(command)
 		self.monitoredUsersLock.release()
 		
 		
@@ -1501,7 +1501,7 @@ class MonAst:
 		command.append('Queue: %s' % queue)
 		command.append('Interface: %s' % member)
 		log.debug('MonAst.clientRemoveQueueMember (%s) :: Removing member %s from queue %s' % (threadId, member, queue))
-		self.AMI.send(command)
+		self.AMI.execute(command)
 		
 		
 	def clientPauseQueueMember(self, threadId, message):
@@ -1515,7 +1515,7 @@ class MonAst:
 		command.append('Interface: %s' % member)
 		command.append('Paused: 1')
 		log.debug('MonAst.clientAddQueueMember (%s) :: Pausing member %s on queue %s' % (threadId, member, queue))
-		self.AMI.send(command)
+		self.AMI.execute(command)
 		
 	def clientUnpauseQueueMember(self, threadId, message):
 		
@@ -1528,7 +1528,7 @@ class MonAst:
 		command.append('Interface: %s' % member)
 		command.append('Paused: 0')
 		log.debug('MonAst.clientUnpauseQueueMember (%s) :: Unpausing member %s on queue %s' % (threadId, member, queue))
-		self.AMI.send(command)
+		self.AMI.execute(command)
 		
 	
 	def clientCliCommand(self, threadId, message, session):
@@ -1541,7 +1541,7 @@ class MonAst:
 		command.append('Command: %s' % cliCommand)
 		command.append('ActionID: %s' % session)
 		log.debug('MonAst.clientCliCommand (%s) :: Executing CLI command: %s' % (threadId, cliCommand))
-		self.AMI.send(command, self.handlerCliCommand, session)
+		self.AMI.execute(command, self.handlerCliCommand, session)
 	
 	
 	def _GetConfig(self):
@@ -1558,10 +1558,10 @@ class MonAst:
 		self.queues = {}
 		self.queuesLock.release()
 		
-		self.AMI.send(['Action: SIPpeers'])
-		self.AMI.send(['Action: IAXpeers'], self.handlerParseIAXPeers)
-		self.AMI.send(['Action: GetConfig', 'Filename: meetme.conf'], self.handlerGetConfigMeetme)
-		self.AMI.send(['Action: QueueStatus'])
+		self.AMI.execute(['Action: SIPpeers'])
+		self.AMI.execute(['Action: IAXpeers'], self.handlerParseIAXPeers)
+		self.AMI.execute(['Action: GetConfig', 'Filename: meetme.conf'], self.handlerGetConfigMeetme)
+		self.AMI.execute(['Action: QueueStatus'])
 		
 		self.clientQueuelock.acquire()
 		for session in self.clientQueues:
