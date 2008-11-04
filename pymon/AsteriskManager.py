@@ -51,7 +51,8 @@ class AsteriskManager(threading.Thread):
 	
 	socket = None
 	
-	msgQueue = Queue.Queue()
+	recvQueue = Queue.Queue()
+	sendQueue = Queue.Queue()
 	
 	ping           = False
 	pong           = False
@@ -59,9 +60,10 @@ class AsteriskManager(threading.Thread):
 	eventHandlers  = {}
 	actionHandlers = {}
 	
-	tRead     = None
-	tPing     = None
-	tMsgQueue = None
+	tRead      = None
+	tPing      = None
+	tRecvQueue = None
+	rSendQueue = None
 	
 	nextActionID = 0
 	
@@ -88,7 +90,7 @@ class AsteriskManager(threading.Thread):
 				
 				messages = buffer.strip().split('\r\n\r\n')
 				for message in messages:
-					self.msgQueue.put(message)
+					self.recvQueue.put(message)
 			
 			except socket.error, e:
 				if self.running:
@@ -119,7 +121,7 @@ class AsteriskManager(threading.Thread):
 					log.info('AsteriskManager.threadPing :: PING')
 					count     = 0
 					self.ping = True
-					self.send(['Action: PING'])
+					self.execute(['Action: PING'])
 				
 				if self.ping and not self.pong:
 					if count == 60:
@@ -132,13 +134,13 @@ class AsteriskManager(threading.Thread):
 			time.sleep(1)
 			
 				
-	def threadMsgQueue(self, name, params):
+	def threadRecvQueue(self, name, params):
 		
-		log.info('AsteriskManager.threadMsgQueue :: Starting Thread...')
+		log.info('AsteriskManager.threadRecvQueue :: Starting Thread...')
 		while self.running:
-			msg = self.msgQueue.get()
+			msg = self.recvQueue.get()
 			msg = msg.strip()
-			log.debug('AsteriskManager.threadMsgQueue :: %s' % msg)
+			log.debug('AsteriskManager.threadRecvQueue :: %s' % msg)
 			
 			if msg == 'Response: Pong':
 				self.pong = True
@@ -151,10 +153,10 @@ class AsteriskManager(threading.Thread):
 				message         = gAuth.group(3)
 				
 				if response == 'Error' and message == 'Authentication failed':
-					log.error('AsteriskManager.threadMsgQueue :: Authentication failed')
+					log.error('AsteriskManager.threadRecvQueue :: Authentication failed')
 				
 				if response == 'Success' and message == 'Authentication accepted':
-					log.log('AsteriskManager.threadMsgQueue :: Authentication accepted')
+					log.log('AsteriskManager.threadRecvQueue :: Authentication accepted')
 					self.isAuthenticated = True									
 			
 			# Event Handlers
@@ -163,15 +165,15 @@ class AsteriskManager(threading.Thread):
 				event = gEvent.group(1)
 				try:
 					if self.eventHandlers.has_key(event):
-						log.info('AsteriskManager.threadMsgQueue :: Executing EventHandler for Event: %s' % event)
+						log.info('AsteriskManager.threadRecvQueue :: Executing EventHandler for Event: %s' % event)
 						self.eventHandlers[event](msg.split('\r\n'))
 					elif self.eventHandlers.has_key('_DEFAULT'):
-						log.info('AsteriskManager.threadMsgQueue :: Executing _DEFAULT handler for Event: %s' % event)
+						log.info('AsteriskManager.threadRecvQueue :: Executing _DEFAULT handler for Event: %s' % event)
 						self.eventHandlers['_DEFAULT'](msg.split('\r\n'))
 					else:
-						log.info('AsteriskManager.threadMsgQueue :: Unhandled Event %s' % event)
+						log.info('AsteriskManager.threadRecvQueue :: Unhandled Event %s' % event)
 				except:
-					log.error('AsteriskManager.threadMsgQueue :: Unhandled Exception in EventHandler for %s: \n%s' % (event, log.formatTraceback(traceback)))
+					log.error('AsteriskManager.threadRecvQueue :: Unhandled Exception in EventHandler for %s: \n%s' % (event, log.formatTraceback(traceback)))
 				
 				continue
 			
@@ -181,18 +183,34 @@ class AsteriskManager(threading.Thread):
 				ActionID = gActionID.group(1)
 				try:
 					if self.actionHandlers.has_key(ActionID):
-						log.info('AsteriskManager.threadMsgQueue :: Executing ActionHandler for ActionID: %s' % ActionID)
+						log.info('AsteriskManager.threadRecvQueue :: Executing ActionHandler for ActionID: %s' % ActionID)
 						self.actionHandlers[ActionID](msg.split('\r\n'))
 					else:
-						log.info('AsteriskManager.threadMsgQueue :: Unhandled Response for ActionID %s' % ActionID)
+						log.info('AsteriskManager.threadRecvQueue :: Unhandled Response for ActionID %s' % ActionID)
 				except:
-					log.error('AsteriskManager.threadMsgQueue :: Unhandled Exception in ActionHandler for ActionID %s: \n%s' % (ActionID, log.formatTraceback(traceback)))
+					log.error('AsteriskManager.threadRecvQueue :: Unhandled Exception in ActionHandler for ActionID %s: \n%s' % (ActionID, log.formatTraceback(traceback)))
 				
 				if self.actionHandlers.has_key(ActionID):
-					log.info('AsteriskManager.threadMsgQueue :: Unregister ActionHandler for ActionID: %s' % ActionID)
+					log.info('AsteriskManager.threadRecvQueue :: Unregister ActionHandler for ActionID: %s' % ActionID)
 					del self.actionHandlers[ActionID]
 					
 				continue
+			
+	
+	def threadSendQueue(self, name, params):
+		
+		log.info('AsteriskManager.threadSendQueue :: Starting Thread...')
+		
+		while self.running:
+			if self.isConnected:
+				lines = self.sendQueue.get()
+				try:
+					log.debug('AsteriskManager.threadSendQueue :: %s' % '\r\n'.join(lines))
+					self.socket.send('%s\r\n\r\n' % '\r\n'.join(lines))
+				except socket.error, e:
+					log.error('AsteriskManager.threadSendQueue :: Error sendind data: %s' % e)
+			
+			time.sleep(0.02)
 					
 	
 	def getNextActionID(self):
@@ -201,33 +219,27 @@ class AsteriskManager(threading.Thread):
 		return 'ID.%06d' % self.nextActionID
 	
 	
-	def send(self, lines, handler = None, ActionID = None):
+	def execute(self, lines, handler = None, ActionID = None):
 		
-		if self.isConnected:
-			if handler:
-				if not ActionID:
-					ActionID = self.getNextActionID()
-				lines.append('ActionID: %s' % ActionID)
-				log.info('AsteriskManager.send :: Register ActionHandler for ActionID: %s' % ActionID)
-				self.actionHandlers[ActionID] = handler
-			try:
-				log.debug('AsteriskManager.send :: %s' % '\r\n'.join(lines))
-				self.socket.send('%s\r\n\r\n' % '\r\n'.join(lines))
-			except socket.error, e:
-				log.error('AsteriskManager.send :: Error sendind data: %s' % e)
+		if handler:
+			if not ActionID:
+				ActionID = self.getNextActionID()
+			lines.append('ActionID: %s' % ActionID)
+			log.info('AsteriskManager.execute :: Register ActionHandler for ActionID: %s' % ActionID)
+			self.actionHandlers[ActionID] = handler
 		
-		time.sleep(0.01)
+		self.sendQueue.put(lines)
 	
 	
 	def login(self):
 		log.log('AsteriskManager.login :: Logging in...')
-		self.send(['Action: login', 'Username: %s' % self.username, 'Secret: %s' % self.password])
+		self.execute(['Action: login', 'Username: %s' % self.username, 'Secret: %s' % self.password])
 		
 		
 	def logoff(self):
 		log.log('AsteriskManager.logoff :: Logging off...')
 		self.isAuthenticated = False
-		self.send(['Action: logoff'])
+		self.execute(['Action: logoff'])
 				
 	
 	def connect(self):
@@ -245,9 +257,10 @@ class AsteriskManager(threading.Thread):
 				time.sleep(30)
 				
 			if not self.tRead:
-				self.tRead     = thread.start_new_thread(self.threadRead, ('threadRead', 1))
-				self.tPing     = thread.start_new_thread(self.threadPing, ('threadPing', 1))
-				self.tMsgQueue = thread.start_new_thread(self.threadMsgQueue, ('threadMsgQueue', 1))
+				self.tRead      = thread.start_new_thread(self.threadRead, ('threadRead', 1))
+				self.tPing      = thread.start_new_thread(self.threadPing, ('threadPing', 1))
+				self.tRecvQueue = thread.start_new_thread(self.threadRecvQueue, ('threadRecvQueue', 1))
+				self.tSendQueue = thread.start_new_thread(self.threadSendQueue, ('threadSendQueue', 1))
 	
 	
 	def disconnect(self):
