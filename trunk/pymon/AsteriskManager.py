@@ -308,5 +308,6 @@ class AsteriskManager(threading.Thread):
 		self.running = False
 		if self.isAuthenticated:
 			self.logoff()
+			time.sleep(2)
 		self.disconnect()
 		

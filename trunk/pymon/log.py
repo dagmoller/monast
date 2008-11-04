@@ -32,23 +32,47 @@ import socket
 DEBUG = False
 INFO  = False
 
-def __write(msg):
-	sys.stdout.write('[%s] %s\n' % (time.ctime(), msg))
+COLORED = False
+
+COLORS = {
+	'black'  : 30,
+	'red'    : 31,
+	'green'  : 32,
+	'yellow' : 33,
+	'blue'   : 34,
+	'magenta': 35,
+	'cyan'   : 36,
+	'white'  : 37
+}
+
+def __write(msg, color):
+	if COLORED:
+		sys.stdout.write('\033[37;1m[%s]\033[0m \033[%d;1m%s\033[0m\n' % (time.ctime(), COLORS[color], msg))
+	else:
+		sys.stdout.write('[%s] %s\n' % (time.ctime(), msg))
 	sys.stdout.flush()
 
-def error(msg):
-	__write('ERROR :: %s' % msg)
+def error(msg, color = None):
+	if not color:
+		color = 'red'
+	__write('ERROR :: %s' % msg, color)
 
-def log(msg):
-	__write('LOG   :: %s' % msg)
+def log(msg, color = None):
+	if not color:
+		color = 'white'
+	__write('LOG   :: %s' % msg, color)
 
-def info(msg):
+def info(msg, color = None):
 	if INFO:
-		__write('INFO  :: %s' % msg)
+		if not color:
+			color = 'yellow'
+		__write('INFO  :: %s' % msg, color)
 
-def debug(msg):
+def debug(msg, color = None):
 	if DEBUG:
-		__write('DEBUG :: %s' % msg.encode('string_escape'))
+		if not color:
+			color = 'cyan'
+		__write('DEBUG :: %s' % msg.encode('string_escape'), color)
 		
 def formatTraceback(trace, prefix = '>>'):
 	return '  %s %s ' % (prefix, ''.join(trace.format_exception(sys.exc_type, sys.exc_value, sys.exc_traceback)).replace('\n', '\n  %s ' % prefix))

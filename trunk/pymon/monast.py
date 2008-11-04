@@ -1605,6 +1605,7 @@ def _usage():
 		-c | --config <config file>     => use alterantive config file instead /etc/monast.conf
 		-i | --info                     => display INFO messages
 		-d | --debug                    => display INFO + DEBUG messages
+		     --colored                  => display colored log messages
 	""" % sys.argv[0]
 	print usage
 	sys.exit()
@@ -1613,7 +1614,7 @@ def _usage():
 if __name__ == '__main__':
 
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], 'hc:id', ['help', 'config=', 'info', 'debug'])
+		opts, args = getopt.getopt(sys.argv[1:], 'hc:id', ['help', 'config=', 'info', 'debug', 'colored'])
 	except:
 		_usage()
 	
@@ -1629,6 +1630,8 @@ if __name__ == '__main__':
 		if o in ('-d', '--debug'):
 			log.DEBUG = True
 			log.INFO  = True
+		if o == '--colored':
+			log.COLORED = True
 			
 	if not os.path.exists(configFile):
 		print '  Config file "%s" not found.' % configFile
