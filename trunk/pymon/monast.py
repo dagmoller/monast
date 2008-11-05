@@ -1480,12 +1480,15 @@ class MonAst:
 		action, queue, member = message.split(':::')
 		
 		self.monitoredUsersLock.acquire()
+		MemberName = self.monitoredUsers[member]['CallerID']
+		if MemberName == '--':
+			MemberName = member
 		command = []
 		command.append('Action: QueueAdd')
 		command.append('Queue: %s' % queue)
 		command.append('Interface: %s' % member)
 		#command.append('Penalty: 10')
-		command.append('MemberName: %s' % self.monitoredUsers[member]['CallerID'])
+		command.append('MemberName: %s' % MemberName)
 		log.debug('MonAst.clientAddQueueMember (%s) :: Adding member %s to queue %s' % (threadId, member, queue))
 		self.AMI.execute(command)
 		self.monitoredUsersLock.release()
