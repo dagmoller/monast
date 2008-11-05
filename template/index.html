@@ -158,6 +158,9 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
     </div>
     
     <div id="meetmesDiv">
+    <script type="text/javascript">
+    var _countMeetme = {};
+    </script>
     <fieldset>
       <legend>Meetme Rooms</legend> 
       <!-- START BLOCK : meetme -->
@@ -165,13 +168,14 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
         <div class="meetmeDiv">
           <table width="250">
             <tr>
-              <td align="center" class="statusHeader">Meetme ({meetme})</td>
+              <td align="center" class="statusHeader">Meetme "{meetme}" (<span id="countMeetme-{meetme}">0</span>)</td>
             </tr>
           </table>
         </div>
       </div>
       <script type="text/javascript">
 		ddDivs['meetme-{meetme}'] = new YAHOO.util.DDTarget('meetme-{meetme}');
+		_countMeetme['{meetme}']  = 0;
       </script>
       <!-- END BLOCK : meetme -->
       <div style="clear: both;"></div>
@@ -179,13 +183,17 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
     </div>
     
     <div id="chanCallDiv">
+    <script type="text/javascript">
+    var _countChannels = 0;
+    var _countCalls    = 0;
+    </script>
     <fieldset>
       <legend>Channels/Calls</legend> 
       <div id="channelsDiv">
         <div class="channelDiv">
           <table width="350">
             <tr>
-              <td class="tableTitle" align="center" colspan="2">Channels</td>
+              <td class="tableTitle" align="center" colspan="2">Channels (<span id="countChannels">0</span>)</td>
             </tr>
             <tr>
               <td class="statusHeader" align="center" width="270">Channel</td>
@@ -198,7 +206,7 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
         <div class="callDiv">
           <table width="600">
             <tr>
-              <td class="tableTitle" align="center" colspan="3">Calls</td>
+              <td class="tableTitle" align="center" colspan="3">Calls (<span id="countCalls">0</span>)</td>
             </tr>
             <tr>
               <td class="statusHeader" align="center" width="260">SRC Channel</td>
@@ -216,13 +224,16 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
     </div>
     
     <div id="parkedCallsDiv">
+    <script type="text/javascript">
+    var _countParked = 0;
+    </script>
     <fieldset>
       <legend>Parked Calls</legend>
       <div id="parkedsDiv">
         <div class="parkedDiv">
           <table width="600">
             <tr>
-              <td class="tableTitle" align="center" colspan="3">Parked Calls</td>
+              <td class="tableTitle" align="center" colspan="3">Parked Calls (<span id="countParked">0</span>)</td>
             </tr>
             <tr>
               <td class="statusHeader" align="center" width="80">Exten</td>
