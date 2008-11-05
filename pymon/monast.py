@@ -1151,7 +1151,7 @@ class MonAst:
 			tmp       = tmp[tmp.find(':\n') + 2:]
 			Variables = re.compile('^[\s]+(.*)\n', re.MULTILINE)
 			Variables = Variables.findall(tmp)
-			Variables = [i.replace(' = ', '=') for i in vars]
+			Variables = [i.replace(' = ', '=') for i in Variables]
 		except:
 			Variables = []
 		
@@ -1159,7 +1159,7 @@ class MonAst:
 		if self.monitoredUsers.has_key(user):
 			self.monitoredUsers[user]['CallerID']  = CallerID
 			self.monitoredUsers[user]['Context']   = Context
-			self.monitoredUsers[user]['Variables'] = vars
+			self.monitoredUsers[user]['Variables'] = Variables
 		self.monitoredUsersLock.release()
 		
 		
