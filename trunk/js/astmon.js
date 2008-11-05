@@ -202,6 +202,9 @@ function Process(o)
 			ddDivs[o['Uniqueid']].onInvalidDrop = invalidDrop;
 			ddDivs[o['Uniqueid']].onDragOver    = dragOver;
 			ddDivs[o['Uniqueid']].onDragOut     = dragOut;
+			
+			_countChannels += 1;
+			$('countChannels').innerHTML = _countChannels;
 		}
 		
 		return;
@@ -238,6 +241,9 @@ function Process(o)
 		ddDivs[div.id].onDragOver    = dragOver;
 		ddDivs[div.id].onDragOut     = dragOut;
 
+		_countCalls += 1;
+		$('countCalls').innerHTML = _countCalls;
+
 		return;
 	}
 	
@@ -245,7 +251,11 @@ function Process(o)
 	{
 		var div = $(o['Uniqueid']);
 		if (div)
+		{
 			$('channelsDiv').removeChild(div);
+			_countChannels -= 1;
+			$('countChannels').innerHTML = _countChannels;
+		}
 		
 		return;
 	}
@@ -309,6 +319,10 @@ function Process(o)
 	{
 		stopChrono('callStatus-' + o['Uniqueid1'] + '-' + o['Uniqueid2']);
 		$('callsDiv').removeChild($('call-' + o['Uniqueid1'] + '-' + o['Uniqueid2']));
+		
+		_countCalls -= 1;
+		$('countCalls').innerHTML = _countCalls;
+		
 		return;
 	}
 	
@@ -363,6 +377,9 @@ function Process(o)
 			ddDivs[id].onInvalidDrop = invalidDrop;
 			ddDivs[id].onDragOver    = dragOver;
 			ddDivs[id].onDragOut     = dragOut;
+			
+			_countMeetme[o['Meetme']] += 1;
+			$('countMeetme-' + o['Meetme']).innerHTML = _countMeetme[o['Meetme']];
 		}
 		
 		return;
@@ -373,7 +390,11 @@ function Process(o)
 		var id  = 'meetme-' + o['Meetme'] + '-' + o['Usernum'];
 		var div = $(id);
 		if (div)
+		{
 			$('meetme-' + o['Meetme']).removeChild(div);
+			_countMeetme[o['Meetme']] -= 1;
+			$('countMeetme-' + o['Meetme']).innerHTML = _countMeetme[o['Meetme']];
+		}
 			
 		return;
 	}
@@ -414,6 +435,9 @@ function Process(o)
 			ddDivs[id].onInvalidDrop = invalidDrop;
 			ddDivs[id].onDragOver    = dragOver;
 			ddDivs[id].onDragOut     = dragOut;
+			
+			_countParked += 1;
+			$('countParked').innerHTML = _countParked;
 		}
 		
 		return;
@@ -424,7 +448,11 @@ function Process(o)
 		var id  = 'parked-' + o['Exten'];
 		var div = $(id);
 		if (div)
+		{
 			$('parkedsDiv').removeChild(div);
+			_countParked -= 1;
+			$('countParked').innerHTML = _countParked;
+		}
 			
 		return;
 	}
