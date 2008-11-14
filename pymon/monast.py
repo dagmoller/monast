@@ -1692,10 +1692,8 @@ if __name__ == '__main__':
 		if o in ('-c', '--config'):
 			configFile = a
 		if o in ('-i', '--info'):
-			info = True
 			logging.getLogger("").setLevel(logging.INFO)
 		if o in ('-d', '--debug'):
-			debug = True
 			logging.getLogger("").setLevel(logging.DEBUG)
 		if o == '--colored':
 			logging.COLORED = True
