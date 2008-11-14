@@ -40,7 +40,6 @@ import distutils.sysconfig
 PYTHON_VERSION = distutils.sysconfig.get_python_version()
 
 ## Basic Logger
-logging.NOTICE = 60
 if float(PYTHON_VERSION) >= 2.4:
 	logging.basicConfig(
 		format  = "[%(asctime)s] %(levelname)-8s :: %(message)s",
@@ -50,7 +49,8 @@ else:
 	print "AsteriskManager is incompatible with your Python version (%s)" % PYTHON_VERSION
 	print "It requires Python >= 2.4"
 	sys.exit(1)
-	
+
+logging.NOTICE = 60	
 logging.addLevelName(logging.NOTICE, "NOTICE")
 log = logging.getLogger("AsteriskManager")
 
