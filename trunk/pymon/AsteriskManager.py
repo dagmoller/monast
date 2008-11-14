@@ -159,7 +159,7 @@ class AsteriskManager(threading.Thread):
 		while self.running:
 			msg = self.recvQueue.get()
 			msg = msg.strip()
-			log.debug(msg)
+			log.debug('AsteriskManager.threadRecvQueue :: Received: %s' % msg)
 			
 			if msg == 'Response: Pong':
 				self.pong = True
