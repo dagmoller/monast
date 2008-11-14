@@ -41,12 +41,7 @@ PYTHON_VERSION = distutils.sysconfig.get_python_version()
 
 ## Basic Logger
 logging.NOTICE = 60
-if float(PYTHON_VERSION) >= 2.5:
-	logging.basicConfig(
-		format  = "[%(asctime)s] %(levelname)-8s :: %(name)s.%(funcName)-20s :: %(message)s", 
-		datefmt = '%a %b %d %H:%M:%S %Y'
-	)
-elif float(PYTHON_VERSION) >= 2.4:
+if float(PYTHON_VERSION) >= 2.4:
 	logging.basicConfig(
 		format  = "[%(asctime)s] %(levelname)-8s :: %(message)s",
 		datefmt = '%a %b %d %H:%M:%S %Y'
