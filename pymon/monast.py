@@ -38,9 +38,12 @@ import traceback
 import socket
 import random
 import Queue
-import log
+import logging
 from AsteriskManager import AsteriskManager
 from ConfigParser import SafeConfigParser
+
+import distutils.sysconfig
+PYTHON_VERSION = distutils.sysconfig.get_python_version()
 
 MONAST_CALLERID = "MonAst WEB"
 
@@ -55,6 +58,60 @@ AST_DEVICE_STATES = { # copied from include/asterisk/devicestate.h
 	'7': 'Ring, In Use',
 	'8': 'On Hold'
 }
+
+COLORS = {
+	'black'  : 30,
+	'red'    : 31,
+	'green'  : 32,
+	'yellow' : 33,
+	'blue'   : 34,
+	'magenta': 35,
+	'cyan'   : 36,
+	'white'  : 37
+}
+
+## Global Logger
+logging.NOTICE = 60
+logging.addLevelName(logging.NOTICE, "NOTICE")
+
+LEVEL_COLORS = {
+	logging.NOTICE   : 'white',
+	logging.INFO     : 'yellow',
+	logging.ERROR    : 'red',
+	logging.WARNING  : 'magenta',
+	logging.DEBUG    : 'cyan',
+}
+
+class ColorFormatter(logging.Formatter):
+	def __init__(self, fmt = None, datefmt = None):
+		logging.Formatter.__init__(self, fmt, datefmt)
+	
+	def color(self, levelno, msg):
+		return '\033[%d;1m%s\033[0m' % (COLORS[LEVEL_COLORS[levelno]], msg)
+	
+	def formatTime(self, record, datefmt):
+		if hasattr(logging, 'COLORED'):
+			return '\033[37;1m%s\033[0m' % logging.Formatter.formatTime(self, record, datefmt)
+		else:
+			return logging.Formatter.formatTime(self, record, datefmt)
+	
+	def format(self, record):
+		if record.levelname == 'DEBUG':
+			record.msg = record.msg.encode('string_escape')
+		
+		if hasattr(logging, 'COLORED'):
+			record.name      = self.color(record.levelno, record.name)
+			record.module    = self.color(record.levelno, record.module)
+			record.msg       = self.color(record.levelno, record.msg)
+			record.levelname = self.color(record.levelno, record.levelname)
+
+			if float(PYTHON_VERSION) >= 2.5:
+				record.funcName  = self.color(record.levelno, record.funcName)
+			
+			if record.exc_info:
+				record.exc_text  = self.color(record.levelno, '>> %s' % self.formatException(record.exc_info).replace('\n', '\n>> '))
+		
+		return logging.Formatter.format(self, record)
 
 
 class MyConfigParser(SafeConfigParser):
@@ -118,7 +175,7 @@ class MonAst:
 	##
 	def __init__(self, configFile):
 		
-		log.log('MonAst :: Initializing...')
+		log.log(logging.NOTICE, 'MonAst :: Initializing...')
 		
 		self.configFile = configFile
 		
@@ -251,7 +308,7 @@ class MonAst:
 							except KeyError:
 								self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time()}
 								output.append('NEW SESSION')
-								log.log('MonAst.threadClient (%s) :: New client session: %s' % (threadId, session))
+								log.log(logging.NOTICE, 'MonAst.threadClient (%s) :: New client session: %s' % (threadId, session))
 							self.clientQueuelock.release()
 						
 						elif session and message.upper() == 'GET STATUS':
@@ -343,7 +400,7 @@ class MonAst:
 				if int(now - past) > 600:
 					dels.append(session)
 			for session in dels:
-				log.log('MonAst.threadClientQueueRemover :: Removing dead client session: %s' % session)
+				log.log(logging.NOTICE, 'MonAst.threadClientQueueRemover :: Removing dead client session: %s' % session)
 				del self.clientQueues[session]
 			self.clientQueuelock.release()
 			
@@ -423,7 +480,7 @@ class MonAst:
 			self.monitoredUsers[user] = {'Channeltype': Channeltype, 'Status': Status, 'Calls': 0, 'CallerID': '--', 'Context': 'default', 'Variables': []}
 		else:
 			user = None
-			
+		
 		if user:
 			self.AMI.execute(['Action: Command', 'Command: %s show peer %s' % (Channeltype.lower(), ObjectName)], self._defaultParseConfigPeers, user)
 		
@@ -823,7 +880,7 @@ class MonAst:
 		self.callsLock.acquire()
 		lostChannels = [i for i in self.channels.keys() if i not in self.channelStatus]
 		for Uniqueid in lostChannels:
-			log.log('MonAst.handlerStatusComplete :: Removing lost channel %s' % Uniqueid)
+			log.log(logging.NOTICE, 'MonAst.handlerStatusComplete :: Removing lost channel %s' % Uniqueid)
 			try:
 				Channel = self.channels[Uniqueid]['Channel']
 				del self.channels[Uniqueid]
@@ -1104,13 +1161,13 @@ class MonAst:
 				queue       = self.queueStatusOrder.pop(0)
 				lostMembers = [i for i in self.queues[queue]['members'].keys() if i not in self.queueMemberStatus[queue]]
 				for member in lostMembers:
-					log.log('MonAst.handlerQueueStatusComplete :: Removing lost member %s from queue %s' % (member, queue))
+					log.log(logging.NOTICE, 'MonAst.handlerQueueStatusComplete :: Removing lost member %s from queue %s' % (member, queue))
 					del self.queues[queue]['members'][member]
 					self.enqueue('RemoveQueueMember: %s:::%s:::FAKE' % (queue, member))
 				
 				lostClients = [i for i in self.queues[queue]['clients'].keys() if i not in self.queueClientStatus[queue]]
 				for client in lostClients:
-					log.log('MonAst.handlerQueueStatusComplete :: Removing lost client %s from queue %s' % (client, queue))
+					log.log(logging.NOTICE, 'MonAst.handlerQueueStatusComplete :: Removing lost client %s from queue %s' % (client, queue))
 					Channel = self.queues[queue]['clients'][client]['Channel']
 					del self.queues[queue]['clients'][client]
 					Count = len(self.queues[queue]['clients'])
@@ -1595,7 +1652,7 @@ class MonAst:
 		self.AMI.close()
 		
 		time.sleep(2)
-		log.log('Monast :: Finished...')
+		log.log(logging.NOTICE, 'Monast :: Finished...')
 	
 	
 def _usage():
@@ -1622,6 +1679,12 @@ if __name__ == '__main__':
 		_usage()
 	
 	configFile = '/etc/monast.conf'
+	info       = False
+	debug      = False
+	colored    = False
+	
+	#basicFormat = "[%(asctime)s] %(levelname)-8s :: %(name)s.%(funcName)s :: %(message)s" 
+	basicFormat = "[%(asctime)s] %(levelname)-8s :: %(message)s"
 	
 	for o, a in opts:
 		if o in ('-h', '--help'):
@@ -1629,13 +1692,27 @@ if __name__ == '__main__':
 		if o in ('-c', '--config'):
 			configFile = a
 		if o in ('-i', '--info'):
-			log.INFO = True
+			info = True
 		if o in ('-d', '--debug'):
-			log.DEBUG = True
-			log.INFO  = True
+			debug = True
 		if o == '--colored':
-			log.COLORED = True
-			
+			logging.COLORED = True
+			#basicFormat = "[%(asctime)s] %(levelname)-19s :: %(name)s.%(funcName)s :: %(message)s"
+			basicFormat = "[%(asctime)s] %(levelname)-19s :: %(message)s"
+	
+	fmt  = ColorFormatter(basicFormat, '%a %b %d %H:%M:%S %Y')
+	hdlr = logging.StreamHandler(sys.stdout)
+	hdlr.setFormatter(fmt)
+	#logging.getLogger("").addHandler(hdlr)
+	logging.getLogger("").handlers[0] = hdlr
+	
+	if debug:
+		logging.getLogger("").setLevel(logging.DEBUG)
+	elif info:
+		logging.getLogger("").setLevel(logging.INFO)
+		
+	log = logging.getLogger("MonAst")
+	
 	if not os.path.exists(configFile):
 		print '  Config file "%s" not found.' % configFile
 		print '  Run "%s --help" for help.' % sys.argv[0]
