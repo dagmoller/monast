@@ -29,9 +29,9 @@
 import os
 import re
 import sys
+sys.path.append('amapi')
 import time
 import pprint
-import getopt
 import thread
 import threading
 import traceback
@@ -39,6 +39,7 @@ import socket
 import random
 import Queue
 import logging
+import optparse
 from AsteriskManager import AsteriskManager
 from ConfigParser import SafeConfigParser
 
@@ -1655,63 +1656,55 @@ class MonAst:
 		log.log(logging.NOTICE, 'Monast :: Finished...')
 	
 	
-def _usage():
-	
-	usage = """
-	Usage: %s [options]
-	
-	Options:
-		-h | --help                     => display this help
-		-c | --config <config file>     => use alterantive config file instead /etc/monast.conf
-		-i | --info                     => display INFO messages
-		-d | --debug                    => display INFO + DEBUG messages
-		     --colored                  => display colored log messages
-	""" % sys.argv[0]
-	print usage
-	sys.exit()
-	
-	
 if __name__ == '__main__':
 
-	try:
-		opts, args = getopt.getopt(sys.argv[1:], 'hc:id', ['help', 'config=', 'info', 'debug', 'colored'])
-	except:
-		_usage()
+	opt = optparse.OptionParser()
+	opt.add_option('-c', '--config',
+		dest    = "configFile",
+		default = '/etc/monast.conf',
+		help    = "display INFO messages"
+	)
+	opt.add_option('-i', '--info',
+		dest   = "info",
+		action = "store_true",
+		help   = "display INFO messages"
+	)
+	opt.add_option('-d', '--debug',
+		dest   = "debug",
+		action = "store_true",
+		help   = "display DEBUG messages"
+	)
+	opt.add_option('-l', '--colored',
+		dest   = "colored",
+		action = "store_true",
+		help   = "display colored log messages"
+	)
 	
-	configFile = '/etc/monast.conf'
-	info       = False
-	debug      = False
-	colored    = False
+	(options, args) = opt.parse_args()
+
+	if not os.path.exists(options.configFile):
+		print '  Config file "%s" not found.' % options.configFile
+		print '  Run "%s --help" for help.' % sys.argv[0]
+		sys.exit(1)
+
+	if options.info:
+		logging.getLogger("").setLevel(logging.INFO)
+		
+	if options.debug:
+		logging.getLogger("").setLevel(logging.DEBUG)
 	
-	#basicFormat = "[%(asctime)s] %(levelname)-8s :: %(name)s.%(funcName)s :: %(message)s" 
-	basicFormat = "[%(asctime)s] %(levelname)-8s :: %(message)s"
+	basicLogFormat = "[%(asctime)s] %(levelname)-8s :: %(message)s"
 	
-	for o, a in opts:
-		if o in ('-h', '--help'):
-			_usage()
-		if o in ('-c', '--config'):
-			configFile = a
-		if o in ('-i', '--info'):
-			logging.getLogger("").setLevel(logging.INFO)
-		if o in ('-d', '--debug'):
-			logging.getLogger("").setLevel(logging.DEBUG)
-		if o == '--colored':
-			logging.COLORED = True
-			#basicFormat = "[%(asctime)s] %(levelname)-19s :: %(name)s.%(funcName)s :: %(message)s"
-			basicFormat = "[%(asctime)s] %(levelname)-19s :: %(message)s"
+	if options.colored:
+		logging.COLORED = True
+		basicLogFormat  = "[%(asctime)s] %(levelname)-19s :: %(message)s"
 	
-	fmt  = ColorFormatter(basicFormat, '%a %b %d %H:%M:%S %Y')
+	fmt  = ColorFormatter(basicLogFormat, '%a %b %d %H:%M:%S %Y')
 	hdlr = logging.StreamHandler(sys.stdout)
 	hdlr.setFormatter(fmt)
-	#logging.getLogger("").addHandler(hdlr)
 	logging.getLogger("").handlers[0] = hdlr
 	
 	log = logging.getLogger("MonAst")
 	
-	if not os.path.exists(configFile):
-		print '  Config file "%s" not found.' % configFile
-		print '  Run "%s --help" for help.' % sys.argv[0]
-		sys.exit(1)
-
-	monast = MonAst(configFile)
+	monast = MonAst(options.configFile)
 	monast.start()	
