@@ -1693,8 +1693,10 @@ if __name__ == '__main__':
 			configFile = a
 		if o in ('-i', '--info'):
 			info = True
+			logging.getLogger("").setLevel(logging.INFO)
 		if o in ('-d', '--debug'):
 			debug = True
+			logging.getLogger("").setLevel(logging.DEBUG)
 		if o == '--colored':
 			logging.COLORED = True
 			#basicFormat = "[%(asctime)s] %(levelname)-19s :: %(name)s.%(funcName)s :: %(message)s"
@@ -1706,11 +1708,6 @@ if __name__ == '__main__':
 	#logging.getLogger("").addHandler(hdlr)
 	logging.getLogger("").handlers[0] = hdlr
 	
-	if debug:
-		logging.getLogger("").setLevel(logging.DEBUG)
-	elif info:
-		logging.getLogger("").setLevel(logging.INFO)
-		
 	log = logging.getLogger("MonAst")
 	
 	if not os.path.exists(configFile):
