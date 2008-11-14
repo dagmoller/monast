@@ -25,6 +25,36 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
+##
+## AsteriskManager.py
+## Sample usage
+## 
+## import time
+## from AsteriskManager import AsteriskManager
+##
+## def _defaultHandler(lines):
+##     for line in lines:
+##         print line
+##
+## def handlerPeerEntry(lines):
+##     print lines
+##
+## def handlerCommand(lines)
+##     print lines
+##
+## am = AsteriskManager(hostname, port, username, password)
+## am.registerEventHandler('_DEFAULT', _defaultHandler)
+## am.registerEventHandler('PeerEntry', handlerPeerEntry)
+## am.start()
+##
+## while not am.isConnected or not am.isAuthenticated:
+##     time.sleep(1)
+##
+## am.execute(["Action: Command", "Command: sip show peers"], handlerCommand)
+## time.sleep(1)
+## am.close()
+##
+
 import sys
 import pprint
 import re
