@@ -300,7 +300,7 @@ class MonAst:
 				self.clientSocks[threadId] = thread.start_new_thread(self.threadClient, (threadId, sc, addr))
 				self.clientSockLock.release()
 			except:
-				log.error('MonAst.threadClientSocket :: Unhandled Exception: \n%s' % log.formatTraceback(traceback))
+				log.exception('MonAst.threadClientSocket :: Unhandled Exception')
 				
 				
 	def threadClient(self, threadId, sock, addr):
@@ -394,7 +394,7 @@ class MonAst:
 		except socket.error, e:
 			log.error('MonAst.threadClient (%s) :: Socket Error: %s' % (threadId, e))
 		except:
-			log.error('MonAst.threadClient (%s) :: Unhandled Exception: \n%s' % (threadId, log.formatTraceback(traceback)))
+			log.exception('MonAst.threadClient (%s) :: Unhandled Exception' % threadId)
 			
 		try:
 			sock.close()
@@ -1204,7 +1204,7 @@ class MonAst:
 					Count = len(self.queues[queue]['clients'])
 					self.enqueue('RemoveQueueClient: %s:::%s:::%s:::%s:::FAKE' % (queue, client, Channel, Count))
 			except:
-				log.error('MonAst.handlerQueueStatusComplete :: Unhandled Exception: \n%s' % log.formatTraceback(traceback))
+				log.exception('MonAst.handlerQueueStatusComplete :: Unhandled Exception')
 		self.queuesLock.release()
 		
 		
@@ -1329,7 +1329,7 @@ class MonAst:
 					output.append('Call: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s:::%d' % (c['Source'], c['Destination'], c['CallerID'], c['CallerIDName'], \
 													self.channels[dst]['CallerIDNum'], c['SrcUniqueID'], c['DestUniqueID'], c['Status'], time.time() - c['startTime']))
 				except:
-					log.error('MonAst.clientGetStatus (%s) :: Unhandled Exception \n%s' % (threadId, log.formatTraceback(traceback)))
+					log.exception('MonAst.clientGetStatus (%s) :: Unhandled Exception' % threadId)
 			meetmeRooms = self.meetme.keys()
 			meetmeRooms.sort()
 			for meetme in meetmeRooms:
@@ -1378,7 +1378,7 @@ class MonAst:
 			
 			output.append('END STATUS')
 		except:
-			log.error('MonAst.clientGetStatus (%s) :: Unhandled Exception \n%s' % (threadId, log.formatTraceback(traceback)))
+			log.exception('MonAst.clientGetStatus (%s) :: Unhandled Exception' % threadId)
 		
 		self.queuesLock.release()
 		self.parkedLock.release()
