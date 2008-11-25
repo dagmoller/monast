@@ -29,7 +29,11 @@
 import os
 import re
 import sys
-sys.path.append('amapi')
+#sys.path.append('amapi')
+
+START_PATH = os.getcwd()
+sys.path.append('%s/%s/amapi' % (START_PATH, sys.argv[0][:sys.argv[0].rfind('/')]))
+
 import time
 import thread
 import threading
@@ -45,8 +49,6 @@ from ConfigParser import SafeConfigParser
 
 import distutils.sysconfig
 PYTHON_VERSION = distutils.sysconfig.get_python_version()
-
-START_PATH = os.getcwd()
 
 MONAST_CALLERID = "MonAst WEB"
 
