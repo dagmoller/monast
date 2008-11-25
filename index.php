@@ -101,8 +101,8 @@ while (!feof($fp))
 				if (strpos($message, 'Call: ') === 0)
 					$calls[] = substr($message, strlen('Call: '));	
 					
-				if (strpos($message, 'MeetmeRoom: ') === 0)
-				    $meetmeRooms[] = substr($message, strlen('MeetmeRoom: '));
+				if (strpos($message, 'MeetmeCreate: ') === 0)
+				    $meetmeRooms[] = substr($message, strlen('MeetmeCreate: '));
 				    
 				if (strpos($message, 'MeetmeJoin: ') === 0)
 				    $meetmeJoins[] = substr($message, strlen('MeetmeJoin: '));
@@ -159,8 +159,14 @@ foreach ($peerStatus as $idx => $peer)
 
 foreach ($meetmeRooms as $idx => $meetmeRoom)
 {
-    $template->newBlock('meetme');
-    $template->assign('meetme', $meetmeRoom);
+	$tmp = array
+	(
+		'Action' => 'MeetmeCreate',
+		'Meetme' => $meetmeRoom
+	);
+	
+	$template->newBlock('process');
+	$template->assign('json', $json->encode($tmp));
 }
 
 foreach ($meetmeJoins as $idx => $meetmeJoin)

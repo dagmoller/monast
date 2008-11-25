@@ -163,22 +163,8 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
     </script>
     <fieldset>
       <legend>Meetme Rooms</legend> 
-      <!-- START BLOCK : meetme -->
-      <div id="meetme-{meetme}" class="meetmeDivWrap">
-        <div class="meetmeDiv">
-          <table width="250">
-            <tr>
-              <td align="center" class="statusHeader">Meetme "{meetme}" (<span id="countMeetme-{meetme}">0</span>)</td>
-            </tr>
-          </table>
-        </div>
+      <div id="meetmeDivWrapper">
       </div>
-      <script type="text/javascript">
-		ddDivs['meetme-{meetme}'] = new YAHOO.util.DDTarget('meetme-{meetme}');
-		_countMeetme['{meetme}']  = 0;
-      </script>
-      <!-- END BLOCK : meetme -->
-      <div style="clear: both;"></div>
     </fieldset>
     </div>
     
@@ -216,9 +202,6 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
           </table>
         </div>
       </div>
-      <!-- <div id="trash">
-        <img src="image/trash-2.png" width="96" height="96" title="Drag channels or calls to Hangup">
-      </div> -->
       <div style="clear: both;"></div>
     </fieldset>
     </div>

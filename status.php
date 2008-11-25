@@ -187,6 +187,28 @@ function parseMsg($msg)
 		return $saida;
 	}
 	
+	if (strpos($msg, 'MeetmeCreate: ') !== false)
+	{
+	    list($Meetme) = explode(':::', substr($msg, 14));
+        $saida = array
+        (
+            'Action' => 'MeetmeCreate',
+            'Meetme' => $Meetme
+        );
+    	return $saida;
+	}
+	
+	if (strpos($msg, 'MeetmeDestroy: ') !== false)
+	{
+	    list($Meetme) = explode(':::', substr($msg, 15));
+        $saida = array
+        (
+            'Action' => 'MeetmeDestroy',
+            'Meetme' => $Meetme
+        );
+    	return $saida;
+	}
+	
 	if (strpos($msg, 'MeetmeJoin: ') !== false)
 	{
 	    list($Meetme, $Uniqueid, $Usernum, $Channel, $CallerIDNum, $CallerIDName) = explode(':::', substr($msg, 12));

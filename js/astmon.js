@@ -348,6 +348,40 @@ function Process(o)
 		return;
 	}
 	
+	if (o['Action'] == 'MeetmeCreate')
+	{
+		var id  = 'meetme-' + o['Meetme'];
+		var div = $(id);
+		if (!div)
+		{
+			div           = document.createElement('div');
+			div.id        = id;
+			div.className = 'meetmeDivWrap';
+			
+			var template = "<div class='meetmeDiv'><table width='250'><tr>";
+			template    += "<td align='center' class='statusHeader'>Meetme \"{Meetme}\" (<span id='countMeetme-{Meetme}'>0</span>)</td>";
+			template    += "</tr></table></div>";
+			template     = template.replace(/\{Meetme\}/g, o['Meetme']);
+			
+			div.innerHTML = template;
+			
+			$('meetmeDivWrapper').appendChild(div);
+			
+			ddDivs[id] = new YAHOO.util.DDTarget(id);
+			_countMeetme[o['Meetme']] = 0;
+		} 
+	}
+	
+	if (o['Action'] == 'MeetmeDestroy')
+	{
+		var id  = 'meetme-' + o['Meetme'];
+		var div = $(id);
+		if (div)
+		{
+			$('meetmeDivWrapper').removeChild(div);
+		}
+	}
+	
 	if (o['Action'] == 'MeetmeJoin')
 	{
 		var id  = 'meetme-' + o['Meetme'] + '-' + o['Usernum'];
