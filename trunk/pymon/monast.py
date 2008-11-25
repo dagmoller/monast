@@ -1729,7 +1729,7 @@ if __name__ == '__main__':
 	
 	basicLogFormat = "[%(asctime)s] %(levelname)-8s :: %(message)s"
 	
-	if options.colored and not options.daemon:
+	if options.colored:
 		logging.COLORED = True
 		basicLogFormat  = "[%(asctime)s] %(levelname)-19s :: %(message)s"
 	
