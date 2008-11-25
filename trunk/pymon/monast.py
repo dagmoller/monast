@@ -31,7 +31,6 @@ import re
 import sys
 sys.path.append('amapi')
 import time
-#import pprint
 import thread
 import threading
 import traceback
