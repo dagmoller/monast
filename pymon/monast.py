@@ -71,6 +71,8 @@ COLORS = {
 	'white'  : 37
 }
 
+## deamonize
+
 ## Global Logger
 logging.NOTICE = 60
 logging.addLevelName(logging.NOTICE, "NOTICE")
@@ -1672,22 +1674,32 @@ if __name__ == '__main__':
 	opt.add_option('-c', '--config',
 		dest    = "configFile",
 		default = '/etc/monast.conf',
-		help    = "display INFO messages"
+		help    = "use this config file instead of /etc/monast.conf"
 	)
-	opt.add_option('-i', '--info',
+	opt.add_option('--info',
 		dest   = "info",
 		action = "store_true",
 		help   = "display INFO messages"
 	)
-	opt.add_option('-d', '--debug',
+	opt.add_option('--debug',
 		dest   = "debug",
 		action = "store_true",
 		help   = "display DEBUG messages"
 	)
-	opt.add_option('-l', '--colored',
+	opt.add_option('--colored',
 		dest   = "colored",
 		action = "store_true",
 		help   = "display colored log messages"
+	)
+	opt.add_option('-d', '--daemon',
+		dest   = "daemon",
+		action = "store_true",
+		help   = "deamonize (fork in background)"
+	)
+	opt.add_option('-l', '--logfile',
+		dest    = "logfile",
+		default = "/var/log/monast.log",
+		help    = "use this log file instead of /var/log/monast.log"
 	)
 	
 	(options, args) = opt.parse_args()
@@ -1697,6 +1709,18 @@ if __name__ == '__main__':
 		print '  Run "%s --help" for help.' % sys.argv[0]
 		sys.exit(1)
 
+	if options.daemon:
+		if os.fork() == 0:
+			os.setsid()
+			if os.fork() == 0:
+				pass
+			else:
+				os._exit(0)
+		else:
+			os._exit(0)
+		
+		print 'MonAst daemonized with pid %s' % os.getpid()
+
 	if options.info:
 		logging.getLogger("").setLevel(logging.INFO)
 		
@@ -1705,12 +1729,16 @@ if __name__ == '__main__':
 	
 	basicLogFormat = "[%(asctime)s] %(levelname)-8s :: %(message)s"
 	
-	if options.colored:
+	if options.colored and not options.daemon:
 		logging.COLORED = True
 		basicLogFormat  = "[%(asctime)s] %(levelname)-19s :: %(message)s"
 	
 	fmt  = ColorFormatter(basicLogFormat, '%a %b %d %H:%M:%S %Y')
-	hdlr = logging.StreamHandler(sys.stdout)
+	hdlr = None
+	if options.daemon:
+		hdlr = logging.FileHandler(options.logfile)
+	else:
+		hdlr = logging.StreamHandler(sys.stdout)
 	hdlr.setFormatter(fmt)
 	if (len(logging.getLogger("").handlers) == 1):
 		logging.getLogger("").handlers[0] = hdlr
@@ -1720,4 +1748,6 @@ if __name__ == '__main__':
 	log = logging.getLogger("MonAst")
 	
 	monast = MonAst(options.configFile)
-	monast.start()	
+	monast.start()
+
+	hdlr.close()
