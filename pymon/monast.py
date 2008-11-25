@@ -29,7 +29,6 @@
 import os
 import re
 import sys
-#sys.path.append('amapi')
 
 START_PATH = os.getcwd()
 sys.path.append('%s/%s/amapi' % (START_PATH, sys.argv[0][:sys.argv[0].rfind('/')]))
