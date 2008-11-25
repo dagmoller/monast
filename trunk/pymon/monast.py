@@ -729,8 +729,15 @@ class MonAst:
 					
 		self.meetmeLock.acquire()
 		self.channelsLock.acquire()
-		self.meetme[Meetme][Usernum] = {'Uniqueid': Uniqueid, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName}
 		ch = self.channels[Uniqueid]
+		try:
+			self.meetme[Meetme]['users'][Usernum] = {'Uniqueid': Uniqueid, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName}
+		except KeyError:
+			self.meetme[Meetme] = {
+					'dynamic': True,
+					'users'  : {Usernum: {'Uniqueid': Uniqueid, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName}}
+			}
+			self.enqueue('MeetmeCreate: %s' % Meetme)
 		self.enqueue('MeetmeJoin: %s:::%s:::%s:::%s:::%s:::%s' % (Meetme, Uniqueid, Usernum, ch['Channel'], CallerIDNum, CallerIDName))
 		self.channelsLock.release()
 		self.meetmeLock.release()
@@ -748,10 +755,13 @@ class MonAst:
 					
 		self.meetmeLock.acquire()
 		try:
-			del self.meetme[Meetme][Usernum]
+			del self.meetme[Meetme]['users'][Usernum]
 			self.enqueue('MeetmeLeave: %s:::%s:::%s:::%s' % (Meetme, Uniqueid, Usernum, Duration))
+			if (self.meetme[Meetme]['dynamic'] and len(self.meetme[Meetme]['users']) == 0):
+				del self.meetme[Meetme]
+				self.enqueue('MeetmeDestroy: %s' % Meetme)
 		except Exception, e:
-			log.error('MonAst.handlerMeetmeLeave :: Meetme or Usernum not found in self.meetme[\'%s\'][\'%s\']' % (Meetme, Usernum))
+			log.error('MonAst.handlerMeetmeLeave :: Meetme or Usernum not found in self.meetme[\'%s\'][\'users\'][\'%s\']' % (Meetme, Usernum))
 		self.meetmeLock.release()
 		
 		
@@ -1241,7 +1251,7 @@ class MonAst:
 		for line in lines:
 			if line.startswith('Line-') and line.find('conf=') != -1:
 				params = line[line.find('conf=')+5:].split(',')
-				self.meetme[params[0]] = {}
+				self.meetme[params[0]] = {'dynamic': False, 'users': {}}
 		self.meetmeLock.release()
 		
 		
@@ -1303,9 +1313,9 @@ class MonAst:
 			meetmeRooms = self.meetme.keys()
 			meetmeRooms.sort()
 			for meetme in meetmeRooms:
-				output.append('MeetmeRoom: %s' % meetme)
-				for Usernum in self.meetme[meetme]:
-					mm = self.meetme[meetme][Usernum]
+				output.append('MeetmeCreate: %s' % meetme)
+				for Usernum in self.meetme[meetme]['users']:
+					mm = self.meetme[meetme]['users'][Usernum]
 					ch = self.channels[mm['Uniqueid']]
 					output.append('MeetmeJoin: %s:::%s:::%s:::%s:::%s:::%s' % (meetme, mm['Uniqueid'], Usernum, ch['Channel'], mm['CallerIDNum'], mm['CallerIDName']))
 			
@@ -1702,7 +1712,10 @@ if __name__ == '__main__':
 	fmt  = ColorFormatter(basicLogFormat, '%a %b %d %H:%M:%S %Y')
 	hdlr = logging.StreamHandler(sys.stdout)
 	hdlr.setFormatter(fmt)
-	logging.getLogger("").handlers[0] = hdlr
+	if (len(logging.getLogger("").handlers) == 1):
+		logging.getLogger("").handlers[0] = hdlr
+	else:
+		logging.getLogger("").addHandler(hdlr)
 	
 	log = logging.getLogger("MonAst")
 	
