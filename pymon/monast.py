@@ -36,6 +36,7 @@ import thread
 import threading
 import traceback
 import socket
+import signal
 import random
 import Queue
 import logging
@@ -45,6 +46,8 @@ from ConfigParser import SafeConfigParser
 
 import distutils.sysconfig
 PYTHON_VERSION = distutils.sysconfig.get_python_version()
+
+START_PATH = os.getcwd()
 
 MONAST_CALLERID = "MonAst WEB"
 
@@ -72,7 +75,23 @@ COLORS = {
 }
 
 ## deamonize
-
+def createDaemon():
+	if os.fork() == 0:
+		os.setsid()
+		if os.fork() == 0:
+			os.chdir('/')
+			os.umask(0)
+		else:
+			os._exit(0)
+	else:
+		os._exit(0)
+	
+	pid = os.getpid()
+	print 'MonAst daemonized with pid %s' % pid
+	f = open('/var/run/monast.pid', 'w')
+	f.write('%s' % pid)
+	f.close()
+	
 ## Global Logger
 logging.NOTICE = 60
 logging.addLevelName(logging.NOTICE, "NOTICE")
@@ -1644,6 +1663,8 @@ class MonAst:
 	
 	def start(self):
 		
+		signal.signal(signal.SIGTERM, self.stop)
+		
 		self.AMI.start()
 		
 		try:
@@ -1664,8 +1685,16 @@ class MonAst:
 			
 		self.AMI.close()
 		
-		time.sleep(2)
+		while self.AMI.isConnected:
+			time.sleep(1)
+		
 		log.log(logging.NOTICE, 'Monast :: Finished...')
+		
+		
+	def stop(self, *args):
+		
+		log.info('MonAst.stop :: Shutting Down')
+		self.running = False
 	
 	
 if __name__ == '__main__':
@@ -1704,22 +1733,19 @@ if __name__ == '__main__':
 	
 	(options, args) = opt.parse_args()
 
+	if not options.configFile.startswith('/'):
+		options.configFile = '%s/%s' % (START_PATH, options.configFile)
+
+	if not options.logfile.startswith('/'):
+		options.logfile = '%s/%s' % (START_PATH, options.logfile)
+
 	if not os.path.exists(options.configFile):
 		print '  Config file "%s" not found.' % options.configFile
 		print '  Run "%s --help" for help.' % sys.argv[0]
 		sys.exit(1)
 
 	if options.daemon:
-		if os.fork() == 0:
-			os.setsid()
-			if os.fork() == 0:
-				pass
-			else:
-				os._exit(0)
-		else:
-			os._exit(0)
-		
-		print 'MonAst daemonized with pid %s' % os.getpid()
+		createDaemon()
 
 	if options.info:
 		logging.getLogger("").setLevel(logging.INFO)
@@ -1746,7 +1772,7 @@ if __name__ == '__main__':
 		logging.getLogger("").addHandler(hdlr)
 	
 	log = logging.getLogger("MonAst")
-	
+
 	monast = MonAst(options.configFile)
 	monast.start()
 
