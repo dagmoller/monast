@@ -14,7 +14,7 @@
 
 4 - Run monast.py:
     # cd pymon
-    # ./monast.py > monast.log 2>&1 &
+    # ./monast.py --daemon
 
 5 - Edit lib/config.php as documented inside this file.
 
