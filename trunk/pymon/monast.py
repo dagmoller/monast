@@ -148,6 +148,7 @@ class MonAst:
 	##
 	
 	running         = True
+	reloading       = False
 	
 	configFile      = None
 	
@@ -200,6 +201,26 @@ class MonAst:
 		log.log(logging.NOTICE, 'MonAst :: Initializing...')
 		
 		self.configFile = configFile
+		self.parseConfig()
+		
+	
+	def list2Dict(self, lines):
+		dic = {}
+		for line in lines:
+			tmp = line.split(':')
+			if len(tmp) == 1:
+				dic[tmp[0].strip()] = ''
+			elif len(tmp) == 2:
+				dic[tmp[0].strip()] = tmp[1].strip()
+			elif len(tmp) >= 3:
+				dic[tmp[0].strip()] = ''.join(tmp[1:])
+									
+		return dic
+	
+	
+	def parseConfig(self):
+		
+		log.log(logging.NOTICE, 'MonAst.parseConfig :: Parsing config')
 		
 		cp = MyConfigParser()
 		cp.read(self.configFile)
@@ -229,7 +250,9 @@ class MonAst:
 			
 			if display == 'force':
 				tech, peer = user.split('/')
-				self.monitoredUsers[user] = {'Channeltype': tech, 'Status': '--', 'Calls': 0, 'CallerID': '--', 'Context': self.defaultContext, 'Variables': []}
+				self.monitoredUsers[user] = {
+					'Channeltype': tech, 'Status': '--', 'Calls': 0, 'CallerID': '--', 'Context': self.defaultContext, 'Variables': [], 'forced': True
+				}
 				
 		try:
 			self.socketClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -273,20 +296,7 @@ class MonAst:
 		self.AMI.registerEventHandler('QueueMemberPaused', self.handlerQueueMemberPaused)
 		self.AMI.registerEventHandler('QueueEntry', self.handlerQueueEntry)
 		self.AMI.registerEventHandler('QueueStatusComplete', self.handlerQueueStatusComplete)
-	
-	
-	def list2Dict(self, lines):
-		dic = {}
-		for line in lines:
-			tmp = line.split(':')
-			if len(tmp) == 1:
-				dic[tmp[0].strip()] = ''
-			elif len(tmp) == 2:
-				dic[tmp[0].strip()] = tmp[1].strip()
-			elif len(tmp) >= 3:
-				dic[tmp[0].strip()] = ''.join(tmp[1:])
-									
-		return dic
+		
 	
 	
 	def threadSocketClient(self, name, params):
@@ -301,7 +311,8 @@ class MonAst:
 				self.clientSocks[threadId] = thread.start_new_thread(self.threadClient, (threadId, sc, addr))
 				self.clientSockLock.release()
 			except:
-				log.exception('MonAst.threadClientSocket :: Unhandled Exception')
+				if not self.reloading:
+					log.exception('MonAst.threadClientSocket :: Unhandled Exception')
 				
 				
 	def threadClient(self, threadId, sock, addr):
@@ -429,10 +440,10 @@ class MonAst:
 			
 	def threadCheckStatus(self, name, params):
 		
-		log.info('MonAst.threadChannelChecker :: Starting Thread...')
+		log.info('MonAst.threadCheckStatus :: Starting Thread...')
 		time.sleep(10)
 		while self.running:
-			log.info('MonAst.threadChannelChecker :: Requesting Status...')
+			log.info('MonAst.threadCheckStatus :: Requesting Status...')
 			
 			self.channelStatus = []
 			self.AMI.execute(['Action: Status'])
@@ -922,7 +933,8 @@ class MonAst:
 			
 			toDelete = None
 			for id in self.calls:
-				if id.find(Uniqueid) != -1 and self.calls[id]['Status'] == 'Dial':
+				#if id.find(Uniqueid) != -1 and self.calls[id]['Status'] == 'Dial':
+				if id.find(Uniqueid) != -1:
 					toDelete = id
 					break
 			if toDelete:
@@ -1636,10 +1648,13 @@ class MonAst:
 		self.AMI.execute(command, self.handlerCliCommand, session)
 	
 	
-	def _GetConfig(self):
+	def _GetConfig(self, sendReload = True):
 		
 		self.monitoredUsersLock.acquire()
-		self.monitoredUsers = {}
+		users = self.monitoredUsers.keys()
+		for user in users:
+			if not self.monitoredUsers[user].has_key('forced'):
+				del self.monitoredUsers[user]
 		self.monitoredUsersLock.release()
 		
 		self.meetmeLock.acquire()
@@ -1655,15 +1670,17 @@ class MonAst:
 		self.AMI.execute(['Action: GetConfig', 'Filename: meetme.conf'], self.handlerGetConfigMeetme)
 		self.AMI.execute(['Action: QueueStatus'])
 		
-		self.clientQueuelock.acquire()
-		for session in self.clientQueues:
-			self.clientQueues[session]['q'].put('Reload: 10')
-		self.clientQueuelock.release()
+		if sendReload:
+			self.clientQueuelock.acquire()
+			for session in self.clientQueues:
+				self.clientQueues[session]['q'].put('Reload: 10')
+			self.clientQueuelock.release()
 		
 	
 	def start(self):
 		
-		signal.signal(signal.SIGTERM, self.stop)
+		signal.signal(signal.SIGTERM, self._sigTERM)
+		signal.signal(signal.SIGHUP, self._sigHUP)
 		
 		self.AMI.start()
 		
@@ -1691,10 +1708,39 @@ class MonAst:
 		log.log(logging.NOTICE, 'Monast :: Finished...')
 		
 		
-	def stop(self, *args):
+	def _sigTERM(self, *args):
 		
-		log.info('MonAst.stop :: Shutting Down')
+		log.log(logging.NOTICE, 'MonAst :: Received SIGTERM -- Shutting Down...')
 		self.running = False
+		
+		
+	def _sigHUP(self, *args):
+		
+		log.log(logging.NOTICE, 'MonAst :: Received SIGHUP -- Reloading...')
+		if self.reloading:
+			log.log(logging.NOTICE, 'MonAst._sigHUP :: Already reloading...')
+			return
+			
+		self.reloading = True
+		
+		self.enqueue('Reload: 10')
+		
+		self.monitoredUsersLock.acquire()
+		self.userDisplay    = {}
+		self.monitoredUsers = {}
+		self.monitoredUsersLock.release()
+		
+		self.AMI.close()
+		while self.AMI.isConnected:
+			time.sleep(1)
+		
+		self.socketClient.shutdown(2)
+		self.socketClient.close()
+		
+		self.parseConfig()
+		self.AMI.start()
+		self._GetConfig(False)
+		self.reloading = False	
 	
 	
 if __name__ == '__main__':
