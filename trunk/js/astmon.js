@@ -824,7 +824,11 @@ function queueMemberAdd(queue, member)
 
 function queueMemberRemove(queue, member)
 {
-	var c = confirm('Remove member ' + callerIDs[member] + ' from queue ' + queue + '?');
+	var cid = callerIDs[member];
+	if (!cid)
+		cid = member;
+	
+	var c = confirm('Remove member ' + cid + ' from queue ' + queue + '?');
 	if (c)
 	{
 		new Ajax.Request('action.php', 
