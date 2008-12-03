@@ -808,7 +808,7 @@ function parkedHangup(exten)
 // Add/Remove Pause/Unpause Queue members
 function queueMemberAdd(queue, member)
 {
-	var c = confirm('Add member ' + callerIDs[member] + ' to queue ' + queue + '?');
+	var c = confirm('Add member ' + (callerIDs[member] ? callerIDs[member] : member) + ' to queue ' + queue + '?');
 	if (c)
 	{
 		new Ajax.Request('action.php', 
@@ -824,11 +824,7 @@ function queueMemberAdd(queue, member)
 
 function queueMemberRemove(queue, member)
 {
-	var cid = callerIDs[member];
-	if (!cid)
-		cid = member;
-	
-	var c = confirm('Remove member ' + cid + ' from queue ' + queue + '?');
+	var c = confirm('Remove member ' + (callerIDs[member] ? callerIDs[member] : member) + ' from queue ' + queue + '?');
 	if (c)
 	{
 		new Ajax.Request('action.php', 
@@ -852,7 +848,7 @@ function queueMemberPause(p_sType, p_aArgs, id)
 	var tmp    = id.split(':::');
 	var queue  = tmp[0];
 	var member = tmp[1];
-	var c      = confirm('Pause member ' + callerIDs[member] + ' in queue ' + queue + '?');
+	var c      = confirm('Pause member ' + (callerIDs[member] ? callerIDs[member] : member) + ' in queue ' + queue + '?');
 	if (c)
 	{
 		new Ajax.Request('action.php', 
@@ -871,7 +867,7 @@ function queueMemberUnpause(p_sType, p_aArgs, id)
 	var tmp    = id.split(':::');
 	var queue  = tmp[0];
 	var member = tmp[1];
-	var c      = confirm('Unpause member ' + callerIDs[member] + ' in queue ' + queue + '?');
+	var c      = confirm('Unpause member ' + (callerIDs[member] ? callerIDs[member] : member) + ' in queue ' + queue + '?');
 	if (c)
 	{
 		new Ajax.Request('action.php', 
