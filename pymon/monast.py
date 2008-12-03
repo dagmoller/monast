@@ -1724,12 +1724,7 @@ class MonAst:
 		self.reloading = True
 		
 		self.enqueue('Reload: 10')
-		
-		self.monitoredUsersLock.acquire()
-		self.userDisplay    = {}
-		self.monitoredUsers = {}
-		self.monitoredUsersLock.release()
-		
+
 		self.AMI.close()
 		while self.AMI.isConnected:
 			time.sleep(1)
@@ -1737,6 +1732,31 @@ class MonAst:
 		self.socketClient.shutdown(2)
 		self.socketClient.close()
 		
+		self.monitoredUsersLock.acquire()
+		self.parkedLock.acquire()
+		self.meetmeLock.acquire()
+		self.callsLock.acquire()
+		self.channelsLock.acquire()
+		self.monitoredUsersLock.acquire()
+		self.queuesLock.acquire()
+		
+		self.userDisplay    = {}
+		self.monitoredUsers = {}
+		self.parked         = {}
+		self.meetme         = {}
+		self.calls          = {}
+		self.channels       = {}
+		self.monitoredUsers = {}
+		self.queues         = {}
+		
+		self.parkedLock.release()
+		self.meetmeLock.release()
+		self.callsLock.release()
+		self.channelsLock.release()
+		self.monitoredUsersLock.release()
+		self.queuesLock.release()
+		self.monitoredUsersLock.release()
+
 		self.parseConfig()
 		self.AMI.start()
 		self._GetConfig(False)
