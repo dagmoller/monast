@@ -933,8 +933,8 @@ class MonAst:
 			
 			toDelete = None
 			for id in self.calls:
-				#if id.find(Uniqueid) != -1 and self.calls[id]['Status'] == 'Dial':
-				if id.find(Uniqueid) != -1:
+				if id.find(Uniqueid) != -1 and self.calls[id]['Status'] == 'Dial':
+				#if id.find(Uniqueid) != -1:
 					toDelete = id
 					break
 			if toDelete:
