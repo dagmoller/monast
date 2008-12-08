@@ -154,6 +154,7 @@ class MonAst:
 	
 	AMI             = None
 	
+	bindHost        = None
 	bindPort        = None
 	socketClient    = None
 	
@@ -230,6 +231,7 @@ class MonAst:
 		username = cp.get('global', 'username')
 		password = cp.get('global', 'password')
 		
+		self.bindHost       = cp.get('global', 'bind_host')
 		self.bindPort       = int(cp.get('global', 'bind_port'))
 		
 		self.defaultContext  = cp.get('global', 'default_context')
@@ -257,7 +259,7 @@ class MonAst:
 		try:
 			self.socketClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			self.socketClient.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-			self.socketClient.bind(('0.0.0.0', self.bindPort))
+			self.socketClient.bind((self.bindHost, self.bindPort))
 			self.socketClient.listen(10)
 		except socket.error, e:
 			log.error("MonAst.__init__ :: Cound not open socket on port %d, cause: %s" % (self.bindPort, e))
