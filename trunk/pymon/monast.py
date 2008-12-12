@@ -194,6 +194,8 @@ class MonAst:
 	queueStatusFirst = False
 	queueStatusOrder = []
 	
+	getMeetmeStatus  = False
+	
 	##
 	## Class Initialization
 	##
@@ -954,6 +956,10 @@ class MonAst:
 			self.monitoredUsersLock.release()
 		self.callsLock.release()
 		self.channelsLock.release()
+		
+		if self.getMeetmeStatus:
+			self.AMI.execute(['Action: Command', 'Command: meetme'], self.handlerParseMeetme)
+			self.getMeetmeStatus = False
 	
 	
 	def handlerQueueMember(self, lines):
@@ -1288,6 +1294,59 @@ class MonAst:
 				params = line[line.find('conf=')+5:].split(',')
 				self.meetme[params[0]] = {'dynamic': False, 'users': {}}
 		self.meetmeLock.release()
+		
+		
+	def handlerParseMeetme(self, lines):
+		
+		log.info('MonAst.handlerParseMeetme :: Parsing meetme...')
+		
+		reMeetme = re.compile('([^\s]*)[\s]+([^\s]*)[\s]+([^\s]*)[\s]+([^\s]*)[\s]+([^\s]*)')
+		
+		self.meetmeLock.acquire()
+		try:
+			meetmes = lines[3].split('\n')[1:-1]
+			if len(meetmes) > 0:
+				meetmes = meetmes[:-1]
+			for meetme in meetmes:
+				try:
+					gMeetme = reMeetme.match(meetme)
+					conf    = gMeetme.group(1)
+					type    = gMeetme.group(5)
+					
+					if not self.meetme.has_key(conf):
+						dynamic = False
+						if type.lower() == 'dynamic':
+							dynamic = True
+						self.meetme[conf] = {'dynamic': dynamic, 'users': {}}
+						self.enqueue('MeetmeCreate: %s' % conf)
+						
+					self.AMI.execute(['Action: Command', 'Command: meetme list %s concise' % conf], self.handlerParseMeetmeConcise, 'meetmeList-%s' % conf)				
+				except:
+					log.warn("MonAst.handlerParseMeetme :: Can't parse meetme line: %s" % meetme)
+		except:
+			log.exception("MonAst.handlerParseMeetme :: Unhandled Exception")
+		self.meetmeLock.release()
+		
+		
+	def handlerParseMeetmeConcise(self, lines):
+
+		#self.enqueue('MeetmeJoin: %s:::%s:::%s:::%s:::%s:::%s' % (Meetme, Uniqueid, Usernum, ch['Channel'], CallerIDNum, CallerIDName))
+		log.info('MonAst.handlerParseMeetmeConcise :: Parsing meetme concise...')
+		self.meetmeLock.acquire()
+		self.channelsLock.acquire()
+		meetme = lines[2][10:].replace('meetmeList-', '')
+		users  = lines[3].replace('--END COMMAND--', '').split('\n')[:-1]
+		for user in users:
+			user = user.split('!')
+			if self.meetme.has_key(meetme):
+				# locate UniqueID for this channel
+				for Uniqueid in self.channels:
+					if self.channels[Uniqueid]['Channel'] == user[3]:
+						self.meetme[meetme]['users'][user[0]] = {'Uniqueid': Uniqueid, 'CallerIDNum': user[1], 'CallerIDName': user[2]}
+						self.enqueue('MeetmeJoin: %s:::%s:::%s:::%s:::%s:::%s' % (meetme, Uniqueid, user[0], user[3], user[1], user[2]))
+						break
+		self.channelsLock.release()
+		self.meetmeLock.release()			
 		
 		
 	def handlerCliCommand(self, lines):
@@ -1671,6 +1730,9 @@ class MonAst:
 		self.AMI.execute(['Action: IAXpeers'], self.handlerParseIAXPeers)
 		self.AMI.execute(['Action: GetConfig', 'Filename: meetme.conf'], self.handlerGetConfigMeetme)
 		self.AMI.execute(['Action: QueueStatus'])
+		
+		# Meetme Status will be parsed after handlerStatusConplete
+		self.getMeetmeStatus = True
 		
 		if sendReload:
 			self.clientQueuelock.acquire()
