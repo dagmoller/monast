@@ -1330,8 +1330,8 @@ class MonAst:
 		
 	def handlerParseMeetmeConcise(self, lines):
 
-		#self.enqueue('MeetmeJoin: %s:::%s:::%s:::%s:::%s:::%s' % (Meetme, Uniqueid, Usernum, ch['Channel'], CallerIDNum, CallerIDName))
 		log.info('MonAst.handlerParseMeetmeConcise :: Parsing meetme concise...')
+
 		self.meetmeLock.acquire()
 		self.channelsLock.acquire()
 		meetme = lines[2][10:].replace('meetmeList-', '')
