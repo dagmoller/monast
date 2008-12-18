@@ -1200,12 +1200,15 @@ function sendCliCommand()
 	$('cliResponse').value += '\r\n> ' + command;
 	$('cliResponse').scrollTop = $('cliResponse').scrollHeight - $('cliResponse').offsetHeight + 10;
 	
-	new Ajax.Request('action.php', 
+	if (command)
 	{
-		method: 'get',
-		parameters: {
-			reqTime: new Date().getTime(),
-			action: 'CliCommand:::' + command
-		}
-	});
+		new Ajax.Request('action.php', 
+		{
+			method: 'get',
+			parameters: {
+				reqTime: new Date().getTime(),
+				action: 'CliCommand:::' + command
+			}
+		});
+	}
 }
