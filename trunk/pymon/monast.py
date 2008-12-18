@@ -31,7 +31,7 @@ import re
 import sys
 
 START_PATH = os.getcwd()
-sys.path.append('%s/%s/amapi' % (START_PATH, sys.argv[0][:sys.argv[0].rfind('/')]))
+sys.path.append('%s/amapi' % sys.path[0])
 
 import time
 import thread
