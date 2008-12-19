@@ -107,31 +107,31 @@ LEVEL_COLORS = {
 class ColorFormatter(logging.Formatter):
 	def __init__(self, fmt = None, datefmt = None):
 		logging.Formatter.__init__(self, fmt, datefmt)
+		self.colored = hasattr(logging, 'COLORED')
 	
 	def color(self, levelno, msg):
-		return '\033[%d;1m%s\033[0m' % (COLORS[LEVEL_COLORS[levelno]], msg)
+		if self.colored:
+			return '\033[%d;1m%s\033[0m' % (COLORS[LEVEL_COLORS[levelno]], msg)
+		else:
+			return msg
 	
 	def formatTime(self, record, datefmt):
-		if hasattr(logging, 'COLORED'):
-			return '\033[37;1m%s\033[0m' % logging.Formatter.formatTime(self, record, datefmt)
-		else:
-			return logging.Formatter.formatTime(self, record, datefmt)
+		return self.color(logging.NOTICE, logging.Formatter.formatTime(self, record, datefmt))
 	
 	def format(self, record):
 		if record.levelname == 'DEBUG':
 			record.msg = record.msg.encode('string_escape')
 		
-		if hasattr(logging, 'COLORED'):
-			record.name      = self.color(record.levelno, record.name)
-			record.module    = self.color(record.levelno, record.module)
-			record.msg       = self.color(record.levelno, record.msg)
-			record.levelname = self.color(record.levelno, record.levelname)
+		record.name      = self.color(record.levelno, record.name)
+		record.module    = self.color(record.levelno, record.module)
+		record.msg       = self.color(record.levelno, record.msg)
+		record.levelname = self.color(record.levelno, record.levelname)
 
-			if float(PYTHON_VERSION) >= 2.5:
-				record.funcName  = self.color(record.levelno, record.funcName)
+		if float(PYTHON_VERSION) >= 2.5:
+			record.funcName = self.color(record.levelno, record.funcName)
 			
-			if record.exc_info:
-				record.exc_text  = self.color(record.levelno, '>> %s' % self.formatException(record.exc_info).replace('\n', '\n>> '))
+		if record.exc_info:
+			record.exc_text = self.color(record.levelno, '>> %s' % self.formatException(record.exc_info).replace('\n', '\n>> '))
 		
 		return logging.Formatter.format(self, record)
 
