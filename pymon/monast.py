@@ -74,6 +74,18 @@ COLORS = {
 	'white'  : 37
 }
 
+## Global Logger
+logging.NOTICE = 60
+logging.addLevelName(logging.NOTICE, "NOTICE")
+
+LEVEL_COLORS = {
+	logging.NOTICE   : 'white',
+	logging.INFO     : 'yellow',
+	logging.ERROR    : 'red',
+	logging.WARNING  : 'magenta',
+	logging.DEBUG    : 'cyan',
+}
+
 ## deamonize
 def createDaemon():
 	if os.fork() == 0:
@@ -92,17 +104,6 @@ def createDaemon():
 	f.write('%s' % pid)
 	f.close()
 	
-## Global Logger
-logging.NOTICE = 60
-logging.addLevelName(logging.NOTICE, "NOTICE")
-
-LEVEL_COLORS = {
-	logging.NOTICE   : 'white',
-	logging.INFO     : 'yellow',
-	logging.ERROR    : 'red',
-	logging.WARNING  : 'magenta',
-	logging.DEBUG    : 'cyan',
-}
 
 class ColorFormatter(logging.Formatter):
 	def __init__(self, fmt = None, datefmt = None):
@@ -194,7 +195,7 @@ class MonAst:
 	queueStatusFirst = False
 	queueStatusOrder = []
 	
-	getMeetmeStatus  = False
+	getMeetmeAndParkStatus  = False
 	
 	##
 	## Class Initialization
@@ -404,7 +405,7 @@ class MonAst:
 				else:
 					count += 1
 					if count == 10:
-						log.error('MonAst.threadClient (%s) :: Loose connection, dropping client.' % threadId)
+						log.error('MonAst.threadClient (%s) :: Lost connection, dropping client.' % threadId)
 						break
 					
 		except socket.error, e:
@@ -749,7 +750,7 @@ class MonAst:
 			
 			self.enqueue('Rename: %s:::%s:::%s:::%s:::%s' % (Oldname, Newname, Uniqueid, CallerIDName, CallerID))
 		except:
-			log.error('MonAst.handlerRename :: Channel %s not found in self.channels, ignored.' % Oldname)
+			log.warn('MonAst.handlerRename :: Channel %s not found in self.channels, ignored.' % Oldname)
 			
 			
 	def handlerMeetmeJoin(self, lines):
@@ -797,7 +798,7 @@ class MonAst:
 				del self.meetme[Meetme]
 				self.enqueue('MeetmeDestroy: %s' % Meetme)
 		except Exception, e:
-			log.error('MonAst.handlerMeetmeLeave :: Meetme or Usernum not found in self.meetme[\'%s\'][\'users\'][\'%s\']' % (Meetme, Usernum))
+			log.warn('MonAst.handlerMeetmeLeave :: Meetme or Usernum not found in self.meetme[\'%s\'][\'users\'][\'%s\']' % (Meetme, Usernum))
 		self.meetmeLock.release()
 		
 		
@@ -835,7 +836,7 @@ class MonAst:
 			del self.parked[Exten]
 			self.enqueue('UnparkedCall: %s' % (Exten))
 		except:
-			log.error('MonAst.handlerUnParkedCall :: Parked Exten not found: %s' % Exten)
+			log.warn('MonAst.handlerUnParkedCall :: Parked Exten not found: %s' % Exten)
 		self.parkedLock.release()
 		
 	
@@ -854,7 +855,7 @@ class MonAst:
 			del self.parked[Exten]
 			self.enqueue('UnparkedCall: %s' % (Exten))
 		except:
-			log.error('MonAst.handlerParkedCallTimeOut :: Parked Exten not found: %s' % Exten)
+			log.warn('MonAst.handlerParkedCallTimeOut :: Parked Exten not found: %s' % Exten)
 		self.parkedLock.release()
 		
 	
@@ -873,7 +874,7 @@ class MonAst:
 			del self.parked[Exten]
 			self.enqueue('UnparkedCall: %s' % (Exten))
 		except:
-			log.error('MonAst.handlerParkedCallGiveUp :: Parked Exten not found: %s' % Exten)
+			log.warn('MonAst.handlerParkedCallGiveUp :: Parked Exten not found: %s' % Exten)
 		self.parkedLock.release()
 		
 		
@@ -957,9 +958,10 @@ class MonAst:
 		self.callsLock.release()
 		self.channelsLock.release()
 		
-		if self.getMeetmeStatus:
+		if self.getMeetmeAndParkStatus:
 			self.AMI.execute(['Action: Command', 'Command: meetme'], self.handlerParseMeetme)
-			self.getMeetmeStatus = False
+			#self.AMI.execute(['Action: Command', 'Command: show parkedcalls'], self.handlerShowParkedCalls)
+			self.getMeetmeAndParkStatus = False
 	
 	
 	def handlerQueueMember(self, lines):
@@ -1083,7 +1085,7 @@ class MonAst:
 			del self.queues[Queue]['members'][Location]
 			self.enqueue('RemoveQueueMember: %s:::%s:::%s' % (Queue, Location, MemberName))
 		except KeyError:
-			log.error("MonAst.handlerQueueMemberRemoved :: Queue or Member not found in self.queues['%s']['members']['%s']" % (Queue, Location))
+			log.warn("MonAst.handlerQueueMemberRemoved :: Queue or Member not found in self.queues['%s']['members']['%s']" % (Queue, Location))
 		self.queuesLock.release()
 		
 		
@@ -1132,7 +1134,7 @@ class MonAst:
 			del self.queues[Queue]['clients'][Uniqueid]
 			self.enqueue('RemoveQueueClient: %s:::%s:::%s:::%s:::%s' % (Queue, Uniqueid, Channel, Count, cause))
 		except KeyError:
-			log.error("MonAst.handlerLeave :: Queue or Client not found in self.queues['%s']['clients']['%s']" % (Queue, Uniqueid))
+			log.warn("MonAst.handlerLeave :: Queue or Client not found in self.queues['%s']['clients']['%s']" % (Queue, Uniqueid))
 		self.queuesLock.release()
 		
 		
@@ -1346,7 +1348,40 @@ class MonAst:
 						self.enqueue('MeetmeJoin: %s:::%s:::%s:::%s:::%s:::%s' % (meetme, Uniqueid, user[0], user[3], user[1], user[2]))
 						break
 		self.channelsLock.release()
-		self.meetmeLock.release()			
+		self.meetmeLock.release()
+		
+		
+	def handlerShowParkedCalls(self, lines):
+		
+		log.info('MonAst.handlerShowParkedCalls :: Parsing parkedcalls...')
+		
+		reParked = re.compile('([0-9]+)[\s]+([^\s]*).*([^\s][0-9]+s)')
+		
+		self.parkedLock.acquire()
+		self.channelsLock.acquire()
+		parkeds = lines[3].split('\n')[1:-2]
+		for park in parkeds:
+			gParked = reParked.match(park)
+			if gParked:
+				Exten   = gParked.group(1)
+				Channel = gParked.group(2)
+				Timeout = gParked.group(3).replace('s', '')
+				
+				# search callerid for this channel
+				c = None
+				for Uniqueid in self.channels:
+					if self.channels[Uniqueid]['Channel'] == Channel:
+						c = self.channels[Uniqueid]
+						break
+					
+				if c:
+					self.parked[Exten] = {'Channel': c['Channel'], 'From': 'Undefined', 'Timeout': Timeout, 'CallerID': c['CallerIDNum'], 'CallerIDName': c['CallerIDName']}
+					self.enqueue('ParkedCall: %s:::%s:::%s:::%s:::%s:::%s' % (Exten, Channel, 'Undefined', Timeout, c['CallerIDNum'], c['CallerIDName']))
+				else:
+					log.warn('MonAst.handlerShowParkedCalls :: No Channel found for parked call exten %s' % Exten)
+				
+		self.channelsLock.release()
+		self.parkedLock.release()
 		
 		
 	def handlerCliCommand(self, lines):
@@ -1540,7 +1575,7 @@ class MonAst:
 			log.debug('MonAst.clientHangupChannel (%s) :: Hangup channel %s' % (threadId, Channel))
 			self.AMI.execute(command)
 		except:
-			log.error('MonAst.clientHangupChannel (%s) :: Uniqueid %s not found on self.channels' % (threadId, Uniqueid))
+			log.warn('MonAst.clientHangupChannel (%s) :: Uniqueid %s not found on self.channels' % (threadId, Uniqueid))
 		self.channelsLock.release()
 	
 	
@@ -1633,7 +1668,7 @@ class MonAst:
 			log.debug('MonAst.clientParkedHangup (%s) :: Hangup parcked channel %s' % (threadId, Channel))
 			self.AMI.execute(command)
 		except:
-			log.error('MonAst.clientParkedHangup (%s) :: Exten %s not found on self.parked' % (threadId, Exten))
+			log.warn('MonAst.clientParkedHangup (%s) :: Exten %s not found on self.parked' % (threadId, Exten))
 		self.parkedLock.release()
 		
 		
@@ -1732,8 +1767,8 @@ class MonAst:
 		self.AMI.execute(['Action: GetConfig', 'Filename: meetme.conf'], self.handlerGetConfigMeetme)
 		self.AMI.execute(['Action: QueueStatus'])
 		
-		# Meetme Status will be parsed after handlerStatusConplete
-		self.getMeetmeStatus = True
+		# Meetme and Parked Status will be parsed after handlerStatusConplete
+		self.getMeetmeAndParkStatus = True
 		
 		if sendReload:
 			self.clientQueuelock.acquire()
