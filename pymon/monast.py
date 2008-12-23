@@ -960,7 +960,7 @@ class MonAst:
 		
 		if self.getMeetmeAndParkStatus:
 			self.AMI.execute(['Action: Command', 'Command: meetme'], self.handlerParseMeetme)
-			#self.AMI.execute(['Action: Command', 'Command: show parkedcalls'], self.handlerShowParkedCalls)
+			self.AMI.execute(['Action: Command', 'Command: show parkedcalls'], self.handlerShowParkedCalls)
 			self.getMeetmeAndParkStatus = False
 	
 	
