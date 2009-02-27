@@ -1107,7 +1107,7 @@ class MonAst:
 		dic = self.list2Dict(lines)
 		
 		Channel      = dic['Channel']
-		CallerID     = dic['CallerID']
+		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
 		CallerIDName = dic['CallerIDName']
 		Queue        = dic['Queue']
 		Position     = dic['Position']
