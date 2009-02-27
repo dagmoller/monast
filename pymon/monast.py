@@ -491,7 +491,7 @@ class MonAst:
 		log.info('MonAst.handlerChannelReload :: Running...')
 		dic = self.list2Dict(lines)
 		
-		Channel      = dic['Channel']
+		Channel      = dic.get('ChannelType', dic.get('Channel'))
 		ReloadReason = dic['ReloadReason']
 		
 		self._GetConfig()
