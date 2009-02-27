@@ -1043,7 +1043,7 @@ class MonAst:
 		Queue        = dic['Queue']
 		Position     = dic['Position']
 		Channel      = dic['Channel']
-		CallerID     = dic['CallerID']
+		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
 		CallerIDName = dic['CallerIDName']
 		Wait         = dic['Wait']
 		Uniqueid     = None
