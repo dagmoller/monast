@@ -279,8 +279,10 @@ class MonAst:
 		self.AMI.registerEventHandler('Hangup', self.handlerHangup)
 		self.AMI.registerEventHandler('Dial', self.handlerDial)
 		self.AMI.registerEventHandler('Link', self.handlerLink)
+		self.AMI.registerEventHandler('Bridge', self.handlerBridge)
 		self.AMI.registerEventHandler('Unlink', self.handlerUnlink)
 		self.AMI.registerEventHandler('Newcallerid', self.handlerNewcallerid)
+		self.AMI.registerEventHandler('NewCallerid', self.handlerNewcallerid)
 		self.AMI.registerEventHandler('Rename', self.handlerRename)
 		self.AMI.registerEventHandler('MeetmeJoin', self.handlerMeetmeJoin)
 		self.AMI.registerEventHandler('MeetmeLeave', self.handlerMeetmeLeave)
@@ -547,7 +549,7 @@ class MonAst:
 		dic = self.list2Dict(lines)
 		
 		Channel      = dic['Channel']
-		State        = dic['State']
+		State        = dic.get('ChannelStateDesc', dic.get('State'))
 		CallerIDNum  = dic['CallerIDNum']
 		CallerIDName = dic['CallerIDName']
 		Uniqueid     = dic['Uniqueid']
@@ -574,8 +576,8 @@ class MonAst:
 		dic = self.list2Dict(lines)
 		
 		Channel      = dic['Channel']
-		State        = dic['State']
-		CallerID     = dic['CallerID']
+		State        = dic.get('ChannelStateDesc', dic.get('State'))
+		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
 		CallerIDName = dic['CallerIDName']
 		Uniqueid     = dic['Uniqueid']
 					
@@ -633,11 +635,15 @@ class MonAst:
 		log.info('MonAst.handlerDial :: Running...')
 		dic = self.list2Dict(lines)
 		
-		Source       = dic['Source']
+		SubEvent = dic.get('SubEvent', None)
+		if SubEvent != 'Begin':
+			return			
+		
+		Source       = dic.get('Channel', dic.get('Source'))
 		Destination  = dic['Destination']
-		CallerID     = dic['CallerID']
+		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
 		CallerIDName = dic['CallerIDName']
-		SrcUniqueID  = dic['SrcUniqueID']
+		SrcUniqueID  = dic.get('UniqueID', dic.get('SrcUniqueID'))
 		DestUniqueID = dic['DestUniqueID']
 					
 		self.callsLock.acquire()
@@ -677,6 +683,12 @@ class MonAst:
 		self.callsLock.release()
 		
 		
+	def handlerBridge(self, lines):
+		
+		log.info('MonAst.handlerBridge :: Running...')
+		self.handlerLink(lines)
+		
+		
 	def handlerUnlink(self, lines):
 		
 		log.info('MonAst.handlerLink :: Running...')
@@ -704,7 +716,7 @@ class MonAst:
 		dic = self.list2Dict(lines)
 		
 		Channel        = dic['Channel']
-		CallerID       = dic['CallerID']
+		CallerID       = dic.get('CallerIDNum', dic.get('CallerID'))
 		CallerIDName   = dic['CallerIDName']
 		Uniqueid       = dic['Uniqueid']
 		CIDCallingPres = dic['CID-CallingPres']
@@ -722,7 +734,7 @@ class MonAst:
 		log.info('MonAst.handlerRename :: Running...')
 		dic = self.list2Dict(lines)
 		
-		Oldname      = dic['Oldname']
+		Oldname      = dic.get('Channel', dic.get('Oldname'))
 		Newname      = dic['Newname']
 		Uniqueid     = dic['Uniqueid']
 		CallerIDName = ''
@@ -811,7 +823,7 @@ class MonAst:
 		Channel      = dic['Channel']
 		From         = dic['From']
 		Timeout      = dic['Timeout']
-		CallerID     = dic['CallerID']
+		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
 		CallerIDName = dic['CallerIDName']
 					
 		self.parkedLock.acquire()
@@ -828,7 +840,7 @@ class MonAst:
 		Exten        = dic['Exten']
 		Channel      = dic['Channel']
 		From         = dic['From']
-		CallerID     = dic['CallerID']
+		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
 		CallerIDName = dic['CallerIDName']
 					
 		self.parkedLock.acquire()
@@ -847,7 +859,7 @@ class MonAst:
 		
 		Exten        = dic['Exten']
 		Channel      = dic['Channel']
-		CallerID     = dic['CallerID']
+		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
 		CallerIDName = dic['CallerIDName']
 					
 		self.parkedLock.acquire()
@@ -866,7 +878,7 @@ class MonAst:
 		
 		Exten        = dic['Exten']
 		Channel      = dic['Channel']
-		CallerID     = dic['CallerID']
+		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
 		CallerIDName = dic['CallerIDName']
 					
 		self.parkedLock.acquire()
@@ -886,11 +898,11 @@ class MonAst:
 		Channel      = dic['Channel']
 		CallerIDNum  = dic['CallerIDNum']
 		CallerIDName = dic['CallerIDName']
-		State        = dic['State']
+		State        = dic.get('ChannelStateDesc', dic.get('State'))
 		Seconds      = dic.get('Seconds', 0)
-		Link         = dic.get('Link', '')
+		Link         = dic.get('BridgedChannel', dic.get('Link', ''))
 		Uniqueid     = dic['Uniqueid']
-					
+		
 		self.channelStatus.append(Uniqueid)
 		
 		self.channelsLock.acquire()
