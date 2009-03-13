@@ -1566,7 +1566,7 @@ class MonAst:
 		command.append('Action: Originate')
 		command.append('Channel: %s' % src)
 		command.append('Application: Dial')
-		command.append('Data: %s|30|rTt' % dst)
+		command.append('Data: %s,30,rTt' % dst)
 		command.append('CallerID: %s' % MONAST_CALLERID)
 		
 		log.debug('MonAst.clientOriginateDial (%s) :: From %s to %s' % (threadId, src, dst))
