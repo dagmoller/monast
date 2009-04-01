@@ -1600,9 +1600,14 @@ class MonAst:
 		SrcChannel   = None
 		ExtraChannel = None
 		if type == 'peer':
-			self.channelsLock.acquire()
-			SrcChannel  = self.channels[src]['Channel']
-			self.channelsLock.release()
+			try:
+				self.channelsLock.acquire()
+				SrcChannel  = self.channels[src]['Channel']
+				self.channelsLock.release()
+			except KeyError:
+				self.channelsLock.release()
+				log.error('MonAst.clientTransferCall (%s) :: Channel %s not found on self.channels. Transfer failed! (peer)' % (threadId, src))
+				return
 			tech, exten = dst.split('/')
 			try:
 				exten = int(exten)
@@ -1612,14 +1617,19 @@ class MonAst:
 				exten = exten[exten.find('<')+1:exten.find('>')]
 				self.monitoredUsersLock.release()
 		elif type == 'meetme':
-			self.channelsLock.acquire()
-			tmp = src.split('-')
-			if len(tmp) == 2:
-				SrcChannel   = self.channels[tmp[0]]['Channel']
-				ExtraChannel = self.channels[tmp[1]]['Channel']
-			else:
-				SrcChannel   = self.channels[tmp[0]]['Channel']
-			self.channelsLock.release()
+			try:
+				self.channelsLock.acquire()
+				tmp = src.split('-')
+				if len(tmp) == 2:
+					SrcChannel   = self.channels[tmp[0]]['Channel']
+					ExtraChannel = self.channels[tmp[1]]['Channel']
+				else:
+					SrcChannel   = self.channels[tmp[0]]['Channel']
+				self.channelsLock.release()
+			except KeyError, e:
+				self.channelsLock.release()
+				log.error('MonAst.clientTransferCall (%s) :: Channel %s not found on self.channels. Transfer failed! (meetme)' % (threadId, e))
+				return
 			Context = self.meetmeContext
 			exten   = '%s%s' % (self.meetmePrefix, dst)
 
