@@ -44,7 +44,7 @@ import Queue
 import logging
 import optparse
 from AsteriskManager import AsteriskManager
-from ConfigParser import SafeConfigParser
+from ConfigParser import SafeConfigParser, NoOptionError
 
 import distutils.sysconfig
 PYTHON_VERSION = distutils.sysconfig.get_python_version()
@@ -197,6 +197,8 @@ class MonAst:
 	
 	getMeetmeAndParkStatus  = False
 	
+	sortby = 'callerid'
+	
 	##
 	## Class Initialization
 	##
@@ -242,6 +244,12 @@ class MonAst:
 		
 		self.meetmeContext = cp.get('global', 'meetme_context')
 		self.meetmePrefix  = cp.get('global', 'meetme_prefix')
+		
+		try:
+			self.sortby = cp.get('users', 'sortby')
+		except NoOptionError:
+			self.sortby = 'callerid'
+			log.error("No option 'sortby' in section: 'users' of config file, sorting by CallerID")
 		
 		if cp.get('users', 'default') == 'show':
 			self.userDisplay['DEFAULT'] = True 
@@ -475,7 +483,55 @@ class MonAst:
 			for session in self.clientQueues:
 				self.clientQueues[session]['q'].put(msg)
 		self.clientQueuelock.release()
-	
+		
+		
+	def __sortPeers(self):
+
+		_sortKeys = {
+			'user'        : 0,
+			'peer'        : 1,
+			'callerid'    : 2,
+			'calleridname': 3,
+			'calleridnum' : 4
+		}
+
+		## identify technologies
+		techs           = {}
+		for user in self.monitoredUsers:
+			tech, peer   = user.split('/')
+			
+			CallerID     = self.monitoredUsers[user]['CallerID']
+			CallerIDName = peer
+			CallerIDNum  = peer
+			
+			if CallerID != '--':
+				CallerIDName = CallerID[:CallerID.find('<')].strip()
+				CallerIDNum  = CallerID[CallerID.find('<')+1:CallerID.find('>')].strip()
+			else:
+				CallerID = peer
+				
+			try:
+				techs[tech].append((user, peer, CallerID, CallerIDName, CallerIDNum))
+			except KeyError:
+				techs[tech] = [(user, peer, CallerID, CallerIDName, CallerIDNum)]
+
+		for tech in techs:
+			if self.sortby in ('callerid', 'calleridname', 'calleridnum'):
+				usersWithCid    = []
+				usersWithoutCid = []
+				for user in techs[tech]:
+					if user[1] != user[2]:
+						usersWithCid.append(user)
+					else:
+						usersWithoutCid.append(user)
+				usersWithCid.sort(lambda x, y: cmp(x[_sortKeys[self.sortby]].lower(), y[_sortKeys[self.sortby]].lower()))
+				usersWithoutCid.sort(lambda x, y: cmp(x[_sortKeys[self.sortby]].lower(), y[_sortKeys[self.sortby]].lower()))
+				techs[tech] = usersWithCid + usersWithoutCid
+			else:
+				techs[tech].sort(lambda x, y: cmp(x[_sortKeys[self.sortby]].lower(), y[_sortKeys[self.sortby]].lower()))
+				
+		return techs
+		
 	
 	##
 	## AMI Handlers for Events
@@ -1427,19 +1483,14 @@ class MonAst:
 			self.clientQueues[session]['t'] = time.time()
 			output.append('BEGIN STATUS')
 			
-			usersWithCid    = []
-			usersWithoutCid = []
-			for user in self.monitoredUsers:
-				if self.monitoredUsers[user]['CallerID'] != '--':
-					usersWithCid.append((user, self.monitoredUsers[user]['CallerID']))
-				else:
-					usersWithoutCid.append((user, user))
-			usersWithCid.sort(lambda x, y: cmp(x[1].lower(), y[1].lower()))
-			usersWithoutCid.sort(lambda x, y: cmp(x[1].lower(), y[1].lower()))
-			users = usersWithCid + usersWithoutCid
-			for user, CallerID in users:
-				mu = self.monitoredUsers[user]
-				output.append('PeerStatus: %s:::%s:::%s:::%s' % (user, mu['Status'], mu['Calls'], CallerID))
+			users = self.__sortPeers()
+			techs = users.keys()
+			techs.sort()
+			for tech in techs:
+				for user in users[tech]:
+					mu = self.monitoredUsers[user[0]]
+					output.append('PeerStatus: %s:::%s:::%s:::%s' % (user[0], mu['Status'], mu['Calls'], user[2]))
+					
 			for Uniqueid in self.channels:
 				ch = self.channels[Uniqueid]
 				output.append('NewChannel: %s:::%s:::%s:::%s:::%s' % (ch['Channel'], ch['State'], ch['CallerIDNum'], ch['CallerIDName'], Uniqueid))
