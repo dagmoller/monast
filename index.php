@@ -144,10 +144,19 @@ if (MONAST_DEBUG_TAB)
 	$template->newBlock('debug_tab_div');
 }
 
+$lastTech = null;
 foreach ($peerStatus as $idx => $peer)
 {
     list($peer, $status, $peerCalls, $CallerID) = explode(':::', $peer);
-
+	list($tech, $tmp) = explode('/', $peer);
+	
+	if ($tech != $lastTech)
+	{	
+		$lastTech = $tech;
+		$template->newBlock('technology');
+		$template->assign('technology', $tech);
+	}
+    
     $template->newBlock('peer');
     $template->assign('peer', $peer);
     $template->assign('CallerID', $CallerID);

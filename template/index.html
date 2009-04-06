@@ -130,28 +130,35 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
     <fieldset>
       <legend>Peers/Users</legend>
       <div id="peersDivWraper"> 
-      <!-- START BLOCK : peer -->
-      <div id="peerDiv-{peer}" class="peerTable">
-        <table class="status" width="175px">
-          <tr>
-            <td colspan="2" bgcolor="#DDDDDD" nowrap="nowrap"><b><a href="javascript:void(0)" title="Options" onClick="showPeerOptionsMenu('{peer}')">{CallerID}</a></b></td>
-          </tr>
-          <tr>
-            <td id="peerStatus-{peer}" bgcolor="{status-color}" width="115px">{status}</td>
-            <td id="peerCalls-{peer}" bgcolor="{calls-color}" width="60px">{calls}</td>
-          </tr>
-        </table>
-      </div>
-      <script type="text/javascript">
-		callerIDs['{peer}'] = '{CallerID}';
-		ddDivs['peerDiv-{peer}']               = new YAHOO.util.DD("peerDiv-{peer}");
-		ddDivs['peerDiv-{peer}'].onMouseDown   = setStartPosition;
-		ddDivs['peerDiv-{peer}'].onDragDrop    = peerDrop; 
-		ddDivs['peerDiv-{peer}'].onInvalidDrop = invalidDrop;
-		ddDivs['peerDiv-{peer}'].onDragOver    = dragOver;
-		ddDivs['peerDiv-{peer}'].onDragOut     = dragOut;
-      </script>
-      <!-- END BLOCK : peer -->
+
+      <!-- START BLOCK : technology -->
+      <fieldset>
+        <legend>{technology}</legend>
+        <!-- START BLOCK : peer -->
+        <div id="peerDiv-{peer}" class="peerTable">
+          <table class="status" width="175px">
+            <tr>
+              <td colspan="2" bgcolor="#DDDDDD" nowrap="nowrap"><b><a href="javascript:void(0)" title="Options" onClick="showPeerOptionsMenu('{peer}')">{CallerID}</a></b></td>
+            </tr>
+            <tr>
+              <td id="peerStatus-{peer}" bgcolor="{status-color}" width="115px">{status}</td>
+              <td id="peerCalls-{peer}" bgcolor="{calls-color}" width="60px">{calls}</td>
+            </tr>
+          </table>
+        </div>
+        <script type="text/javascript">
+		  callerIDs['{peer}'] = '{CallerID}';
+		  ddDivs['peerDiv-{peer}']               = new YAHOO.util.DD("peerDiv-{peer}");
+		  ddDivs['peerDiv-{peer}'].onMouseDown   = setStartPosition;
+		  ddDivs['peerDiv-{peer}'].onDragDrop    = peerDrop; 
+		  ddDivs['peerDiv-{peer}'].onInvalidDrop = invalidDrop;
+		  ddDivs['peerDiv-{peer}'].onDragOver    = dragOver;
+		  ddDivs['peerDiv-{peer}'].onDragOut     = dragOut;
+        </script>
+        <!-- END BLOCK : peer -->
+      </fieldset>
+      <!-- END BLOCK : technology -->
+      
       </div>
       <div style="clear: both;"></div>
     </fieldset>

@@ -48,6 +48,9 @@ meetme_context = default
 meetme_prefix = 
 
 [users]
+# sort peers (options: peer, callerid, calleridname, calleridnum)
+sortby = callerid
+
 # defualt show/hide
 default = show
 
