@@ -66,7 +66,7 @@ function parseMsg($msg)
 	
 	if (strpos($msg, 'NewChannel: ') !== false)
 	{	
-		list($Channel, $State, $CallerIDNum, $CallerIDName, $Uniqueid) = explode(':::', substr($msg, 12));
+		list($Channel, $State, $CallerIDNum, $CallerIDName, $Uniqueid, $Monitor) = explode(':::', substr($msg, 12));
 		$saida = array
 		(
 			'Action'       => 'NewChannel',
@@ -74,7 +74,8 @@ function parseMsg($msg)
 			'State'        => $State, 
 			'CallerIDNum'  => $CallerIDNum, 
 			'CallerIDName' => $CallerIDName, 
-			'Uniqueid'     => $Uniqueid
+			'Uniqueid'     => $Uniqueid,
+			'Monitor'      => $Monitor
 		);
 		return $saida;
 	}
@@ -373,6 +374,30 @@ function parseMsg($msg)
 			'ServiceLevel'     => $ServiceLevel,
 			'ServicelevelPerf' => $ServicelevelPerf,
 			'Weight'           => $Weight
+		);
+		return $saida;
+	}
+	
+	if (strpos($msg, 'MonitorStart: ') !== false)
+	{
+		list($Channel, $Uniqueid) = explode(':::', substr($msg, 14));
+		$saida = array
+		(
+			'Action'   => 'MonitorStart',
+			'Channel'  => $Channel,
+			'Uniqueid' => $Uniqueid
+		);
+		return $saida;
+	}
+	
+	if (strpos($msg, 'MonitorStop: ') !== false)
+	{
+		list($Channel, $Uniqueid) = explode(':::', substr($msg, 13));
+		$saida = array
+		(
+			'Action'   => 'MonitorStop',
+			'Channel'  => $Channel,
+			'Uniqueid' => $Uniqueid
 		);
 		return $saida;
 	}

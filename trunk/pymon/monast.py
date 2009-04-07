@@ -311,8 +311,9 @@ class MonAst:
 		self.AMI.registerEventHandler('QueueMemberPaused', self.handlerQueueMemberPaused)
 		self.AMI.registerEventHandler('QueueEntry', self.handlerQueueEntry)
 		self.AMI.registerEventHandler('QueueStatusComplete', self.handlerQueueStatusComplete)
+		self.AMI.registerEventHandler('MonitorStart', self.handlerMonitorStart)
+		self.AMI.registerEventHandler('MonitorStop', self.handlerMonitorStop)
 		
-	
 	
 	def threadSocketClient(self, name, params):
 		
@@ -373,6 +374,12 @@ class MonAst:
 							
 						elif session and message.startswith('HangupChannel'):
 							self.clientHangupChannel(threadId, message)
+							
+						elif session and message.startswith('MonitorChannel'):
+							self.clientMonitorChannel(threadId, message)
+							
+						elif session and message.startswith('MonitorStop'):
+							self.clientMonitorStop(threadId, message)
 						
 						elif session and message.startswith('TransferCall'):
 							self.clientTransferCall(threadId, message)
@@ -609,9 +616,10 @@ class MonAst:
 		CallerIDNum  = dic['CallerIDNum']
 		CallerIDName = dic['CallerIDName']
 		Uniqueid     = dic['Uniqueid']
+		Monitor      = False
 					
 		self.channelsLock.acquire()
-		self.channels[Uniqueid] = {'Channel': Channel, 'State': State, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName}
+		self.channels[Uniqueid] = {'Channel': Channel, 'State': State, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName, 'Monitor': Monitor}
 		self.channelsLock.release()
 		
 		self.monitoredUsersLock.acquire()
@@ -623,7 +631,7 @@ class MonAst:
 			self.enqueue('PeerStatus: %s:::%s:::%s' % (user, self.monitoredUsers[user]['Status'], self.monitoredUsers[user]['Calls']))
 		self.monitoredUsersLock.release()
 		
-		self.enqueue('NewChannel: %s:::%s:::%s:::%s:::%s' % (Channel, State, CallerIDNum, CallerIDName, Uniqueid))
+		self.enqueue('NewChannel: %s:::%s:::%s:::%s:::%s:::%s' % (Channel, State, CallerIDNum, CallerIDName, Uniqueid, Monitor))
 		
 		
 	def handlerNewstate(self, lines):
@@ -958,12 +966,13 @@ class MonAst:
 		Seconds      = dic.get('Seconds', 0)
 		Link         = dic.get('BridgedChannel', dic.get('Link', ''))
 		Uniqueid     = dic['Uniqueid']
+		Monitor      = False
 		
 		self.channelStatus.append(Uniqueid)
 		
 		self.channelsLock.acquire()
 		if not self.channels.has_key(Uniqueid):
-			self.channels[Uniqueid] = {'Channel': Channel, 'State': State, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName}
+			self.channels[Uniqueid] = {'Channel': Channel, 'State': State, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName, 'Monitor': Monitor}
 			self.monitoredUsersLock.acquire()
 			user = Channel
 			if Channel.rfind('-') != -1:
@@ -972,7 +981,7 @@ class MonAst:
 				self.monitoredUsers[user]['Calls'] += 1
 				self.enqueue('PeerStatus: %s:::%s:::%s' % (user, self.monitoredUsers[user]['Status'], self.monitoredUsers[user]['Calls']))
 			self.monitoredUsersLock.release()
-			self.enqueue('NewChannel: %s:::%s:::%s:::%s:::%s' % (Channel, State, CallerIDNum, CallerIDName, Uniqueid))
+			self.enqueue('NewChannel: %s:::%s:::%s:::%s:::%s:::%s' % (Channel, State, CallerIDNum, CallerIDName, Uniqueid, Monitor))
 			if Link:
 				for UniqueidLink in self.channels:
 					if self.channels[UniqueidLink]['Channel'] == Link:
@@ -1297,6 +1306,40 @@ class MonAst:
 			except:
 				log.exception('MonAst.handlerQueueStatusComplete :: Unhandled Exception')
 		self.queuesLock.release()
+	
+	
+	def handlerMonitorStart(self, lines):
+		
+		log.info('MonAst.handlerMonitorStart :: Running...')
+		dic = self.list2Dict(lines)
+		
+		Channel  = dic['Channel']
+		Uniqueid = dic['Uniqueid']
+		
+		self.channelsLock.acquire()
+		try:
+			self.channels[Uniqueid]['Monitor'] = True
+			self.enqueue('MonitorStart: %s:::%s' % (Channel, Uniqueid))
+		except:
+			log.warning('MonAst.handlerMonitorStart :: Uniqueid %s not found in self.channels' % Uniqueid)
+		self.channelsLock.release()
+		
+		
+	def handlerMonitorStop(self, lines):
+		
+		log.info('MonAst.handlerMonitorStart :: Running...')
+		dic = self.list2Dict(lines)
+		
+		Channel  = dic['Channel']
+		Uniqueid = dic['Uniqueid']
+		
+		self.channelsLock.acquire()
+		try:
+			self.channels[Uniqueid]['Monitor'] = False
+			self.enqueue('MonitorStop: %s:::%s' % (Channel, Uniqueid))
+		except:
+			log.warning('MonAst.handlerMonitorStop :: Uniqueid %s not found in self.channels' % Uniqueid)
+		self.channelsLock.release()
 		
 		
 	##
@@ -1450,8 +1493,8 @@ class MonAst:
 				
 		self.channelsLock.release()
 		self.parkedLock.release()
-		
-		
+	
+	
 	def handlerCliCommand(self, lines):
 		
 		log.info('MonAst.handlerCliCommand :: Running...')
@@ -1493,7 +1536,7 @@ class MonAst:
 					
 			for Uniqueid in self.channels:
 				ch = self.channels[Uniqueid]
-				output.append('NewChannel: %s:::%s:::%s:::%s:::%s' % (ch['Channel'], ch['State'], ch['CallerIDNum'], ch['CallerIDName'], Uniqueid))
+				output.append('NewChannel: %s:::%s:::%s:::%s:::%s:::%s' % (ch['Channel'], ch['State'], ch['CallerIDNum'], ch['CallerIDName'], Uniqueid, ch['Monitor']))
 			for call in self.calls:
 				c = self.calls[call]
 				src, dst = call.split('-')
@@ -1639,6 +1682,48 @@ class MonAst:
 			self.AMI.execute(command)
 		except:
 			log.warn('MonAst.clientHangupChannel (%s) :: Uniqueid %s not found on self.channels' % (threadId, Uniqueid))
+		self.channelsLock.release()
+		
+		
+	def clientMonitorChannel(self, threadId, message):
+		
+		log.info('MonAst.clientMonitorChannel (%s) :: Running...' % threadId)
+		action, Uniqueid, mix = message.split(':::')
+		
+		self.channelsLock.acquire()
+		try:
+			Channel = self.channels[Uniqueid]['Channel']
+			command = []
+			command.append('Action: Monitor')
+			command.append('Channel: %s' % Channel)
+			command.append('File: MonAst-Monitor.%s' % Channel.replace('/', '-'))
+			tt = 'without'
+			if int(mix) == 1:
+				command.append('Mix: 1')
+				tt = 'with'
+			log.debug('MonAst.clientMonitorChannel (%s) :: Monitoring channel %s %s Mix' % (threadId, Channel, tt))
+			self.AMI.execute(command)
+		except:
+			log.warn('MonAst.clientMonitorChannel (%s) :: Uniqueid %s not found on self.channels' % (threadId, Uniqueid))
+		self.channelsLock.release()
+		
+		
+	def clientMonitorStop(self, threadId, message):
+		
+		log.info('MonAst.clientMonitorStop (%s) :: Running...' % threadId)
+		action, Uniqueid = message.split(':::')
+		
+		self.channelsLock.acquire()
+		try:
+			self.channels[Uniqueid]['Monitor'] = False
+			Channel = self.channels[Uniqueid]['Channel']
+			command = []
+			command.append('Action: StopMonitor')
+			command.append('Channel: %s' % Channel)
+			log.debug('MonAst.clientMonitorStop (%s) :: Stop Monitor on channel %s' % (threadId, Channel))
+			self.AMI.execute(command)
+		except:
+			log.warn('MonAst.clientMonitorStop (%s) :: Uniqueid %s not found on self.channels' % (threadId, Uniqueid))
 		self.channelsLock.release()
 	
 	

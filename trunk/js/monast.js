@@ -182,13 +182,17 @@ function Process(o)
 			div           = document.createElement('div');
 			div.id        = o['Uniqueid'];
 			div.className = 'channelDiv';
-			 
+			
+			var rec = '';
+			if (o['Monitor'] == 'True')
+				rec = "<a href='javascript:recordStop(\"" + o['Uniqueid'] + "\")' title='Stop Monitor'><img src='image/record.png' border='0' width='8' height='8'></a>&nbsp;&nbsp;";
+			
 			var template = "<table width='350'><tr>";
 			template    += "<td id='channel-{Uniqueid}' class='status' width='270'>{Channel}</td>";
 			template    += "<td id='channelStatus-{Uniqueid}' bgcolor='{color}' class='status' width='80'>{State}</td>";
 			template    += "</tr></table>";
 			template     = template.replace(/\{Uniqueid\}/g, o['Uniqueid']);
-			template     = template.replace(/\{Channel\}/g, o['Channel']);
+			template     = template.replace(/\{Channel\}/g, rec + o['Channel']);
 			template     = template.replace(/\{State\}/g, o['State']);
 			template     = template.replace(/\{color\}/g, color(o['State']));
 			
@@ -645,6 +649,25 @@ function Process(o)
 		
 		return;
 	}
+	
+	if (o['Action'] == 'MonitorStart')
+	{
+		var td = $('channel-' + o['Uniqueid'])
+		if (td)
+		{
+			var rec = "<a href='javascript:recordStop(\"" + o['Uniqueid'] + "\")' title='Stop Monitor'><img src='image/record.png' border='0' width='8' height='8'></a>&nbsp;&nbsp;";
+			td.innerHTML = rec + o['Channel'];
+		}
+	}
+	
+	if (o['Action'] == 'MonitorStop')
+	{
+		var td = $('channel-' + o['Uniqueid'])
+		if (td)
+		{
+			td.innerHTML = o['Channel'];
+		}
+	}
 }
 
 function showHidePannels(e)
@@ -720,6 +743,48 @@ function hangupCall(chanId)
 			parameters: {
 				reqTime: new Date().getTime(),
 				action: 'HangupChannel:::' + chanId
+			}
+		});
+	}
+}
+
+// Rercord a call
+function recordCall(chanId)
+{
+	var msg = "Record this Channel?";
+	var mix = 0;
+	if (chanId.indexOf('call') != -1)
+	{
+		msg    = "Record this Call?";
+		chanId = chanId.substring(5, chanId.lastIndexOf('-'));
+		mix    = 1;
+	}
+	
+	var c = confirm(msg);
+	if (c)
+	{
+		new Ajax.Request('action.php', 
+		{
+			method: 'get',
+			parameters: {
+				reqTime: new Date().getTime(),
+				action: 'MonitorChannel:::' + chanId + ':::' + mix
+			}
+		});
+	}
+}
+
+function recordStop(chanId)
+{
+	var c = confirm('Stop this Record?');
+	if (c)
+	{
+		new Ajax.Request('action.php', 
+		{
+			method: 'get',
+			parameters: {
+				reqTime: new Date().getTime(),
+				action: 'MonitorStop:::' + chanId
 			}
 		});
 	}
@@ -950,7 +1015,10 @@ function channelCallDrop(e, id)
 {
 	if (id == 'trash')
 		hangupCall(this.id);
-		
+	
+	if (id == 'record')
+		recordCall(this.id);
+	
 	if (id.indexOf('peerDiv-') != -1 && this.id.indexOf('call-') == -1)
 		transferCall(this.id, id.substring(8), 'peer');
 		
