@@ -198,7 +198,7 @@ foreach ($meetmeJoins as $idx => $meetmeJoin)
 
 foreach ($channels as $channel)
 {
-	list($Channel, $State, $CallerIDNum, $CallerIDName, $Uniqueid) = explode(':::', $channel);
+	list($Channel, $State, $CallerIDNum, $CallerIDName, $Uniqueid, $Monitor) = explode(':::', $channel);
 	$tmp = array
 	(
 		'Action'       => 'NewChannel',
@@ -206,7 +206,8 @@ foreach ($channels as $channel)
 		'State'        => $State, 
 		'CallerIDNum'  => $CallerIDNum, 
 		'CallerIDName' => $CallerIDName, 
-		'Uniqueid'     => $Uniqueid
+		'Uniqueid'     => $Uniqueid,
+		'Monitor'      => $Monitor
 	); 
 	
 	$template->newBlock('process');

@@ -72,9 +72,9 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
   <div id="park">
     <img src="image/park.png" width="32" height="32" title="Park Calls"><br>Park
   </div>
-  <!-- <div id="record">
+  <div id="record">
     <img src="image/record.png" width="32" height="32" title="Record Channels/Calls"><br>Record
-  </div> -->
+  </div>
   <div id="trash">
     <img src="image/trash.png" width="32" height="32" title="Hangup Channels/Calls or Kick meetme users"><br>Trash
   </div>
@@ -437,8 +437,9 @@ if (_state.activeIndex == 0)
 	}
 }
 
-var _dTrash = new YAHOO.util.DDTarget("trash");
-var _dPark  = new YAHOO.util.DDTarget("park");
+var _dTrash  = new YAHOO.util.DDTarget("trash");
+var _dPark   = new YAHOO.util.DDTarget("park");
+var _dRecord = new YAHOO.util.DDTarget("record");
 
 <!-- START BLOCK : process -->
 Process('{json}');
