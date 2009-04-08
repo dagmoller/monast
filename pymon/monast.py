@@ -1697,6 +1697,7 @@ class MonAst:
 			command.append('Action: Monitor')
 			command.append('Channel: %s' % Channel)
 			command.append('File: MonAst-Monitor.%s' % Channel.replace('/', '-'))
+			command.append('Format: wav49')
 			tt = 'without'
 			if int(mix) == 1:
 				command.append('Mix: 1')
