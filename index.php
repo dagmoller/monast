@@ -138,7 +138,7 @@ if (MONAST_CLI_TAB)
 	$template->newBlock('cli_tab_div');
 }
 
-if (MONAST_DEBUG_TAB)
+if (MONAST_DEBUG_TAB || getValor('debug'))
 {
 	$template->newBlock('debug_tab');
 	$template->newBlock('debug_tab_div');
