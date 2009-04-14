@@ -37,6 +37,6 @@ define("MONAST_BROWSER_REFRESH", 60 * 10); // 10 minutes
 define("MONAST_CALL_TIME", true); // enable or disable call timer
 
 define("MONAST_CLI_TAB", true); // enable or disable Asterisk CLI TAB
-define("MONAST_DEBUG_TAB", true); // enable or disable debug TAB
+define("MONAST_DEBUG_TAB", false); // enable or disable debug TAB
 
 ?>
