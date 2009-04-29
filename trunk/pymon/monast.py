@@ -63,6 +63,10 @@ AST_DEVICE_STATES = { # copied from include/asterisk/devicestate.h
 	'8': 'On Hold'
 }
 
+AST_TECH_STATES = {
+	'Khomp': 'Not in Use'
+}
+
 COLORS = {
 	'black'  : 30,
 	'red'    : 31,
@@ -263,8 +267,11 @@ class MonAst:
 			
 			if display == 'force':
 				tech, peer = user.split('/')
+				Status = '--'
+				if AST_TECH_STATES.has_key(tech):
+					Status = AST_TECH_STATES[tech]
 				self.monitoredUsers[user] = {
-					'Channeltype': tech, 'Status': '--', 'Calls': 0, 'CallerID': '--', 'Context': self.defaultContext, 'Variables': [], 'forced': True
+					'Channeltype': tech, 'Status': Status, 'Calls': 0, 'CallerID': '--', 'Context': self.defaultContext, 'Variables': [], 'forced': True
 				}
 				
 		try:
@@ -282,6 +289,8 @@ class MonAst:
 		self.AMI.registerEventHandler('ChannelReload', self.handlerChannelReload)
 		self.AMI.registerEventHandler('PeerEntry', self.handlerPeerEntry)
 		self.AMI.registerEventHandler('PeerStatus', self.handlerPeerStatus)
+		self.AMI.registerEventHandler('BranchOnHook', self.handlerBranchOnHook)
+		self.AMI.registerEventHandler('BranchOffHook', self.handlerBranchOffHook)
 		self.AMI.registerEventHandler('Newchannel', self.handlerNewchannel)
 		self.AMI.registerEventHandler('Newstate', self.handlerNewstate)
 		self.AMI.registerEventHandler('Hangup', self.handlerHangup)
@@ -604,7 +613,42 @@ class MonAst:
 			mu['Status'] = PeerStatus
 			self.enqueue('PeerStatus: %s:::%s:::%s' % (Peer, mu['Status'], mu['Calls']))
 		self.monitoredUsersLock.release()
+				
 					
+	def handlerBranchOnHook(self, lines): 
+
+		log.info('MonAst.handlerBranchOnHook :: Running... (On)')
+		dic = self.list2Dict(lines) 
+
+		Channel = dic['Channel']
+
+		self.monitoredUsersLock.acquire()
+		user = Channel
+		if Channel.rfind('-') != -1:
+			user = Channel[:Channel.rfind('-')]
+		if self.monitoredUsers.has_key(user):
+			self.monitoredUsers[user]['Calls'] = 0
+			self.monitoredUsers[user]['Status'] = "Not in Use"
+			self.enqueue('PeerStatus: %s:::%s:::%s' % (user, self.monitoredUsers[user]['Status'], self.monitoredUsers[user]['Calls']))
+		self.monitoredUsersLock.release()
+
+
+	def handlerBranchOffHook(self, lines):
+
+		log.info('MonAst.handlerBranchOffHook :: Running... (Off)')
+		dic = self.list2Dict(lines)
+
+		Channel = dic['Channel']
+		
+		self.monitoredUsersLock.acquire()
+		user = Channel
+		if Channel.rfind('-') != -1:
+			user = Channel[:Channel.rfind('-')]
+		if self.monitoredUsers.has_key(user):
+			self.monitoredUsers[user]['Status'] = "In Use"
+			self.enqueue('PeerStatus: %s:::%s:::%s' % (user, self.monitoredUsers[user]['Status'], self.monitoredUsers[user]['Calls']))
+		self.monitoredUsersLock.release()
+	
 	
 	def handlerNewchannel(self, lines):
 		

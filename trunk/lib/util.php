@@ -37,13 +37,19 @@ function color($t)
         case 'unregistered':
         case 'unreachable':
         case 'unknown':
+        case 'unavailable':
+        case 'invalid':
+        case 'busy':
             //return 'red';
             return '#ffb0b0';
             
         case 'ring':
         case 'ringing':
+        case 'ring, in use':
+        case 'in use':
         case 'dial':
         case 'lagged':
+        case 'on hold':
             //return 'yellow';
             return '#ffffb0';
             
@@ -52,6 +58,7 @@ function color($t)
         case 'registered':
         case 'reachable':
         case 'unmonitored':
+        case 'not in use':
             //return 'green';
             return '#b0ffb0';
     }
