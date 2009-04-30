@@ -54,12 +54,14 @@ sortby = callerid
 # defualt show/hide
 default = show
 
-# esconde ramal caso default = show
+# hide peer when default = show
 SIP/user-1 = hide
 
-# mostra ramal caso default = hide
+# show peer when default = hide
 SIP/user-2 = show
 
-# Sempre mostra.
+# always show peer.
 SIP/user-3 = force
 
+# force CallerID (only in forced mode)
+SIP/user-4 = force,Diego Aguirre <5555>

@@ -265,13 +265,20 @@ class MonAst:
 				if (self.userDisplay['DEFAULT'] and display == 'hide') or (not self.userDisplay['DEFAULT'] and display == 'show'):
 					self.userDisplay[user] = True
 			
-			if display == 'force':
+			if display.startswith('force'):
 				tech, peer = user.split('/')
 				Status = '--'
 				if AST_TECH_STATES.has_key(tech):
 					Status = AST_TECH_STATES[tech]
+				
+				tmp      = display.split(',')
+				display  = tmp[0].strip()
+				CallerID = '--'
+				if len(tmp) == 2:
+					CallerID = tmp[1].strip()
+				
 				self.monitoredUsers[user] = {
-					'Channeltype': tech, 'Status': Status, 'Calls': 0, 'CallerID': '--', 'Context': self.defaultContext, 'Variables': [], 'forced': True
+					'Channeltype': tech, 'Status': Status, 'Calls': 0, 'CallerID': CallerID, 'Context': self.defaultContext, 'Variables': [], 'forced': True
 				}
 				
 		try:
