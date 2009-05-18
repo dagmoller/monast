@@ -583,7 +583,7 @@ class MonAst:
 		
 		Status      = dic['Status']
 		Channeltype = dic['Channeltype']
-		ObjectName  = dic['ObjectName']
+		ObjectName  = dic['ObjectName'].split('/')[0]
 		
 		if Status.startswith('OK'):
 			Status = 'Registered'
