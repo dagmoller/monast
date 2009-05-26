@@ -1107,6 +1107,11 @@ class MonAst:
 		Paused     = dic['Paused']
 		
 		self.queuesLock.acquire()
+		if not self.queues.has_key(Queue):
+			log.warning("MonAst.handlerQueueMember :: Can not add location '%s' to queue '%s'. Queue not found." % (Location, Queue))
+			self.queuesLock.release()
+			return
+		
 		try:
 			self.queues[Queue]['members'][Location]['Penalty']    = Penalty
 			self.queues[Queue]['members'][Location]['CallsTaken'] = CallsTaken
@@ -1231,10 +1236,13 @@ class MonAst:
 		Uniqueid     = dic['Uniqueid']
 		
 		self.queuesLock.acquire()
-		self.queues[Queue]['clients'][Uniqueid] = {'Uniqueid': Uniqueid, 'Channel': Channel, 'CallerID': CallerID, 'CallerIDName': CallerIDName, \
-												'Position': Position, 'JoinTime': time.time()}
-		self.queues[Queue]['stats']['Calls'] += 1
-		self.enqueue('AddQueueClient: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % (Queue, Uniqueid, Channel, CallerID, CallerIDName, Position, Count, 0))
+		try:
+			self.queues[Queue]['clients'][Uniqueid] = {'Uniqueid': Uniqueid, 'Channel': Channel, 'CallerID': CallerID, 'CallerIDName': CallerIDName, \
+													'Position': Position, 'JoinTime': time.time()}
+			self.queues[Queue]['stats']['Calls'] += 1
+			self.enqueue('AddQueueClient: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % (Queue, Uniqueid, Channel, CallerID, CallerIDName, Position, Count, 0))
+		except KeyError:
+			log.warning("MonAst.handlerJoin :: Queue '%s' not found." % Queue)
 		self.queuesLock.release()
 		
 	
