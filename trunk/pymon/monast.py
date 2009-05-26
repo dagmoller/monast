@@ -842,7 +842,7 @@ class MonAst:
 			self.channels[Uniqueid]['CallerIDNum']  = CallerID
 			self.enqueue('NewCallerid: %s:::%s:::%s:::%s:::%s' % (Channel, CallerID, CallerIDName, Uniqueid, CIDCallingPres))
 		except KeyError:
-			log.warning("MonAst.handlerNewcallerid :: UniqueID '%s' not foung on self.channels" % Uniqueid)
+			log.warning("MonAst.handlerNewcallerid :: UniqueID '%s' not found on self.channels" % Uniqueid)
 		self.channelsLock.release()
 		
 		
