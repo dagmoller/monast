@@ -1301,7 +1301,7 @@ class MonAst:
 		Completed        = int(dic['Completed'])
 		Abandoned        = int(dic['Abandoned'])
 		ServiceLevel     = int(dic['ServiceLevel'])
-		ServicelevelPerf = float(dic['ServicelevelPerf'])
+		ServicelevelPerf = float(dic['ServicelevelPerf'].replace(',', '.'))
 		Weight           = int(dic['Weight'])
 		
 		self.queuesLock.acquire()
