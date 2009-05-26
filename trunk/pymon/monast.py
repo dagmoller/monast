@@ -837,11 +837,13 @@ class MonAst:
 		CIDCallingPres = dic['CID-CallingPres']
 					
 		self.channelsLock.acquire()
-		self.channels[Uniqueid]['CallerIDName'] = CallerIDName
-		self.channels[Uniqueid]['CallerIDNum']  = CallerID
+		try:
+			self.channels[Uniqueid]['CallerIDName'] = CallerIDName
+			self.channels[Uniqueid]['CallerIDNum']  = CallerID
+			self.enqueue('NewCallerid: %s:::%s:::%s:::%s:::%s' % (Channel, CallerID, CallerIDName, Uniqueid, CIDCallingPres))
+		except KeyError:
+			log.warning("MonAst.handlerNewcallerid :: UniqueID '%s' not foung on self.channels" % Uniqueid)
 		self.channelsLock.release()
-		
-		self.enqueue('NewCallerid: %s:::%s:::%s:::%s:::%s' % (Channel, CallerID, CallerIDName, Uniqueid, CIDCallingPres))
 		
 		
 	def handlerRename(self, lines):
