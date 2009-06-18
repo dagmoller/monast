@@ -1,0 +1,50 @@
+#!/bin/bash
+#
+# chkconfig: - 91 60
+# description: Monast Asterisk Monitor
+#
+# processname: monast
+# config: /etc/monast.conf
+
+# source function library
+. /etc/rc.d/init.d/functions
+
+RETVAL=0
+
+prog="monast"
+
+case "$1" in
+	start)
+		# The process must be configured first.
+		[ -f /etc/monast.conf ] || exit 6
+
+		echo -n $"Starting $prog: "
+
+		daemon /var/www/html/monast/pymon/monast.py --daemon
+		RETVAL=$?
+		[ $RETVAL -eq 0 ] && touch /var/lock/subsys/monast
+		echo
+		;;
+	stop)
+		echo -n $"Shutting down $prog: "
+		killproc monast
+		RETVAL=$?
+		[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/monast
+		echo
+		;;
+	restart|reload)
+		$0 stop
+		$0 start
+		RETVAL=$?
+		;;
+	status)
+		status monast
+		RETVAL=$?
+		;;
+	*)
+		echo $"Usage: $0 {start|stop|restart|reload|status}"
+		exit 2
+esac
+
+exit $RETVAL
+
