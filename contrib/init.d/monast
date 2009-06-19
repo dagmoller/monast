@@ -26,14 +26,14 @@ case "$1" in
 
 		echo -n $"Starting $prog: "
 
-		daemon $MONAST --daemon > /dev/null
+		daemon $MONAST --daemon
 		RETVAL=$?
 		[ $RETVAL -eq 0 ] && touch /var/lock/subsys/monast
 		echo
 		;;
 	stop)
 		echo -n $"Shutting down $prog: "
-		kill -TERM $(cat /var/run/monast.pid)
+		killproc monast
 		RETVAL=$?
 		[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/monast
 		echo
@@ -45,8 +45,9 @@ case "$1" in
 		;;
 	reload)
 		echo -n $"Reloading $prog config: "
-		kill -HUP $(cat /var/run/monast.pid)
+		killproc monast -HUP
 		RETVAL=$?
+		echo
 		;;
 	status)
 		status monast
