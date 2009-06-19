@@ -5,6 +5,7 @@ MONASTPATH=/opt/monast
 HTMLPATH=/var/www/html/monast
 BINPATH=/usr/bin
 CONFIGPATH=/etc
+INITD=/etc/init.d
 
 if [ "$(whoami)" != "root" ]; then
 	echo -e "\nYou must be root to run this instalation script...\n"
@@ -50,6 +51,16 @@ if [ $inst -eq 1 ]; then
 	if [ ! -f /etc/monast.conf ]; then
 		cp pymon/monast.conf.sample /etc/monast.conf
 		echo "Sample monast.conf created at ${CONFIGPATH}/monast.conf"
+	fi
+
+	if [ -f /etc/slackware-version ]; then
+		cp contrib/slackware/rc.monast /etc/rc.d/rc.monast
+		echo "Instaling rc.d scripts"
+	fi
+
+	if [ -f /etc/redhat-release ]; then
+		cp contrib/init.d/monast $INITD/monast
+		echo "Instaling init.d scripts"
 	fi
 fi
 
