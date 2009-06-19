@@ -13,6 +13,12 @@ RETVAL=0
 
 prog="monast"
 
+if [ -f /usr/bin/monast ]; then
+	MONAST=/usr/bin/monast
+elif [ -f /opt/monast/pymon/monast.py ]; then
+	MONAST=/opt/monast/pymon/monast.py
+fi
+
 case "$1" in
 	start)
 		# The process must be configured first.
@@ -20,7 +26,7 @@ case "$1" in
 
 		echo -n $"Starting $prog: "
 
-		daemon /var/www/html/monast/pymon/monast.py --daemon
+		daemon $MONAST --daemon
 		RETVAL=$?
 		[ $RETVAL -eq 0 ] && touch /var/lock/subsys/monast
 		echo
