@@ -1,0 +1,37 @@
+#!/bin/sh
+#
+# /etc/rc.d/rc.httpd
+#
+# Start/stop/restart/graceful[ly restart]/graceful[ly]-stop
+# the Apache (httpd) web server.
+#
+# To make Apache start automatically at boot, make this
+# file executable:  chmod 755 /etc/rc.d/rc.httpd
+#
+# For information on these options, "man apachectl".
+
+if [ -f /usr/bin/monast ]; then
+	MONAST=/usr/bin/monast
+elif [ -f /opt/monast/pymon/monast.py ]; then
+	MONAST=/opt/monast/pymon/monast.py
+fi
+
+case "$1" in
+  'start')
+    $MONAST --daemon
+  ;;
+  'stop')
+    kill -TERM $(cat /var/run/monast.pid)
+  ;;
+  'restart')
+    kill -TERM $(cat /var/run/monast.pid)
+    $MONAST --daemon
+  ;;
+  'reload')
+    kill -HUP $(cat /var/run/monast.pid)
+  ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|reload}"
+  ;;
+esac
+
