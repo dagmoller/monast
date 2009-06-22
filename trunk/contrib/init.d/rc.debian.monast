@@ -1,0 +1,87 @@
+#!/bin/bash 
+#
+# chkconfig: - 91 60
+# description: Monast Asterisk Monitor
+#
+# processname: monast
+# config: /etc/monast.conf
+
+# source function library
+. /lib/lsb/init-functions
+
+RETVAL=0
+
+MONARGS=--daemon
+MONLOG=/var/log/monast.log
+pidfile=/var/run/monast.pid
+
+
+if [ -f /usr/bin/monast ]; then
+	MONAST=/usr/bin/monast
+elif [ -f /opt/monast/monast.py ]; then
+#elif [ -f /var/www/monast/pymon/monast.py ]; then
+	MONAST=/opt/monast/monast.py
+#	MONAST=/var/www/monast/pymon/monast.py
+fi
+
+starting(){
+if [ -f $pidfile ]; then
+	
+	status_of_proc monast monast
+
+else
+
+	echo -n "Starting" "MonAst..."
+	log_daemon_msg "Starting" "MonAst..." >> $MONLOG
+	if [ -f $MONAST ];then
+		start-stop-daemon --start --oknodo --exec $MONAST -- $MONARGS  > /dev/null 2> /dev/null
+		sleep 1
+		echo -e "\t\t\t\t\t\t\t\t"'\E[32m'"\033[1m[OK]\033[0m"
+	else
+		echo -e "\t\t\t\t\t\t\t\t"'\E[31m'"\033[1m[Fail]\033[0m"
+		echo "$MONAST - nao existe" >> $MONLOG
+	fi
+fi
+}
+
+stopping()
+{
+if [ -f $pidfile ]; then
+	echo -n "Stopping MonAst..."
+	log_action_msg "Stopping MonAst..." >> $MONLOG
+
+	start-stop-daemon --stop --pidfile "$pidfile" --quiet $MONAST
+	echo -e "\t\t\t\t\t\t\t\t"'\E[32m'"\033[1m[OK]\033[0m"
+
+	sleep 2
+	rm -f $pidfile
+else
+	status_of_proc monast monast
+fi
+}
+
+
+case "$1" in
+	start)
+	
+		# The process must be configured first.
+		[ -f /etc/monast.conf ] || exit 6
+
+		starting
+		;;
+	stop)
+		stopping
+		;;
+	restart|reload)
+		log_warning_msg "restarting"
+		$0 stop
+		sleep 1
+		starting
+		;;
+	status)
+		status_of_proc monast monast
+		;;
+	*)
+		echo $"Usage: $0 {start|stop|restart|reload|status}"
+		exit 2
+esac

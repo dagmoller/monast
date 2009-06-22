@@ -15,8 +15,8 @@ prog="monast"
 
 if [ -f /usr/bin/monast ]; then
 	MONAST=/usr/bin/monast
-elif [ -f /opt/monast/pymon/monast.py ]; then
-	MONAST=/opt/monast/pymon/monast.py
+elif [ -f /opt/monast/monast.py ]; then
+	MONAST=/opt/monast/monast.py
 fi
 
 case "$1" in
