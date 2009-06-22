@@ -59,7 +59,12 @@ if [ $inst -eq 1 ]; then
 	fi
 
 	if [ -f /etc/redhat-release ]; then
-		cp contrib/init.d/monast $INITD/monast
+		cp contrib/init.d/rc.redhat.monast $INITD/monast
+		echo "Instaling init.d scripts"
+	fi
+
+	if [ -f /etc/debian-release ]; then
+		cp contrib/init.d/rc.debian.monast $INITD/monast
 		echo "Instaling init.d scripts"
 	fi
 fi
