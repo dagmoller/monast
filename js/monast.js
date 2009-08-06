@@ -46,6 +46,7 @@ function color(t)
         case 'unavailable':
         case 'invalid':
         case 'busy':
+        case 'logged out':
         	//return 'red';
             return '#ffb0b0';
             
@@ -65,6 +66,7 @@ function color(t)
         case 'reachable':
         case 'unmonitored':
         case 'not in use':
+        case 'logged in':
             //return 'green';
             return '#b0ffb0';
     }
