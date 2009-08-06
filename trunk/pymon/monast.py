@@ -296,6 +296,7 @@ class MonAst:
 		self.AMI.registerEventHandler('ChannelReload', self.handlerChannelReload)
 		self.AMI.registerEventHandler('PeerEntry', self.handlerPeerEntry)
 		self.AMI.registerEventHandler('PeerStatus', self.handlerPeerStatus)
+		self.AMI.registerEventHandler('SkypeAccountStatus', self.handlerSkypeAccountStatus)
 		self.AMI.registerEventHandler('BranchOnHook', self.handlerBranchOnHook)
 		self.AMI.registerEventHandler('BranchOffHook', self.handlerBranchOffHook)
 		self.AMI.registerEventHandler('Newchannel', self.handlerNewchannel)
@@ -601,7 +602,8 @@ class MonAst:
 			user = None
 		
 		if user:
-			self.AMI.execute(['Action: Command', 'Command: %s show peer %s' % (Channeltype.lower(), ObjectName)], self._defaultParseConfigPeers, user)
+			type = ['peer', 'user'][Channeltype == 'Skype']
+			self.AMI.execute(['Action: Command', 'Command: %s show %s %s' % (Channeltype.lower(), type, ObjectName)], self._defaultParseConfigPeers, user)
 		
 		self.monitoredUsersLock.release()
 		
@@ -619,6 +621,22 @@ class MonAst:
 			mu = self.monitoredUsers[Peer]
 			mu['Status'] = PeerStatus
 			self.enqueue('PeerStatus: %s:::%s:::%s' % (Peer, mu['Status'], mu['Calls']))
+		self.monitoredUsersLock.release()
+		
+		
+	def handlerSkypeAccountStatus(self, lines):
+		
+		log.info('MonAst.handlerSkypeAccountStatus :: Running...')
+		dic = self.list2Dict(lines)
+		
+		Username = 'Skype/%s' % dic['Username']
+		Status   = dic['Status']
+		
+		self.monitoredUsersLock.acquire()
+		if self.monitoredUsers.has_key(Username):
+			mu = self.monitoredUsers[Username]
+			mu['Status'] = Status
+			self.enqueue('PeerStatus: %s:::%s:::%s' % (Username, mu['Status'], mu['Calls']))
 		self.monitoredUsersLock.release()
 				
 					
@@ -1456,7 +1474,18 @@ class MonAst:
 				name = name[:name.find('/')]
 			
 			self.handlerPeerEntry(['Channeltype: IAX2', 'ObjectName: %s' % name, 'Status: --'])
-	
+			
+			
+	def handlerParseSkypeUsers(self, lines):
+		
+		log.info('MonAst.handlerParseSkypeUsers :: Running...')
+		
+		response = lines[3]
+		if 'Skype Users' in response:
+			users = response.split('\n')[1:-1]
+			for user, status in [i.split(': ') for i in users]:
+				self.handlerPeerEntry(['Channeltype: Skype', 'ObjectName: %s' % user, 'Status: %s' % status])
+				
 	
 	def handlerGetConfigMeetme(self, lines):
 		
@@ -1984,10 +2013,11 @@ class MonAst:
 		
 		self.AMI.execute(['Action: SIPpeers'])
 		self.AMI.execute(['Action: IAXpeers'], self.handlerParseIAXPeers)
+		self.AMI.execute(['Action: Command', 'Command: skype show users'], self.handlerParseSkypeUsers)
 		self.AMI.execute(['Action: GetConfig', 'Filename: meetme.conf'], self.handlerGetConfigMeetme)
 		self.AMI.execute(['Action: QueueStatus'])
 		
-		# Meetme and Parked Status will be parsed after handlerStatusConplete
+		# Meetme and Parked Status will be parsed after handlerStatusComplete
 		self.getMeetmeAndParkStatus = True
 		
 		if sendReload:
