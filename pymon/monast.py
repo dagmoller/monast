@@ -199,7 +199,8 @@ class MonAst:
 	queueStatusFirst = False
 	queueStatusOrder = []
 	
-	getMeetmeAndParkStatus  = False
+	getMeetmeAndParkStatus = False
+	getChannelsCallsStatus = False
 	
 	sortby = 'callerid'
 	
@@ -481,11 +482,22 @@ class MonAst:
 		
 		log.info('MonAst.threadCheckStatus :: Starting Thread...')
 		time.sleep(10)
+		count = 60
 		while self.running:
+			time.sleep(1)
+			if self.getChannelsCallsStatus:
+				self.getChannelsCallsStatus = False
+				time.sleep(10)
+			elif count < 60:
+				count += 1
+				continue
+			
+			count = 0
+			
 			log.info('MonAst.threadCheckStatus :: Requesting Status...')
 			
 			self.channelStatus = []
-			self.AMI.execute(['Action: Status'])
+			self.AMI.execute(['Action: Status']) # generate Event: Status
 			
 			self.queuesLock.acquire()
 			for queue in self.queues:
@@ -494,8 +506,6 @@ class MonAst:
 				self.queueClientStatus[queue] = []
 				self.AMI.execute(['Action: QueueStatus', 'Queue: %s' % queue])
 			self.queuesLock.release()
-			
-			time.sleep(60)
 	
 	
 	def enqueue(self, msg, session = None):
@@ -2007,15 +2017,28 @@ class MonAst:
 		self.meetme = {}
 		self.meetmeLock.release()
 		
+		self.parkedLock.acquire()
+		self.parked = {}
+		self.parkedLock.release()
+		
 		self.queuesLock.acquire()
 		self.queues = {}
 		self.queuesLock.release()
+		
+		self.callsLock.acquire()
+		self.channelsLock.acquire()
+		self.calls    = {}
+		self.channels = {}
+		self.channelsLock.release()
+		self.callsLock.release()
 		
 		self.AMI.execute(['Action: SIPpeers'])
 		self.AMI.execute(['Action: IAXpeers'], self.handlerParseIAXPeers)
 		self.AMI.execute(['Action: Command', 'Command: skype show users'], self.handlerParseSkypeUsers)
 		self.AMI.execute(['Action: GetConfig', 'Filename: meetme.conf'], self.handlerGetConfigMeetme)
 		self.AMI.execute(['Action: QueueStatus'])
+		
+		self.getChannelsCallsStatus = True
 		
 		# Meetme and Parked Status will be parsed after handlerStatusComplete
 		self.getMeetmeAndParkStatus = True
