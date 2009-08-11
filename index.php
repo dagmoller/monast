@@ -216,14 +216,13 @@ foreach ($channels as $channel)
 
 foreach ($calls as $call)
 {
-	list($Source, $Destination, $CallerID, $CallerIDName, $CallerID2, $SrcUniqueID, $DestUniqueID, $Status, $Seconds) = explode(':::', $call);
+	list($Source, $Destination, $CallerID1, $CallerID2, $SrcUniqueID, $DestUniqueID, $Status, $Seconds) = explode(':::', $call);
 	$tmp = array
 	(
 		'Action'       => 'Call',
 		'Source'       => $Source, 
 		'Destination'  => $Destination, 
-		'CallerID'     => $CallerID, 
-		'CallerIDName' => $CallerIDName, 
+		'CallerID1'    => $CallerID1, 
 	    'CallerID2'    => $CallerID2,
 		'SrcUniqueID'  => $SrcUniqueID, 
 		'DestUniqueID' => $DestUniqueID, 

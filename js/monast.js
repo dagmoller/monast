@@ -195,6 +195,7 @@ function Process(o)
 			template    += "</tr></table>";
 			template     = template.replace(/\{Uniqueid\}/g, o['Uniqueid']);
 			template     = template.replace(/\{Channel\}/g, rec + o['Channel']);
+			//template     = template.replace(/\{Channel\}/g, rec + o['Channel'] + '<br>' + o['CallerIDName'] + ' <' + o['CallerIDNum'] + '>');
 			template     = template.replace(/\{State\}/g, o['State']);
 			template     = template.replace(/\{color\}/g, color(o['State']));
 			
@@ -224,10 +225,13 @@ function Process(o)
 		template    += "<td class='status' width='260' id='callChannel-{DestUniqueID}'>{Destination}</td>";
 		template    += "</tr></table>";
 		
+		if (o['CallerID'])
+			o['CallerID1'] = o['CallerIDName'] + ' <' + o['CallerID'] + '>';
+		
 		template = template.replace(/\{SrcUniqueID\}/g, o['SrcUniqueID']);
 		template = template.replace(/\{DestUniqueID\}/g, o['DestUniqueID']);
-		template = template.replace(/\{Source\}/g, o['Source'] + '<br>' + o['CallerIDName'] + ' <' + o['CallerID'] + '>');
-		template = template.replace(/\{Destination\}/g, o['Destination'] + (o['CallerID2'] ? '<br> <' + o['CallerID2'] + '>' : ''));
+		template = template.replace(/\{Source\}/g, o['Source'] + (o['CallerID1'] ? '<br>' + o['CallerID1'] : ''));
+		template = template.replace(/\{Destination\}/g, o['Destination'] + (o['CallerID2'] ? '<br>' + o['CallerID2'] : ''));
 		template = template.replace(/\{Status\}/g, o['Status']);
 		template = template.replace(/\{color\}/g, color(o['Status']));
 		
@@ -313,8 +317,6 @@ function Process(o)
 			o['Destination']  = o['Channel2'];
 			o['SrcUniqueID']  = o['Uniqueid1'];
 			o['DestUniqueID'] = o['Uniqueid2'];
-			o['CallerIDName'] = '';
-			o['CallerID']     = o['CallerID1'];
 			Process(json.encode(o));
 		}
 		
