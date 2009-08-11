@@ -726,10 +726,12 @@ class MonAst:
 					
 		self.channelsLock.acquire()
 		try:
-			self.channels[Uniqueid]['State'] = State
+			self.channels[Uniqueid]['State']        = State
+			self.channels[Uniqueid]['CallerIDNum']  = CallerID
+			self.channels[Uniqueid]['CallerIDName'] = CallerIDName
 			self.enqueue('NewState: %s:::%s:::%s:::%s:::%s' % (Channel, State, CallerID, CallerIDName, Uniqueid))
 		except:
-			pass
+			log.warning("MonAst.handlerNewstate :: Uniqueid %s not found on self.channels" % Uniqueid)
 		self.channelsLock.release()
 		
 		
@@ -790,10 +792,13 @@ class MonAst:
 		DestUniqueID = dic['DestUniqueID']
 					
 		self.callsLock.acquire()
+		self.channelsLock.acquire()
+		c = self.channels[SrcUniqueID]
 		self.calls['%s-%s' % (SrcUniqueID, DestUniqueID)] = {
-			'Source': Source, 'Destination': Destination, 'CallerID': CallerID, 'CallerIDName': CallerIDName, 
-			'SrcUniqueID': SrcUniqueID, 'DestUniqueID': DestUniqueID, 'Status': 'Dial', 'startTime': 0
+			'Source': Source, 'Destination': Destination, 'SrcUniqueID': SrcUniqueID, 'DestUniqueID': DestUniqueID, 
+			'Status': 'Dial', 'startTime': 0
 		}
+		self.channelsLock.release()
 		self.callsLock.release()
 		
 		self.enqueue('Dial: %s:::%s:::%s:::%s:::%s:::%s' % (Source, Destination, CallerID, CallerIDName, SrcUniqueID, DestUniqueID))
@@ -810,18 +815,28 @@ class MonAst:
 		Uniqueid2 = dic['Uniqueid2']
 		CallerID1 = dic['CallerID1']
 		CallerID2 = dic['CallerID2']
-					
+		
+		self.channelsLock.acquire()
+		try:
+			CallerID1 = '%s <%s>' % (self.channels[Uniqueid1]['CallerIDName'], self.channels[Uniqueid1]['CallerIDNum'])
+			CallerID2 = '%s <%s>' % (self.channels[Uniqueid2]['CallerIDName'], self.channels[Uniqueid2]['CallerIDNum'])
+		except:
+			log.warning("MonAst.handlerUnlink :: Uniqueid %s or %s not found on self.channels" % (Uniqueid1, Uniqueid2))
+		self.channelsLock.release()
+			
 		self.callsLock.acquire()
 		try:
-			self.calls['%s-%s' % (Uniqueid1, Uniqueid2)]['Status'] = 'Link'
-			if self.calls['%s-%s' % (Uniqueid1, Uniqueid2)]['startTime'] == 0:
-				self.calls['%s-%s' % (Uniqueid1, Uniqueid2)]['startTime'] = time.time()
+			call = '%s-%s' % (Uniqueid1, Uniqueid2)
+			self.calls[call]['Status']       = 'Link'
+			 
+			if self.calls[call]['startTime'] == 0:
+				self.calls[call]['startTime'] = time.time()
 		except:
-			self.calls['%s-%s' % (Uniqueid1, Uniqueid2)] = {
-				'Source': Channel1, 'Destination': Channel2, 'CallerID': CallerID1, 'CallerIDName': '', 
-				'SrcUniqueID': Uniqueid1, 'DestUniqueID': Uniqueid2, 'Status': 'Link', 'startTime': time.time()
+			self.calls[call] = {
+				'Source': Channel1, 'Destination': Channel2, 'SrcUniqueID': Uniqueid1, 'DestUniqueID': Uniqueid2, 
+				'Status': 'Link', 'startTime': time.time()
 			}
-		Seconds = time.time() - self.calls['%s-%s' % (Uniqueid1, Uniqueid2)]['startTime']
+		Seconds = time.time() - self.calls[call]['startTime']
 		self.enqueue('Link: %s:::%s:::%s:::%s:::%s:::%s:::%d' % (Channel1, Channel2, Uniqueid1, Uniqueid2, CallerID1, CallerID2, Seconds))
 		self.callsLock.release()
 		
@@ -834,7 +849,7 @@ class MonAst:
 		
 	def handlerUnlink(self, lines):
 		
-		log.info('MonAst.handlerLink :: Running...')
+		log.info('MonAst.handlerUnlink :: Running...')
 		dic = self.list2Dict(lines)
 		
 		Channel1  = dic['Channel1']
@@ -843,13 +858,13 @@ class MonAst:
 		Uniqueid2 = dic['Uniqueid2']
 		CallerID1 = dic['CallerID1']
 		CallerID2 = dic['CallerID2']
-					
+		
 		self.callsLock.acquire()
 		try:
 			del self.calls['%s-%s' % (Uniqueid1, Uniqueid2)]
 			self.enqueue('Unlink: %s:::%s:::%s:::%s:::%s:::%s' % (Channel1, Channel2, Uniqueid1, Uniqueid2, CallerID1, CallerID2))
 		except:
-			pass
+			log.warning("MonAst.handlerUnlink :: Call %s-%s not found on self.calls" % (Uniqueid1, Uniqueid2))
 		self.callsLock.release()
 		
 		
@@ -888,6 +903,8 @@ class MonAst:
 		try:
 			self.channelsLock.acquire()
 			self.channels[Uniqueid]['Channel'] = Newname
+			CallerIDName = self.channels[Uniqueid]['CallerIDName']
+			CallerID     = self.channels[Uniqueid]['CallerIDNum']
 			self.channelsLock.release()
 		
 			self.callsLock.acquire()
@@ -900,8 +917,6 @@ class MonAst:
 					key = 'Destination'
 				if key:
 					self.calls[call][key] = Newname
-					CallerIDName = self.calls[call]['CallerIDName']
-					CallerID     = self.calls[call]['CallerID']
 					break							
 			self.callsLock.release()
 			
@@ -1068,12 +1083,14 @@ class MonAst:
 					if self.channels[UniqueidLink]['Channel'] == Link:
 						self.callsLock.acquire()
 						self.calls['%s-%s' % (Uniqueid, UniqueidLink)] = {
-							'Source': Channel, 'Destination': Link, 'CallerID': CallerIDNum, 'CallerIDName': CallerIDName, 
-							'SrcUniqueID': Uniqueid, 'DestUniqueID': UniqueidLink, 'Status': 'Link', 'startTime': time.time() - int(Seconds)
+							'Source': Channel, 'Destination': Link, 'SrcUniqueID': Uniqueid, 'DestUniqueID': UniqueidLink, 
+							'Status': 'Link', 'startTime': time.time() - int(Seconds)
 						}
 						self.callsLock.release()
+						CallerID1 = '%s <%s>' % (self.channels[Uniqueid]['CallerIDName'], self.channels[Uniqueid]['CallerIDNum'])
+						CallerID2 = '%s <%s>' % (self.channels[UniqueidLink]['CallerIDName'], self.channels[UniqueidLink]['CallerIDNum'])
 						self.enqueue('Link: %s:::%s:::%s:::%s:::%s:::%s:::%d' % \
-									(Channel, Link, Uniqueid, UniqueidLink, CallerIDNum, self.channels[UniqueidLink]['CallerIDNum'], int(Seconds)))
+									(Channel, Link, Uniqueid, UniqueidLink, CallerID1, CallerID2, int(Seconds)))
 		self.channelsLock.release()
 		
 		
@@ -1640,9 +1657,13 @@ class MonAst:
 			for call in self.calls:
 				c = self.calls[call]
 				src, dst = call.split('-')
+				
+				CallerID1 = '%s <%s>' % (self.channels[src]['CallerIDName'], self.channels[src]['CallerIDNum'])
+				CallerID2 = '%s <%s>' % (self.channels[dst]['CallerIDName'], self.channels[dst]['CallerIDNum'])
+				
 				try:
-					output.append('Call: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s:::%d' % (c['Source'], c['Destination'], c['CallerID'], c['CallerIDName'], \
-													self.channels[dst]['CallerIDNum'], c['SrcUniqueID'], c['DestUniqueID'], c['Status'], time.time() - c['startTime']))
+					output.append('Call: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%d' % (c['Source'], c['Destination'], \
+						CallerID1, CallerID2, c['SrcUniqueID'], c['DestUniqueID'], c['Status'], time.time() - c['startTime']))
 				except:
 					log.exception('MonAst.clientGetStatus (%s) :: Unhandled Exception' % threadId)
 			meetmeRooms = self.meetme.keys()
