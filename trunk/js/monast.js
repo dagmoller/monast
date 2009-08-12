@@ -950,6 +950,41 @@ function queueMemberUnpause(p_sType, p_aArgs, id)
 	}
 }
 
+// Skype
+function skypeUserLogin(p_sType, p_aArgs, id)
+{
+	var skypeName = id.replace('Skype/', '');
+	var c         = confirm('Login skype user ' + skypeName + '?');
+	if (c)
+	{
+		new Ajax.Request('action.php', 
+		{
+			method: 'get',
+			parameters: {
+				reqTime: new Date().getTime(),
+				action: 'SkypeLogin:::' + skypeName
+			}
+		});
+	}
+}
+
+function skypeUserLogout(p_sType, p_aArgs, id)
+{
+	var skypeName = id.replace('Skype/', '');
+	var c         = confirm('Logout skype user ' + skypeName + '?');
+	if (c)
+	{
+		new Ajax.Request('action.php', 
+		{
+			method: 'get',
+			parameters: {
+				reqTime: new Date().getTime(),
+				action: 'SkypeLogout:::' + skypeName
+			}
+		});
+	}
+}
+
 // Yahoo
 function setStartPosition(e)
 {
@@ -1120,11 +1155,28 @@ function showPeerOptionsMenu(id)
 {
 	if (!_POMENU[id])
 	{
-		_POMENU[id] = new YAHOO.widget.Menu("peerOptionsMenu-" + id, { xy: YAHOO.util.Dom.getXY(YAHOO.util.Dom.get('peerDiv-' + id)) });
-		_POMENU[id].addItems([
+		var items = [[
 			{text: 'Originate Call', onclick: {fn: showOriginateDialog, obj: id}}
-		]);
+		]];
+		
+		if (id.indexOf('Skype') != -1)
+		{
+			items[items.length] = [
+				{text: 'Login', onclick: {fn: skypeUserLogin, obj: id}},
+				{text: 'Logout', onclick: {fn: skypeUserLogout, obj: id}}
+			];
+		}
+	
+		_POMENU[id] = new YAHOO.widget.Menu("peerOptionsMenu-" + id, { xy: YAHOO.util.Dom.getXY(YAHOO.util.Dom.get('peerDiv-' + id)) });
+		_POMENU[id].addItems(items);
+		
 		_POMENU[id].setItemGroupTitle('Options for "' + callerIDs[id] + '"', 0);
+		
+		if (id.indexOf('Skype') != -1)
+		{
+			_POMENU[id].setItemGroupTitle('Skype Options', 1);
+		}
+		
 		_POMENU[id].render("peerDiv-" + id);
 	}
 	else
