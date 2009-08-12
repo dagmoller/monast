@@ -423,6 +423,12 @@ class MonAst:
 						elif session and message.startswith('UnpauseQueueMember'):
 							self.clientUnpauseQueueMember(threadId, message)
 						
+						elif session and message.startswith('SkypeLogin'):
+							self.clientSkypeLogin(threadId, message)
+							
+						elif session and message.startswith('SkypeLogout'):
+							self.clientSkypeLogout(threadId, message)
+						
 						elif session and message.startswith('CliCommand'):
 							self.clientCliCommand(threadId, message, session)
 						
@@ -2009,6 +2015,30 @@ class MonAst:
 		command.append('Interface: %s' % member)
 		command.append('Paused: 0')
 		log.debug('MonAst.clientUnpauseQueueMember (%s) :: Unpausing member %s on queue %s' % (threadId, member, queue))
+		self.AMI.execute(command)
+		
+		
+	def clientSkypeLogin(self, threadId, message):
+		
+		log.info('MonAst.clientSkypeLogin (%s) :: Running...' % threadId)
+		action, skypeName = message.split(':::')
+		
+		command = []
+		command.append('Action: Command')
+		command.append('Command: skype login user %s' % skypeName)
+		log.debug('MonAst.clientSkypeLogin (%s) :: Login skype user %s' % (threadId, skypeName))
+		self.AMI.execute(command)
+	
+	
+	def clientSkypeLogout(self, threadId, message):
+		
+		log.info('MonAst.clientSkypeLogout (%s) :: Running...' % threadId)
+		action, skypeName = message.split(':::')
+		
+		command = []
+		command.append('Action: Command')
+		command.append('Command: skype logout user %s' % skypeName)
+		log.debug('MonAst.clientSkypeLogout (%s) :: Logout skype user %s' % (threadId, skypeName))
 		self.AMI.execute(command)
 		
 	
