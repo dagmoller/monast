@@ -1663,9 +1663,15 @@ class MonAst:
 			for call in self.calls:
 				c = self.calls[call]
 				src, dst = call.split('-')
+			
+				CallerID1 = ''
+				CallerID2 = ''
 				
-				CallerID1 = '%s <%s>' % (self.channels[src]['CallerIDName'], self.channels[src]['CallerIDNum'])
-				CallerID2 = '%s <%s>' % (self.channels[dst]['CallerIDName'], self.channels[dst]['CallerIDNum'])
+				try:
+					CallerID1 = '%s <%s>' % (self.channels[src]['CallerIDName'], self.channels[src]['CallerIDNum'])
+					CallerID2 = '%s <%s>' % (self.channels[dst]['CallerIDName'], self.channels[dst]['CallerIDNum'])
+				except KeyError:
+					log.warning('MonAst.clientGetStatus (%s) :: UniqueID %s or %s not found on self.channels' % (threadId, src, dst))
 				
 				try:
 					output.append('Call: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%d' % (c['Source'], c['Destination'], \
