@@ -1097,6 +1097,19 @@ class MonAst:
 						CallerID2 = '%s <%s>' % (self.channels[UniqueidLink]['CallerIDName'], self.channels[UniqueidLink]['CallerIDNum'])
 						self.enqueue('Link: %s:::%s:::%s:::%s:::%s:::%s:::%d' % \
 									(Channel, Link, Uniqueid, UniqueidLink, CallerID1, CallerID2, int(Seconds)))
+		
+		## Update call duration
+		if self.channels.has_key(Uniqueid) and Seconds > 0 and Link:
+			for UniqueidLink in self.channels:
+				if self.channels[UniqueidLink]['Channel'] == Link:
+					self.callsLock.acquire()
+					duration = time.time() - self.calls['%s-%s' % (Uniqueid, UniqueidLink)]['startTime']
+					Seconds  = int(Seconds)
+					if duration < (Seconds - 10) or duration > (Seconds + 10):
+						self.calls['%s-%s' % (Uniqueid, UniqueidLink)]['startTime'] = time.time() - Seconds
+						self.enqueue('UpdateCallDuration: %s:::%s:::%s' % (Uniqueid, UniqueidLink, Seconds))
+					self.callsLock.release()
+			
 		self.channelsLock.release()
 		
 		

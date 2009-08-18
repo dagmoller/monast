@@ -402,6 +402,19 @@ function parseMsg($msg)
 		return $saida;
 	}
 	
+	if (strpos($msg, 'UpdateCallDuration: ') !== false)
+	{
+		list($Uniqueid1, $Uniqueid2, $Seconds) = explode(':::', substr($msg, 20));
+		$saida = array
+		(
+			'Action'    => 'UpdateCallDuration',
+			'Uniqueid1' => $Uniqueid1,
+			'Uniqueid2' => $Uniqueid2,
+			'Seconds'   => $Seconds
+		);
+		return $saida;
+	}
+	
 	return $json->encode(array('Action' => 'None', 'Message' => $msg));
 }
 
