@@ -662,6 +662,8 @@ function Process(o)
 			var rec = "<a href='javascript:recordStop(\"" + o['Uniqueid'] + "\")' title='Stop Monitor'><img src='image/record.png' border='0' width='8' height='8'></a>&nbsp;&nbsp;";
 			td.innerHTML = rec + o['Channel'];
 		}
+		
+		return;
 	}
 	
 	if (o['Action'] == 'MonitorStop')
@@ -671,6 +673,17 @@ function Process(o)
 		{
 			td.innerHTML = o['Channel'];
 		}
+		
+		return;
+	}
+	
+	if (o['Action'] == 'UpdateCallDuration')
+	{
+		var id = 'callStatus-' + o['Uniqueid1'] + '-' + o['Uniqueid2'];
+		stopChrono(id);
+		chrono(id, o['Seconds']);
+		
+		return;
 	}
 }
 
@@ -1298,8 +1311,10 @@ function chrono(id, secs)
 	var secs  = (_chrono[id].secs < 10 ? '0' + _chrono[id].secs : _chrono[id].secs);
 	var mins  = (_chrono[id].mins < 10 ? '0' + _chrono[id].mins : _chrono[id].mins);
 	var hours = (_chrono[id].hours < 10 ? '0' + _chrono[id].hours : _chrono[id].hours);
-		
-	$('chrono-' + id).innerHTML = hours + ':' + mins + ':' + secs;
+	
+	var f = $('chrono-' + id);
+	if (f)
+		f.innerHTML = hours + ':' + mins + ':' + secs;
 		
 	_chrono[id].run = setTimeout('chrono("' + id + '")', 1000);
 }
