@@ -833,7 +833,7 @@ class MonAst:
 		self.callsLock.acquire()
 		try:
 			call = '%s-%s' % (Uniqueid1, Uniqueid2)
-			self.calls[call]['Status']       = 'Link'
+			self.calls[call]['Status'] = 'Link'
 			 
 			if self.calls[call]['startTime'] == 0:
 				self.calls[call]['startTime'] = time.time()
@@ -2109,6 +2109,7 @@ class MonAst:
 	
 	def start(self):
 		
+		signal.signal(signal.SIGUSR1, self._sigUSR1)
 		signal.signal(signal.SIGTERM, self._sigTERM)
 		signal.signal(signal.SIGHUP, self._sigHUP)
 		
@@ -2136,7 +2137,38 @@ class MonAst:
 			time.sleep(1)
 		
 		log.log(logging.NOTICE, 'Monast :: Finished...')
+	
+	
+	def _sigUSR1(self, *args):
 		
+		log.log(logging.NOTICE, 'MonAst :: Received SIGUSR1 -- Dumping Vars...')
+	
+		self.monitoredUsersLock.acquire()
+		log.log(logging.NOTICE, 'self.monitoredUsers = %s' % repr(self.monitoredUsers))
+		self.monitoredUsersLock.release()
+		
+		self.meetmeLock.acquire()
+		log.log(logging.NOTICE, 'self.meetme = %s' % repr(self.meetme))
+		self.meetmeLock.release()
+		
+		self.parkedLock.acquire()
+		log.log(logging.NOTICE, 'self.parked = %s' % repr(self.parked))
+		self.parkedLock.release()
+		
+		self.queuesLock.acquire()
+		log.log(logging.NOTICE, 'self.queues = %s' % repr(self.queues))
+		log.log(logging.NOTICE, 'self.queueMemberStatus = %s' % repr(self.queueMemberStatus))
+		log.log(logging.NOTICE, 'self.queueClientStatus = %s' % repr(self.queueClientStatus))
+		self.queuesLock.release()
+		
+		self.channelsLock.acquire()
+		log.log(logging.NOTICE, 'self.channels = %s' % repr(self.channels))
+		self.channelsLock.release()
+		
+		self.callsLock.acquire()
+		log.log(logging.NOTICE, 'self.calls = %s' % repr(self.calls))
+		self.callsLock.release()
+			
 		
 	def _sigTERM(self, *args):
 		
