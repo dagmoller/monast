@@ -762,12 +762,12 @@ class MonAst:
 		self.callsLock.acquire()
 		toDelete = None
 		for id in self.calls:
-			if id.find(Uniqueid) != -1 and self.calls[id]['Status'] == 'Dial':
+			if Uniqueid in id and self.calls[id]['Status'] == 'Dial':
 				toDelete = id
 				break
 		if toDelete:
 			del self.calls[toDelete]
-			src, dst = toDelete.split('-')
+			src, dst = toDelete
 			self.enqueue('Unlink: FAKE:::FAKE:::%s:::%s:::FAKE:::FAKE' % (src, dst))
 		self.callsLock.release()
 		
@@ -800,7 +800,7 @@ class MonAst:
 		self.callsLock.acquire()
 		self.channelsLock.acquire()
 		c = self.channels[SrcUniqueID]
-		self.calls['%s-%s' % (SrcUniqueID, DestUniqueID)] = {
+		self.calls[(SrcUniqueID, DestUniqueID)] = {
 			'Source': Source, 'Destination': Destination, 'SrcUniqueID': SrcUniqueID, 'DestUniqueID': DestUniqueID, 
 			'Status': 'Dial', 'startTime': 0
 		}
@@ -832,7 +832,7 @@ class MonAst:
 			
 		self.callsLock.acquire()
 		try:
-			call = '%s-%s' % (Uniqueid1, Uniqueid2)
+			call = (Uniqueid1, Uniqueid2)
 			self.calls[call]['Status'] = 'Link'
 			 
 			if self.calls[call]['startTime'] == 0:
@@ -867,7 +867,7 @@ class MonAst:
 		
 		self.callsLock.acquire()
 		try:
-			del self.calls['%s-%s' % (Uniqueid1, Uniqueid2)]
+			del self.calls[(Uniqueid1, Uniqueid2)]
 			self.enqueue('Unlink: %s:::%s:::%s:::%s:::%s:::%s' % (Channel1, Channel2, Uniqueid1, Uniqueid2, CallerID1, CallerID2))
 		except:
 			log.warning("MonAst.handlerUnlink :: Call %s-%s not found on self.calls" % (Uniqueid1, Uniqueid2))
@@ -915,7 +915,7 @@ class MonAst:
 		
 			self.callsLock.acquire()
 			for call in self.calls:
-				SrcUniqueID, DestUniqueID = call.split('-')
+				SrcUniqueID, DestUniqueID = call
 				key = None
 				if (SrcUniqueID == Uniqueid):
 					key = 'Source'
@@ -1088,7 +1088,7 @@ class MonAst:
 				for UniqueidLink in self.channels:
 					if self.channels[UniqueidLink]['Channel'] == Link:
 						self.callsLock.acquire()
-						self.calls['%s-%s' % (Uniqueid, UniqueidLink)] = {
+						self.calls[(Uniqueid, UniqueidLink)] = {
 							'Source': Channel, 'Destination': Link, 'SrcUniqueID': Uniqueid, 'DestUniqueID': UniqueidLink, 
 							'Status': 'Link', 'startTime': time.time() - int(Seconds)
 						}
@@ -1102,11 +1102,12 @@ class MonAst:
 		if self.channels.has_key(Uniqueid) and Seconds > 0 and Link:
 			for UniqueidLink in self.channels:
 				if self.channels[UniqueidLink]['Channel'] == Link:
+					call = (Uniqueid, UniqueidLink)
 					self.callsLock.acquire()
-					duration = time.time() - self.calls['%s-%s' % (Uniqueid, UniqueidLink)]['startTime']
+					duration = time.time() - self.calls[call]['startTime']
 					Seconds  = int(Seconds)
 					if duration < (Seconds - 10) or duration > (Seconds + 10):
-						self.calls['%s-%s' % (Uniqueid, UniqueidLink)]['startTime'] = time.time() - Seconds
+						self.calls[call]['startTime'] = time.time() - Seconds
 						self.enqueue('UpdateCallDuration: %s:::%s:::%s' % (Uniqueid, UniqueidLink, Seconds))
 					self.callsLock.release()
 			
@@ -1132,13 +1133,13 @@ class MonAst:
 			
 			toDelete = None
 			for id in self.calls:
-				if id.find(Uniqueid) != -1 and self.calls[id]['Status'] == 'Dial':
+				if Uniqueid in id and self.calls[id]['Status'] == 'Dial':
 				#if id.find(Uniqueid) != -1:
 					toDelete = id
 					break
 			if toDelete:
 				del self.calls[toDelete]
-				src, dst = toDelete.split('-')
+				src, dst = toDelete
 				self.enqueue('Unlink: FAKE:::FAKE:::%s:::%s:::FAKE:::FAKE' % (src, dst))
 			
 			self.monitoredUsersLock.acquire()
@@ -1675,7 +1676,7 @@ class MonAst:
 				output.append('NewChannel: %s:::%s:::%s:::%s:::%s:::%s' % (ch['Channel'], ch['State'], ch['CallerIDNum'], ch['CallerIDName'], Uniqueid, ch['Monitor']))
 			for call in self.calls:
 				c = self.calls[call]
-				src, dst = call.split('-')
+				src, dst = call
 			
 				CallerID1 = ''
 				CallerID2 = ''
@@ -1902,7 +1903,7 @@ class MonAst:
 		elif type == 'meetme':
 			try:
 				self.channelsLock.acquire()
-				tmp = src.split('-')
+				tmp = src.split('+++')
 				if len(tmp) == 2:
 					SrcChannel   = self.channels[tmp[0]]['Channel']
 					ExtraChannel = self.channels[tmp[1]]['Channel']

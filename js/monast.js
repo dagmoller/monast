@@ -236,7 +236,7 @@ function Process(o)
 		template = template.replace(/\{color\}/g, color(o['Status']));
 		
 		var div       = document.createElement('div');
-		div.id        = 'call-' + o['SrcUniqueID'] + '-' + o['DestUniqueID'];
+		div.id        = 'call-' + o['SrcUniqueID'] + '+++' + o['DestUniqueID'];
 		div.className = 'callDiv'; 
 		div.innerHTML = template;
 		
@@ -283,7 +283,7 @@ function Process(o)
 	
 	if (o['Action'] == 'Dial')
 	{
-		var div = $('call-' + o['SrcUniqueID'] + '-' + o['DestUniqueID']);
+		var div = $('call-' + o['SrcUniqueID'] + '+++' + o['DestUniqueID']);
 		if (!div)
 		{
 			o['Action'] = 'Call';
@@ -326,7 +326,7 @@ function Process(o)
 	if (o['Action'] == 'Unlink')
 	{
 		stopChrono('callStatus-' + o['Uniqueid1'] + '-' + o['Uniqueid2']);
-		$('callsDiv').removeChild($('call-' + o['Uniqueid1'] + '-' + o['Uniqueid2']));
+		$('callsDiv').removeChild($('call-' + o['Uniqueid1'] + '+++' + o['Uniqueid2']));
 		
 		_countCalls -= 1;
 		$('countCalls').innerHTML = _countCalls;
@@ -748,7 +748,7 @@ function hangupCall(chanId)
 	if (chanId.indexOf('call') != -1)
 	{
 		msg = "Hangup this Call?";
-		chanId = chanId.substring(5, chanId.lastIndexOf('-'));
+		chanId = chanId.substring(5, chanId.lastIndexOf('+++'));
 	}
 		
 	var c = confirm(msg);
@@ -773,7 +773,7 @@ function recordCall(chanId)
 	if (chanId.indexOf('call') != -1)
 	{
 		msg    = "Record this Call?";
-		chanId = chanId.substring(5, chanId.lastIndexOf('-'));
+		chanId = chanId.substring(5, chanId.lastIndexOf('+++'));
 		mix    = 1;
 	}
 	
@@ -1076,7 +1076,7 @@ function channelCallDrop(e, id)
 		
 	if (id.indexOf('peerDiv-') != -1 && this.id.indexOf('call-') != -1)
 	{
-		var ids  = this.id.substring(5).split('-');
+		var ids  = this.id.substring(5).split('+++');
 		var srcA = $('channel-' + ids[0]).innerHTML;
 		var srcB = $('channel-' + ids[1]).innerHTML;
 		showTransferDialog(ids[0], srcA, ids[1], srcB, id.substring(8));
@@ -1092,7 +1092,7 @@ function channelCallDrop(e, id)
 	
 	if (this.id.indexOf('call-') != -1 && id == 'park')
 	{
-		var ids  = this.id.substring(5).split('-');
+		var ids  = this.id.substring(5).split('+++');
 		var srcA = $('channel-' + ids[0]).innerHTML;
 		var srcB = $('channel-' + ids[1]).innerHTML;
 		showTransferDialog(ids[0], srcA, ids[1], srcB, 'ParkedCalls');
