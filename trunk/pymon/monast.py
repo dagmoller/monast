@@ -196,6 +196,8 @@ class MonAst:
 	queueMemberStatus = {}
 	queueClientStatus = {}
 	
+	queueMemberCalls  = {}
+	
 	queueStatusFirst = False
 	queueStatusOrder = []
 	
@@ -780,6 +782,14 @@ class MonAst:
 			self.enqueue('PeerStatus: %s:::%s:::%s' % (user, self.monitoredUsers[user]['Status'], self.monitoredUsers[user]['Calls']))
 		self.monitoredUsersLock.release()
 		
+		self.queuesLock.acquire()
+		if self.queueMemberCalls.has_key(Uniqueid):
+			Queue  = self.queueMemberCalls[Uniqueid]['Queue']
+			Member = self.queueMemberCalls[Uniqueid]['Member']
+			del self.queueMemberCalls[Uniqueid]
+			self.enqueue('RemoveQueueMemberCall: %s:::%s:::%s' % (Queue, Member, Uniqueid))
+		self.queuesLock.release()
+		
 		
 	def handlerDial(self, lines):
 		
@@ -829,10 +839,11 @@ class MonAst:
 		except:
 			log.warning("MonAst.handlerUnlink :: Uniqueid %s or %s not found on self.channels" % (Uniqueid1, Uniqueid2))
 		self.channelsLock.release()
-			
+		
+		call = (Uniqueid1, Uniqueid2)
+		
 		self.callsLock.acquire()
 		try:
-			call = (Uniqueid1, Uniqueid2)
 			self.calls[call]['Status'] = 'Link'
 			 
 			if self.calls[call]['startTime'] == 0:
@@ -844,6 +855,15 @@ class MonAst:
 			}
 		Seconds = time.time() - self.calls[call]['startTime']
 		self.enqueue('Link: %s:::%s:::%s:::%s:::%s:::%s:::%d' % (Channel1, Channel2, Uniqueid1, Uniqueid2, CallerID1, CallerID2, Seconds))
+
+		self.queuesLock.acquire()
+		if self.queueMemberCalls.has_key(Uniqueid1):
+			self.queueMemberCalls[Uniqueid1]['Member'] = Channel2[:Channel2.rfind('-')]
+			self.queueMemberCalls[Uniqueid1]['Link']   = True
+			qmc = self.queueMemberCalls[Uniqueid1]
+			self.enqueue('AddQueueMemberCall: %s:::%s:::%s:::%s:::%s:::%d' % (qmc['Queue'], qmc['Member'], Uniqueid1, qmc['Channel'], CallerID1, Seconds))
+		self.queuesLock.release()
+		
 		self.callsLock.release()
 		
 		
@@ -872,6 +892,13 @@ class MonAst:
 		except:
 			log.warning("MonAst.handlerUnlink :: Call %s-%s not found on self.calls" % (Uniqueid1, Uniqueid2))
 		self.callsLock.release()
+		
+		self.queuesLock.acquire()
+		if self.queueMemberCalls.has_key(Uniqueid1):
+			self.queueMemberCalls[Uniqueid1]['Link'] = False
+			qmc = self.queueMemberCalls[Uniqueid1]
+			self.enqueue('RemoveQueueMemberCall: %s:::%s:::%s' % (qmc['Queue'], qmc['Member'], Uniqueid1))
+		self.queuesLock.release()
 		
 		
 	def handlerNewcallerid(self, lines):
@@ -1332,6 +1359,7 @@ class MonAst:
 			else:
 				cause = 'Completed'
 				self.queues[Queue]['stats']['Completed'] += 1
+				self.queueMemberCalls[Uniqueid] = {'Queue': Queue, 'Channel': Channel, 'Member': None, 'Link': False}
 			self.queues[Queue]['stats']['Calls'] -= 1
 			
 			del self.queues[Queue]['clients'][Uniqueid]
@@ -1650,6 +1678,7 @@ class MonAst:
 		log.info('MonAst.clientGetStatus (%s) :: Running...' % threadId)
 		
 		output = []
+		theEnd = []
 		
 		self.clientQueuelock.acquire()
 		self.monitoredUsersLock.acquire()
@@ -1692,6 +1721,11 @@ class MonAst:
 						CallerID1, CallerID2, c['SrcUniqueID'], c['DestUniqueID'], c['Status'], time.time() - c['startTime']))
 				except:
 					log.exception('MonAst.clientGetStatus (%s) :: Unhandled Exception' % threadId)
+					
+				if self.queueMemberCalls.has_key(src) and self.queueMemberCalls[src]['Link']:
+					qmc = self.queueMemberCalls[src]
+					theEnd.append('AddQueueMemberCall: %s:::%s:::%s:::%s:::%s:::%d' % (qmc['Queue'], qmc['Member'], src, qmc['Channel'], CallerID1, time.time() - c['startTime']))
+				
 			meetmeRooms = self.meetme.keys()
 			meetmeRooms.sort()
 			for meetme in meetmeRooms:
@@ -1738,6 +1772,7 @@ class MonAst:
 				output.append('QueueParams: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % \
 							(queue, Max, Calls, Holdtime, Completed, Abandoned, ServiceLevel, ServicelevelPerf, Weight))
 			
+			output += theEnd
 			output.append('END STATUS')
 		except:
 			log.exception('MonAst.clientGetStatus (%s) :: Unhandled Exception' % threadId)

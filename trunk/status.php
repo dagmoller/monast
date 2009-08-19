@@ -359,6 +359,35 @@ function parseMsg($msg)
     	return $saida;
 	}
 	
+	if (strpos($msg, 'AddQueueMemberCall: ') !== false)
+	{
+		list($Queue, $Member, $Uniqueid, $Channel, $CallerID, $Seconds) = explode(':::', substr($msg, 20));
+		$saida = array
+		(
+			'Action'   => 'AddQueueMemberCall',
+			'Queue'    => $Queue,
+			'Member'   => $Member,
+			'Uniqueid' => $Uniqueid, 
+			'Channel'  => $Channel, 
+			'CallerID' => $CallerID,
+			'Seconds'  => $Seconds 
+		);
+		return $saida;
+	}
+	
+	if (strpos($msg, 'RemoveQueueMemberCall: ') !== false)
+	{
+		list($Queue, $Member, $Uniqueid) = explode(':::', substr($msg, 23));
+		$saida = array
+		(
+			'Action'   => 'RemoveQueueMemberCall',
+			'Queue'    => $Queue,
+			'Member'   => $Member,
+			'Uniqueid' => $Uniqueid
+		);
+		return $saida;
+	}
+	
 	if (strpos($msg, 'QueueParams: ') !== false)
 	{
 		list($Queue, $Max, $Calls, $Holdtime, $Completed, $Abandoned, $ServiceLevel, $ServicelevelPerf, $Weight) = explode(':::', substr($msg, 13));
