@@ -221,7 +221,7 @@ function Process(o)
 	{
 		var template = "<table width='600'><tr>";
 		template    += "<td class='status' width='260' id='callChannel-{SrcUniqueID}'>{Source}</td>";
-		template    += "<td class='status' width='80' bgcolor='{color}' id='callStatus-{SrcUniqueID}-{DestUniqueID}'>{Status}<br><span style='font-family: monospace;' id='chrono-callStatus-{SrcUniqueID}-{DestUniqueID}'></span></td>";
+		template    += "<td class='status' width='80' bgcolor='{color}' id='callStatus-{SrcUniqueID}+++{DestUniqueID}'>{Status}<br><span style='font-family: monospace;' id='chrono-callStatus-{SrcUniqueID}+++{DestUniqueID}'></span></td>";
 		template    += "<td class='status' width='260' id='callChannel-{DestUniqueID}'>{Destination}</td>";
 		template    += "</tr></table>";
 		
@@ -242,7 +242,7 @@ function Process(o)
 		
 		$('callsDiv').appendChild(div);
 		if (o['Status'] == 'Link')
-			chrono('callStatus-' + o['SrcUniqueID'] + '-' + o['DestUniqueID'], o['Seconds']);
+			chrono('callStatus-' + o['SrcUniqueID'] + '+++' + o['DestUniqueID'], o['Seconds']);
 		
 		ddDivs[div.id]               = new YAHOO.util.DD(div.id);
 		ddDivs[div.id].onMouseDown   = setStartPosition;
@@ -295,7 +295,7 @@ function Process(o)
 	
 	if (o['Action'] == 'Link')
 	{
-		td = $('callStatus-' + o['Uniqueid1'] + '-' + o['Uniqueid2']);
+		td = $('callStatus-' + o['Uniqueid1'] + '+++' + o['Uniqueid2']);
 		if (td)
 		{
 			td.style.backgroundColor = color('Link');
@@ -325,7 +325,7 @@ function Process(o)
 	
 	if (o['Action'] == 'Unlink')
 	{
-		stopChrono('callStatus-' + o['Uniqueid1'] + '-' + o['Uniqueid2']);
+		stopChrono('callStatus-' + o['Uniqueid1'] + '+++' + o['Uniqueid2']);
 		$('callsDiv').removeChild($('call-' + o['Uniqueid1'] + '+++' + o['Uniqueid2']));
 		
 		_countCalls -= 1;
@@ -679,7 +679,7 @@ function Process(o)
 	
 	if (o['Action'] == 'UpdateCallDuration')
 	{
-		var id = 'callStatus-' + o['Uniqueid1'] + '-' + o['Uniqueid2'];
+		var id = 'callStatus-' + o['Uniqueid1'] + '+++' + o['Uniqueid2'];
 		stopChrono(id);
 		chrono(id, o['Seconds']);
 		
