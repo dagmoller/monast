@@ -517,6 +517,7 @@ function Process(o)
 			template    += "<td class='status' width='40' align='center' id='queueMemberCallsTaken-{Queue}-{Member}'>{CallsTaken}</td>";
 			template    += "<td class='status' width='90' align='center' id='queueMemberStatus-{Queue}-{Member}' bgcolor='{color}'>{Status}</td>";
 			template    += "</tr></table>";
+			
 			template     = template.replace(/\{Queue\}/g, o['Queue']);
 			template     = template.replace(/\{Member\}/g, o['Member']);
 			template     = template.replace(/\{MemberName\}/g, o['MemberName']);
@@ -651,6 +652,53 @@ function Process(o)
 		$('queueStatsServicelevelPerf-' + o['Queue']).innerHTML = o['ServicelevelPerf'];
 		$('queueStatsWeight-' + o['Queue']).innerHTML           = o['Weight'];
 		
+		return;
+	}
+	
+	if (o['Action'] == 'AddQueueMemberCall')
+	{
+		var id  = 'queueMember-' + o['Queue'] + ':::' + o['Member'];
+		var div = $(id);
+		if (div)
+		{
+			var id = 'queueMemberCall-' + o['Queue'] + ':::' + o['Member'] + ':::' + o['Uniqueid'];
+			
+			if (!$(id))
+			{
+				UserInfo = o['Channel'];
+				if (o['CallerID'])
+					UserInfo = o['CallerID'];
+			
+				var template = "<table width='300' id='queueMemberCall-{Queue}:::{Member}:::{Uniqueid}'><tr>";
+				template    += "<td class='status' width='75' bgcolor='#ffffb0'>Answered</td>";
+				template    += "<td class='status' width='225'>{UserInfo}<br><span style='font-family: monospace;' id='chrono-{ID}'></span></td>";
+				template    += "</tr></table>";
+				
+				template     = template.replace(/\{Queue\}/g, o['Queue']);
+				template     = template.replace(/\{Member\}/g, o['Member']);
+				template     = template.replace(/\{Uniqueid\}/g, o['Uniqueid']);
+				template     = template.replace(/\{UserInfo\}/g, UserInfo);
+				template     = template.replace(/\{ID\}/g, id);
+	
+				div.innerHTML += template;
+				
+				if (MONAST_CALL_TIME)
+					chrono(id, o['Seconds']);
+			}
+		}
+		return;
+	}
+	
+	if (o['Action'] == 'RemoveQueueMemberCall')
+	{
+		var id = 'queueMemberCall-' + o['Queue'] + ':::' + o['Member'] + ':::' + o['Uniqueid'];
+		var tb = $(id);
+		if (tb)
+		{
+			$('queueMember-' + o['Queue'] + ':::' + o['Member']).removeChild(tb);
+			stopChrono(id);
+		}
+			
 		return;
 	}
 	

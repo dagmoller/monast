@@ -40,19 +40,20 @@ setValor('Actions', array());
 $sessionId = session_id();
 session_write_close();
 
-$json         = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
-$template     = new TemplatePower('template/index.html');
-$peerStatus   = array();
-$channels     = array();
-$calls        = array();
-$meetmeRooms  = array();
-$meetmeJoins  = array();
-$parkedCalls  = array();
-$queues       = array();
-$queueParams  = array();
-$queueMembers = array();
-$queueClients = array();
-$isStatus     = false;
+$json             = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
+$template         = new TemplatePower('template/index.html');
+$peerStatus       = array();
+$channels         = array();
+$calls            = array();
+$meetmeRooms      = array();
+$meetmeJoins      = array();
+$parkedCalls      = array();
+$queues           = array();
+$queueParams      = array();
+$queueMembers     = array();
+$queueClients     = array();
+$queueMemberCalls = array();
+$isStatus         = false;
 
 $errno  = null;
 $errstr = null;
@@ -119,6 +120,9 @@ while (!feof($fp))
 				if (strpos($message, 'AddQueueClient: ') === 0)
 				    $queueClients[] = substr($message, strlen('AddQueueClient: '));
 				    
+				if (strpos($message, 'AddQueueMemberCall: ') === 0)
+					$queueMemberCalls[] = substr($message, strlen('AddQueueMemberCall: '));
+				
 				if (strpos($message, 'QueueParams: ') === 0)
 				    $queueParams[] = substr($message, strlen('QueueParams: '));
 			}
@@ -292,6 +296,24 @@ foreach ($queueClients as $client)
 		'Position'     => $Position, 
 		'Count'        => $Count,
 		'Wait'         => $Wait
+	);
+	
+	$template->newBlock('process');
+	$template->assign('json', $json->encode($tmp));
+}
+
+foreach ($queueMemberCalls as $call)
+{
+	list($Queue, $Member, $Uniqueid, $Channel, $CallerID, $Seconds) = explode(':::', $call);
+	$tmp = array
+	(
+		'Action'   => 'AddQueueMemberCall',
+		'Queue'    => $Queue,
+		'Member'   => $Member,
+		'Uniqueid' => $Uniqueid, 
+		'Channel'  => $Channel, 
+		'CallerID' => $CallerID,
+		'Seconds'  => $Seconds
 	);
 	
 	$template->newBlock('process');
