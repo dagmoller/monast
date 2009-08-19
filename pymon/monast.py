@@ -1177,6 +1177,17 @@ class MonAst:
 				self.monitoredUsers[user]['Calls'] -= 1
 				self.enqueue('PeerStatus: %s:::%s:::%s' % (user, self.monitoredUsers[user]['Status'], self.monitoredUsers[user]['Calls']))
 			self.monitoredUsersLock.release()
+			
+		self.queuesLock.acquire()
+		for Uniqueid in self.queueMemberCalls:
+			if not self.channels.has_key(Uniqueid):
+				log.log(logging.NOTICE, 'MonAst.handlerStatusComplete :: Removing lost Queue Member Call %s' % Uniqueid)
+				Queue  = self.queueMemberCalls[Uniqueid]['Queue']
+				Member = self.queueMemberCalls[Uniqueid]['Member']
+				del self.queueMemberCalls[Uniqueid]
+				self.enqueue('RemoveQueueMemberCall: %s:::%s:::%s' % (Queue, Member, Uniqueid))
+		self.queuesLock.release()
+			
 		self.callsLock.release()
 		self.channelsLock.release()
 		
