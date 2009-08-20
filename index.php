@@ -148,6 +148,19 @@ if (MONAST_DEBUG_TAB || getValor('debug'))
 	$template->newBlock('debug_tab_div');
 }
 
+// Counter
+$peerCounter = array();
+foreach ($peerStatus as $idx => $peer)
+{
+	list($peer, $status, $peerCalls, $CallerID) = explode(':::', $peer);
+	list($tech, $tmp) = explode('/', $peer);
+	
+	if (array_key_exists($tech, $peerCounter))
+		$peerCounter[$tech] += 1;
+	else 
+		$peerCounter[$tech] = 1;
+}
+
 $lastTech = null;
 foreach ($peerStatus as $idx => $peer)
 {
@@ -155,10 +168,11 @@ foreach ($peerStatus as $idx => $peer)
 	list($tech, $tmp) = explode('/', $peer);
 	
 	if ($tech != $lastTech)
-	{	
+	{
 		$lastTech = $tech;
 		$template->newBlock('technology');
 		$template->assign('technology', $tech);
+		$template->assign('count', $peerCounter[$tech]);
 	}
     
     $template->newBlock('peer');

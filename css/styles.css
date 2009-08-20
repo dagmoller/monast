@@ -215,3 +215,22 @@ BODY {
 	color: #ffffff;
 	background-color: #000000;
 }
+
+fieldset legend {
+	font-family: Verdana;
+	font-size: 0.8em;
+}
+
+
+/* YUI */
+.yui-skin-sam .yui-button button, .yui-skin-sam .yui-button a {
+	font-size: 0.8em;
+	line-height:2;
+	min-height:2em;
+	padding:0 10px;
+}
+
+.yui-navset li em {
+	font-style:normal;
+	font-size: 0.9em;
+}
