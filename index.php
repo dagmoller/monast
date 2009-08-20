@@ -270,8 +270,11 @@ foreach ($parkedCalls as $park)
 	$template->assign('json', $json->encode($tmp));
 }
 
-foreach ($queues as $queue)
+foreach ($queues as $idx => $queue)
 {
+	if ($idx % 2 == 0)
+		$template->newBlock('queueDualDiv');
+	
 	$template->newBlock('queue');
 	$template->assign('queue', $queue);
 }
