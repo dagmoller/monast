@@ -137,6 +137,9 @@ BODY {
 #queuesDiv {
 	padding: 5px;
 }
+.queueDualDiv {
+	float: left;
+}
 .queueDiv {
 	float: left;
 	margin-right: 10px;
