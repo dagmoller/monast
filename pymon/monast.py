@@ -912,7 +912,7 @@ class MonAst:
 		CallerIDName   = dic['CallerIDName']
 		Uniqueid       = dic['Uniqueid']
 		CIDCallingPres = dic['CID-CallingPres']
-					
+		
 		self.channelsLock.acquire()
 		try:
 			self.channels[Uniqueid]['CallerIDName'] = CallerIDName
@@ -1161,8 +1161,8 @@ class MonAst:
 			
 			toDelete = None
 			for id in self.calls:
-				if Uniqueid in id and self.calls[id]['Status'] == 'Dial':
-				#if id.find(Uniqueid) != -1:
+				#if Uniqueid in id and self.calls[id]['Status'] == 'Dial':
+				if Uniqueid in id:
 					toDelete = id
 					break
 			if toDelete:
