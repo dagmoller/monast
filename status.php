@@ -40,9 +40,9 @@ function parseMsg($msg)
 {
 	global $json;
 	
-	if (strpos($msg, 'Reload: ') !== false)
+	if (strpos($msg, 'Reload: ') === 0)
   	{
-  		$time = substr($msg, 8);
+  		$time = substr($msg, strlen('Reload: '));
   		$saida = array
   		(
   			'Action' => 'Reload',
@@ -51,9 +51,9 @@ function parseMsg($msg)
   		return $saida;
   	}
 	
-	if (strpos($msg, 'PeerStatus: ') !== false)
+	if (strpos($msg, 'PeerStatus: ') === 0)
 	{
-		list($Peer, $Status, $Calls) = explode(':::', substr($msg, 12));
+		list($Peer, $Status, $Calls) = explode(':::', substr($msg, strlen('PeerStatus: ')));
 		$saida = array
 		(
 			'Action' => 'PeerStatus',
@@ -64,9 +64,9 @@ function parseMsg($msg)
 		return $saida;
 	}
 	
-	if (strpos($msg, 'NewChannel: ') !== false)
+	if (strpos($msg, 'NewChannel: ') === 0)
 	{	
-		list($Channel, $State, $CallerIDNum, $CallerIDName, $Uniqueid, $Monitor) = explode(':::', substr($msg, 12));
+		list($Channel, $State, $CallerIDNum, $CallerIDName, $Uniqueid, $Monitor) = explode(':::', substr($msg, strlen('NewChannel: ')));
 		$saida = array
 		(
 			'Action'       => 'NewChannel',
@@ -80,9 +80,9 @@ function parseMsg($msg)
 		return $saida;
 	}
 	
-	if (strpos($msg, 'NewState: ') !== false)
+	if (strpos($msg, 'NewState: ') === 0)
 	{	
-		list($Channel, $State, $CallerID, $CallerIDName, $Uniqueid) = explode(':::', substr($msg, 10));
+		list($Channel, $State, $CallerID, $CallerIDName, $Uniqueid) = explode(':::', substr($msg, strlen('NewState: ')));
 		$saida = array
 		(
 			'Action'       => 'NewState',
@@ -95,9 +95,9 @@ function parseMsg($msg)
 		return $saida;
 	}
 	
-	if (strpos($msg, 'Hangup: ') !== false)
+	if (strpos($msg, 'Hangup: ') === 0)
 	{	
-		list($Channel, $Uniqueid, $Cause, $Cause_txt) = explode(':::', substr($msg, 8));
+		list($Channel, $Uniqueid, $Cause, $Cause_txt) = explode(':::', substr($msg, strlen('Hangup: ')));
 		$saida = array
 		(
 			'Action'    => 'Hangup',
@@ -109,9 +109,9 @@ function parseMsg($msg)
 		return $saida;
 	}
 	
-	if (strpos($msg, 'Dial: ') !== false)
+	if (strpos($msg, 'Dial: ') === 0)
 	{	
-		list($Source, $Destination, $CallerID, $CallerIDName, $SrcUniqueID, $DestUniqueID) = explode(':::', substr($msg, 6));
+		list($Source, $Destination, $CallerID, $CallerIDName, $SrcUniqueID, $DestUniqueID) = explode(':::', substr($msg, strlen('Dial: ')));
 		$saida = array
 		(
 			'Action'       => 'Dial',
@@ -125,9 +125,9 @@ function parseMsg($msg)
 		return $saida;
 	}
 	
-	if (strpos($msg, 'Link: ') !== false)
+	if (strpos($msg, 'Link: ') === 0)
 	{	
-		list($Channel1, $Channel2, $Uniqueid1, $Uniqueid2, $CallerID1, $CallerID2, $Seconds) = explode(':::', substr($msg, 6));
+		list($Channel1, $Channel2, $Uniqueid1, $Uniqueid2, $CallerID1, $CallerID2, $Seconds) = explode(':::', substr($msg, strlen('Link: ')));
 		$saida = array
 		(
 			'Action'    => 'Link',
@@ -142,9 +142,9 @@ function parseMsg($msg)
 		return $saida;
 	}
 	
-	if (strpos($msg, 'Unlink: ') !== false)
+	if (strpos($msg, 'Unlink: ') === 0)
 	{	
-		list($Channel1, $Channel2, $Uniqueid1, $Uniqueid2, $CallerID1, $CallerID2) = explode(':::', substr($msg, 8));
+		list($Channel1, $Channel2, $Uniqueid1, $Uniqueid2, $CallerID1, $CallerID2) = explode(':::', substr($msg, strlen('Unlink: ')));
 		$saida = array
 		(
 			'Action'    => 'Unlink',
@@ -158,9 +158,9 @@ function parseMsg($msg)
 		return $saida;
 	}
 	
-	if (strpos($msg, 'NewCallerid: ') !== false)
+	if (strpos($msg, 'NewCallerid: ') === 0)
 	{	
-		list($Channel, $CallerID, $CallerIDName, $Uniqueid, $CIDCallingPres) = explode(':::', substr($msg, 13));
+		list($Channel, $CallerID, $CallerIDName, $Uniqueid, $CIDCallingPres) = explode(':::', substr($msg, strlen('NewCallerid: ')));
 		$saida = array
 		(
 			'Action'         => 'NewCallerid',
@@ -173,9 +173,9 @@ function parseMsg($msg)
 		return $saida;
 	}
 	
-    if (strpos($msg, 'Rename: ') !== false)
+    if (strpos($msg, 'Rename: ') === 0)
 	{	
-		list($Oldname, $Newname, $Uniqueid, $CallerIDName, $CallerID) = explode(':::', substr($msg, 8));
+		list($Oldname, $Newname, $Uniqueid, $CallerIDName, $CallerID) = explode(':::', substr($msg, strlen('Rename: ')));
 		$saida = array
 		(
 			'Action'       => 'Rename',
@@ -188,9 +188,9 @@ function parseMsg($msg)
 		return $saida;
 	}
 	
-	if (strpos($msg, 'MeetmeCreate: ') !== false)
+	if (strpos($msg, 'MeetmeCreate: ') === 0)
 	{
-	    list($Meetme) = explode(':::', substr($msg, 14));
+	    list($Meetme) = explode(':::', substr($msg, strlen('MeetmeCreate: ')));
         $saida = array
         (
             'Action' => 'MeetmeCreate',
@@ -199,9 +199,9 @@ function parseMsg($msg)
     	return $saida;
 	}
 	
-	if (strpos($msg, 'MeetmeDestroy: ') !== false)
+	if (strpos($msg, 'MeetmeDestroy: ') === 0)
 	{
-	    list($Meetme) = explode(':::', substr($msg, 15));
+	    list($Meetme) = explode(':::', substr($msg, strlen('MeetmeDestroy: ')));
         $saida = array
         (
             'Action' => 'MeetmeDestroy',
@@ -210,9 +210,9 @@ function parseMsg($msg)
     	return $saida;
 	}
 	
-	if (strpos($msg, 'MeetmeJoin: ') !== false)
+	if (strpos($msg, 'MeetmeJoin: ') === 0)
 	{
-	    list($Meetme, $Uniqueid, $Usernum, $Channel, $CallerIDNum, $CallerIDName) = explode(':::', substr($msg, 12));
+	    list($Meetme, $Uniqueid, $Usernum, $Channel, $CallerIDNum, $CallerIDName) = explode(':::', substr($msg, strlen('MeetmeJoin: ')));
         $saida = array
         (
             'Action'       => 'MeetmeJoin',
@@ -226,9 +226,9 @@ function parseMsg($msg)
     	return $saida;
 	}
 	
-    if (strpos($msg, 'MeetmeLeave: ') !== false)
+    if (strpos($msg, 'MeetmeLeave: ') === 0)
 	{
-	    list($Meetme, $Uniqueid, $Usernum, $Duration) = explode(':::', substr($msg, 13));
+	    list($Meetme, $Uniqueid, $Usernum, $Duration) = explode(':::', substr($msg, strlen('MeetmeLeave: ')));
         $saida = array
         (
             'Action'       => 'MeetmeLeave',
@@ -240,9 +240,9 @@ function parseMsg($msg)
     	return $saida;
 	}
 	
-	if (strpos($msg, 'ParkedCall: ') !== false)
+	if (strpos($msg, 'ParkedCall: ') === 0)
 	{
-	    list($Exten, $Channel, $From, $Timeout, $CallerID, $CallerIDName) = explode(':::', substr($msg, 12));
+	    list($Exten, $Channel, $From, $Timeout, $CallerID, $CallerIDName) = explode(':::', substr($msg, strlen('ParkedCall: ')));
     	$saida = array
     	(
     		'Action'       => 'ParkedCall',
@@ -256,9 +256,9 @@ function parseMsg($msg)
     	return $saida;
 	}
 	
-    if (strpos($msg, 'UnparkedCall: ') !== false)
+    if (strpos($msg, 'UnparkedCall: ') === 0)
 	{
-	    list($Exten) = explode(':::', substr($msg, 14));
+	    list($Exten) = explode(':::', substr($msg, strlen('UnparkedCall: ')));
     	$saida = array
     	(
     		'Action'       => 'UnparkedCall',
@@ -267,9 +267,9 @@ function parseMsg($msg)
     	return $saida;
 	}
 	
-	if (strpos($msg, 'CliResponse: ') !== false)
+	if (strpos($msg, 'CliResponse: ') === 0)
 	{
-	    list($Response) = explode(':::', substr($msg, 13));
+	    list($Response) = explode(':::', substr($msg, strlen('CliResponse: ')));
     	$saida = array
     	(
     		'Action'   => 'CliResponse',
@@ -278,9 +278,9 @@ function parseMsg($msg)
     	return $saida;
 	}
 	
-	if (strpos($msg, 'AddQueueMember: ') !== false)
+	if (strpos($msg, 'AddQueueMember: ') === 0)
 	{
-	    list($Queue, $Member, $MemberName, $Penalty, $CallsTaken, $LastCall, $Status, $Paused) = explode(':::', substr($msg, 16));
+	    list($Queue, $Member, $MemberName, $Penalty, $CallsTaken, $LastCall, $Status, $Paused) = explode(':::', substr($msg, strlen('AddQueueMember: ')));
     	$saida = array
     	(
     		'Action'     => 'AddQueueMember',
@@ -296,9 +296,9 @@ function parseMsg($msg)
     	return $saida;
 	}
 	
-	if (strpos($msg, 'RemoveQueueMember: ') !== false)
+	if (strpos($msg, 'RemoveQueueMember: ') === 0)
 	{
-	    list($Queue, $Member, $MemberName) = explode(':::', substr($msg, 19));
+	    list($Queue, $Member, $MemberName) = explode(':::', substr($msg, strlen('RemoveQueueMember: ')));
     	$saida = array
     	(
     		'Action'     => 'RemoveQueueMember',
@@ -309,9 +309,9 @@ function parseMsg($msg)
     	return $saida;
 	}
 	
-	if (strpos($msg, 'QueueMemberStatus: ') !== false)
+	if (strpos($msg, 'QueueMemberStatus: ') === 0)
 	{
-	    list($Queue, $Member, $Penalty, $CallsTaken, $LastCall, $Status, $Paused) = explode(':::', substr($msg, 19));
+	    list($Queue, $Member, $Penalty, $CallsTaken, $LastCall, $Status, $Paused) = explode(':::', substr($msg, strlen('QueueMemberStatus: ')));
     	$saida = array
     	(
     		'Action'     => 'QueueMemberStatus',
@@ -326,9 +326,9 @@ function parseMsg($msg)
     	return $saida;
 	}
 	
-	if (strpos($msg, 'AddQueueClient: ') !== false)
+	if (strpos($msg, 'AddQueueClient: ') === 0)
 	{
-	    list($Queue, $Uniqueid, $Channel, $CallerID, $CallerIDName, $Position, $Count, $Wait) = explode(':::', substr($msg, 16));
+	    list($Queue, $Uniqueid, $Channel, $CallerID, $CallerIDName, $Position, $Count, $Wait) = explode(':::', substr($msg, strlen('AddQueueClient: ')));
     	$saida = array
     	(
     		'Action'       => 'AddQueueClient',
@@ -344,9 +344,9 @@ function parseMsg($msg)
     	return $saida;
 	}
 	
-	if (strpos($msg, 'RemoveQueueClient: ') !== false)
+	if (strpos($msg, 'RemoveQueueClient: ') === 0)
 	{
-	    list($Queue, $Uniqueid, $Channel, $Count, $Cause) = explode(':::', substr($msg, 19));
+	    list($Queue, $Uniqueid, $Channel, $Count, $Cause) = explode(':::', substr($msg, strlen('RemoveQueueClient: ')));
     	$saida = array
     	(
     		'Action'       => 'RemoveQueueClient',
@@ -359,9 +359,9 @@ function parseMsg($msg)
     	return $saida;
 	}
 	
-	if (strpos($msg, 'AddQueueMemberCall: ') !== false)
+	if (strpos($msg, 'AddQueueMemberCall: ') === 0)
 	{
-		list($Queue, $Member, $Uniqueid, $Channel, $CallerID, $Seconds) = explode(':::', substr($msg, 20));
+		list($Queue, $Member, $Uniqueid, $Channel, $CallerID, $Seconds) = explode(':::', substr($msg, strlen('AddQueueMemberCall: ')));
 		$saida = array
 		(
 			'Action'   => 'AddQueueMemberCall',
@@ -375,9 +375,9 @@ function parseMsg($msg)
 		return $saida;
 	}
 	
-	if (strpos($msg, 'RemoveQueueMemberCall: ') !== false)
+	if (strpos($msg, 'RemoveQueueMemberCall: ') === 0)
 	{
-		list($Queue, $Member, $Uniqueid) = explode(':::', substr($msg, 23));
+		list($Queue, $Member, $Uniqueid) = explode(':::', substr($msg, strlen('RemoveQueueMemberCall: ')));
 		$saida = array
 		(
 			'Action'   => 'RemoveQueueMemberCall',
@@ -388,9 +388,9 @@ function parseMsg($msg)
 		return $saida;
 	}
 	
-	if (strpos($msg, 'QueueParams: ') !== false)
+	if (strpos($msg, 'QueueParams: ') === 0)
 	{
-		list($Queue, $Max, $Calls, $Holdtime, $Completed, $Abandoned, $ServiceLevel, $ServicelevelPerf, $Weight) = explode(':::', substr($msg, 13));
+		list($Queue, $Max, $Calls, $Holdtime, $Completed, $Abandoned, $ServiceLevel, $ServicelevelPerf, $Weight) = explode(':::', substr($msg, strlen('QueueParams: ')));
 		$saida = array
 		(
 			'Action'           => 'QueueParams',
@@ -407,9 +407,9 @@ function parseMsg($msg)
 		return $saida;
 	}
 	
-	if (strpos($msg, 'MonitorStart: ') !== false)
+	if (strpos($msg, 'MonitorStart: ') === 0)
 	{
-		list($Channel, $Uniqueid) = explode(':::', substr($msg, 14));
+		list($Channel, $Uniqueid) = explode(':::', substr($msg, strlen('MonitorStart: ')));
 		$saida = array
 		(
 			'Action'   => 'MonitorStart',
@@ -419,9 +419,9 @@ function parseMsg($msg)
 		return $saida;
 	}
 	
-	if (strpos($msg, 'MonitorStop: ') !== false)
+	if (strpos($msg, 'MonitorStop: ') === 0)
 	{
-		list($Channel, $Uniqueid) = explode(':::', substr($msg, 13));
+		list($Channel, $Uniqueid) = explode(':::', substr($msg, strlen('MonitorStop: ')));
 		$saida = array
 		(
 			'Action'   => 'MonitorStop',
@@ -431,9 +431,9 @@ function parseMsg($msg)
 		return $saida;
 	}
 	
-	if (strpos($msg, 'UpdateCallDuration: ') !== false)
+	if (strpos($msg, 'UpdateCallDuration: ') === 0)
 	{
-		list($Uniqueid1, $Uniqueid2, $Seconds) = explode(':::', substr($msg, 20));
+		list($Uniqueid1, $Uniqueid2, $Seconds) = explode(':::', substr($msg, strlen('UpdateCallDuration: ')));
 		$saida = array
 		(
 			'Action'    => 'UpdateCallDuration',
