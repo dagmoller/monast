@@ -2116,7 +2116,7 @@ class MonAst:
 		command = []
 		command.append('Action: Command')
 		command.append('Command: %s' % cliCommand)
-		command.append('ActionID: %s' % session)
+		#command.append('ActionID: %s' % session)
 		log.debug('MonAst.clientCliCommand (%s) :: Executing CLI command: %s' % (threadId, cliCommand))
 		self.AMI.execute(command, self.handlerCliCommand, session)
 	
