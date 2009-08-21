@@ -1162,12 +1162,12 @@ class MonAst:
 			
 			toDelete = None
 			for id in self.calls:
-				#if Uniqueid in id and self.calls[id]['Status'] == 'Dial':
-				if Uniqueid in id:
+				if Uniqueid in id and self.calls[id]['Status'] == 'Dial':
+				#if Uniqueid in id:
 					toDelete = id
 					break
 			if toDelete:
-				log.warning('MonAst.handlerStatusComplete :: Removing call %s-%s for lost channel %s' % (toDelete[0], toDelete[1], Uniqueid))
+				#log.warning('MonAst.handlerStatusComplete :: Removing call %s-%s for lost channel %s' % (toDelete[0], toDelete[1], Uniqueid))
 				del self.calls[toDelete]
 				src, dst = toDelete
 				self.enqueue('Unlink: FAKE:::FAKE:::%s:::%s:::FAKE:::FAKE' % (src, dst))
