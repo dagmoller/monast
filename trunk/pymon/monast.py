@@ -764,7 +764,8 @@ class MonAst:
 		self.callsLock.acquire()
 		toDelete = None
 		for id in self.calls:
-			if Uniqueid in id and self.calls[id]['Status'] == 'Dial':
+			#if Uniqueid in id and self.calls[id]['Status'] == 'Dial':
+			if Uniqueid in id:
 				toDelete = id
 				break
 		if toDelete:
