@@ -670,8 +670,10 @@ function Process(o)
 					UserInfo = o['CallerID'];
 			
 				var template = "<table width='300' id='queueMemberCall-{Queue}:::{Member}:::{Uniqueid}'><tr>";
-				template    += "<td class='status' width='75' bgcolor='#ffffb0'>Answered</td>";
-				template    += "<td class='status' width='225'>{UserInfo}<br><span style='font-family: monospace;' id='chrono-{ID}'></span></td>";
+				//template    += "<td class='status' width='75' bgcolor='#ffffb0'>Answered</td>";
+				//template    += "<td class='status' width='225'>{UserInfo}<br><span style='font-family: monospace;' id='chrono-{ID}'></span></td>";
+				template    += "<td class='status' width='213'>{UserInfo}<br><span style='font-family: monospace;' id='chrono-{ID}'></span></td>";
+				template    += "<td class='status' width='87' bgcolor='#ffffb0'>Answered</td>";
 				template    += "</tr></table>";
 				
 				template     = template.replace(/\{Queue\}/g, o['Queue']);
