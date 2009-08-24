@@ -2221,6 +2221,7 @@ class MonAst:
 		self.queuesLock.acquire()
 		log.log(logging.NOTICE, 'self.queues = %s' % repr(self.queues))
 		log.log(logging.NOTICE, 'self.queueMemberStatus = %s' % repr(self.queueMemberStatus))
+		log.log(logging.NOTICE, 'self.queueMemberCalls = %s' % repr(self.queueMemberCalls))
 		log.log(logging.NOTICE, 'self.queueClientStatus = %s' % repr(self.queueClientStatus))
 		self.queuesLock.release()
 		
