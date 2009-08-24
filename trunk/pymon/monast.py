@@ -1152,7 +1152,7 @@ class MonAst:
 		self.callsLock.acquire()
 		lostChannels = [i for i in self.channels.keys() if i not in self.channelStatus]
 		for Uniqueid in lostChannels:
-			log.log(logging.NOTICE, 'MonAst.handlerStatusComplete :: Removing lost channel %s' % Uniqueid)
+			log.warning('MonAst.handlerStatusComplete :: Removing lost channel %s' % Uniqueid)
 			try:
 				Channel = self.channels[Uniqueid]['Channel']
 				del self.channels[Uniqueid]
@@ -1184,7 +1184,7 @@ class MonAst:
 		self.queuesLock.acquire()
 		for Uniqueid in self.queueMemberCalls:
 			if not self.channels.has_key(Uniqueid):
-				log.log(logging.NOTICE, 'MonAst.handlerStatusComplete :: Removing lost Queue Member Call %s' % Uniqueid)
+				log.warning('MonAst.handlerStatusComplete :: Removing lost Queue Member Call %s' % Uniqueid)
 				Queue  = self.queueMemberCalls[Uniqueid]['Queue']
 				Member = self.queueMemberCalls[Uniqueid]['Member']
 				del self.queueMemberCalls[Uniqueid]
