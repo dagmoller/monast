@@ -27,7 +27,6 @@
 * OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-var json      = new JSON();
 var ddDivs    = new Array();
 var callerIDs = new Array();
 
@@ -116,10 +115,10 @@ function getStatus()
 		
 		onSuccess: function(transport)
 		{
-			var events = json.decode(transport.responseText);
+			var events = transport.responseJSON;
 			for (i = 0; i < events.length; i++)
 			{
-				Process(json.encode(events[i]));
+				Process(events[i]);
 			}
 		},
 		onFailure: function()
@@ -133,9 +132,7 @@ function getStatus()
 function Process(o)
 {
 	if ($('debugMsg'))
-		$('debugMsg').innerHTML += o + "<br>\r\n";
-		
-	o = json.decode(o);
+		$('debugMsg').innerHTML += Object.toJSON(o) + "<br>\r\n";
 	
 	if (o['Action'] == 'Error')
 	{
@@ -146,7 +143,7 @@ function Process(o)
 	if (o['Action'] == 'Reload')
 	{
 		_statusReload = true;
-		setTimeout("location.href = 'index.php'", o['time']);
+		setTimeout("location.href = 'index.php'", o['Time']);
 		return;
 	}
 	
@@ -288,7 +285,7 @@ function Process(o)
 		{
 			o['Action'] = 'Call';
 			o['Status'] = 'Dial';
-			Process(json.encode(o));
+			Process(o);
 		}
 		return;
 	}
@@ -317,7 +314,7 @@ function Process(o)
 			o['Destination']  = o['Channel2'];
 			o['SrcUniqueID']  = o['Uniqueid1'];
 			o['DestUniqueID'] = o['Uniqueid2'];
-			Process(json.encode(o));
+			Process(o);
 		}
 		
 		return;
@@ -377,7 +374,9 @@ function Process(o)
 			
 			ddDivs[id] = new YAHOO.util.DDTarget(id);
 			_countMeetme[o['Meetme']] = 0;
-		} 
+		}
+		
+		return;
 	}
 	
 	if (o['Action'] == 'MeetmeDestroy')
@@ -388,6 +387,8 @@ function Process(o)
 		{
 			$('meetmeDivWrapper').removeChild(div);
 		}
+		
+		return;
 	}
 	
 	if (o['Action'] == 'MeetmeJoin')
@@ -401,7 +402,8 @@ function Process(o)
 			div.className = 'meetmeDiv';
 			
 			var UserInfo = o['CallerIDName'] + ' <' + o['CallerIDNum'] + '>';		
-			if (o['CallerIDName'] == 'None' && o['CallerIDNum'] == 'None')
+			//if (o['CallerIDName'] == 'None' && o['CallerIDNum'] == 'None')
+			if (o['CallerIDName'] == null && o['CallerIDNum'] == null)
 				UserInfo = o['Channel'];
 			 
 			var template = "<table width='250'><tr>";
@@ -688,6 +690,7 @@ function Process(o)
 					chrono(id, o['Seconds']);
 			}
 		}
+		
 		return;
 	}
 	
@@ -741,7 +744,7 @@ function showHidePannels(e)
 {
 	$(this.get('value')).style.display = (e.newValue ? 'block' : 'none');
 	_state.buttons[this.get('id')] = e.newValue;
-	YAHOO.util.Cookie.set('_state', json.encode(_state));
+	YAHOO.util.Cookie.set('_state', Object.toJSON(_state));
 }
 
 // Originate a Call
@@ -766,7 +769,7 @@ function originateCall(peer, number, type)
 		method: 'get',
 		parameters: {
 			reqTime: new Date().getTime(),
-			action: 'OriginateCall:::' + peer + ':::' + number + ':::' + type
+			action: Object.toJSON({Action: 'OriginateCall', Source: peer, Destination: number, Type: type})
 		},
 		onSuccess: function(transport)
 		{
@@ -786,7 +789,7 @@ function originateDial(src, dst, type)
 		method: 'get',
 		parameters: {
 			reqTime: new Date().getTime(),
-			action: 'OriginateDial:::' + src + ':::' + dst + ':::' + type
+			action: Object.toJSON({Action: 'OriginateDial', Source: src, Destination: dst, Type: type})
 		}
 	});
 }
@@ -809,7 +812,7 @@ function hangupCall(chanId)
 			method: 'get',
 			parameters: {
 				reqTime: new Date().getTime(),
-				action: 'HangupChannel:::' + chanId
+				action: Object.toJSON({Action: 'HangupChannel', Uniqueid: chanId})
 			}
 		});
 	}
@@ -835,7 +838,7 @@ function recordCall(chanId)
 			method: 'get',
 			parameters: {
 				reqTime: new Date().getTime(),
-				action: 'MonitorChannel:::' + chanId + ':::' + mix
+				action: Object.toJSON({Action: 'MonitorChannel', Uniqueid: chanId, Mix: mix})
 			}
 		});
 	}
@@ -851,7 +854,7 @@ function recordStop(chanId)
 			method: 'get',
 			parameters: {
 				reqTime: new Date().getTime(),
-				action: 'MonitorStop:::' + chanId
+				action: Object.toJSON({Action: 'MonitorStop', Uniqueid: chanId})
 			}
 		});
 	}
@@ -885,7 +888,7 @@ function transferCall(src, dst, type)
 		method: 'get',
 		parameters: {
 			reqTime: new Date().getTime(),
-			action: 'TransferCall:::' + src + ':::' + dst + ':::' + type
+			action: Object.toJSON({Action: 'TransferCall', Source: src, Destination: dst, Type: type})
 		}
 	});
 }
@@ -898,7 +901,7 @@ function parkCall(park, announce)
 		method: 'get',
 		parameters: {
 			reqTime: new Date().getTime(),
-			action: 'ParkCall:::' + park + ':::' + announce
+			action: Object.toJSON({Action: 'ParkCall', Park: park, Announce: announce})
 		}
 	});
 }
@@ -914,7 +917,7 @@ function meetmeKick(meetme, usernum)
 			method: 'get',
 			parameters: {
 				reqTime: new Date().getTime(),
-				action: 'MeetmeKick:::' + meetme + ':::' + usernum
+				action: Object.toJSON({Action: 'MeetmeKick', Meetme: meetme, Usernum: usernum})
 			}
 		});
 	}
@@ -931,7 +934,7 @@ function parkedHangup(exten)
 			method: 'get',
 			parameters: {
 				reqTime: new Date().getTime(),
-				action: 'ParkedHangup:::' + exten
+				action: Object.toJSON({Action: 'ParkedHangup', Exten: exten})
 			}
 		});
 	}
@@ -948,7 +951,7 @@ function queueMemberAdd(queue, member)
 			method: 'get',
 			parameters: {
 				reqTime: new Date().getTime(),
-				action: 'AddQueueMember:::' + queue + ':::' + member
+				action: Object.toJSON({Action: 'AddQueueMember', Queue: queue, Member: member})
 			}
 		});
 	}
@@ -964,7 +967,7 @@ function queueMemberRemove(queue, member)
 			method: 'get',
 			parameters: {
 				reqTime: new Date().getTime(),
-				action: 'RemoveQueueMember:::' + queue + ':::' + member
+				action: Object.toJSON({Action: 'RemoveQueueMember', Queue: queue, Member: member})
 			}
 		});
 	}
@@ -988,7 +991,7 @@ function queueMemberPause(p_sType, p_aArgs, id)
 			method: 'get',
 			parameters: {
 				reqTime: new Date().getTime(),
-				action: 'PauseQueueMember:::' + queue + ':::' + member
+				action: Object.toJSON({Action: 'PauseQueueMember', Queue: queue, Member: member})
 			}
 		});
 	}
@@ -1007,7 +1010,7 @@ function queueMemberUnpause(p_sType, p_aArgs, id)
 			method: 'get',
 			parameters: {
 				reqTime: new Date().getTime(),
-				action: 'UnpauseQueueMember:::' + queue + ':::' + member
+				action: Object.toJSON({Action: 'UnpauseQueueMember', Queue: queue, Member: member})
 			}
 		});
 	}
@@ -1025,7 +1028,7 @@ function skypeUserLogin(p_sType, p_aArgs, id)
 			method: 'get',
 			parameters: {
 				reqTime: new Date().getTime(),
-				action: 'SkypeLogin:::' + skypeName
+				action: Object.toJSON({Action: 'SkypeLogin', SkypeName: skypeName})
 			}
 		});
 	}
@@ -1042,7 +1045,7 @@ function skypeUserLogout(p_sType, p_aArgs, id)
 			method: 'get',
 			parameters: {
 				reqTime: new Date().getTime(),
-				action: 'SkypeLogout:::' + skypeName
+				action: Object.toJSON({Action: 'SkypeLogout', SkypeName: skypeName})
 			}
 		});
 	}
@@ -1396,7 +1399,7 @@ function sendCliCommand()
 			method: 'get',
 			parameters: {
 				reqTime: new Date().getTime(),
-				action: 'CliCommand:::' + command
+				action: Object.toJSON({Action: 'CliCommand', CliCommand: command})
 			}
 		});
 	}

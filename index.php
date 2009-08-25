@@ -40,19 +40,23 @@ setValor('Actions', array());
 $sessionId = session_id();
 session_write_close();
 
+$validActions = array
+(
+	'PeerStatus'         => array(), 
+	'NewChannel'         => array(), 
+	'Call'               => array(), 
+	'MeetmeCreate'       => array(), 
+	'MeetmeJoin'         => array(), 
+	'ParkedCall'         => array(), 
+	'Queue'              => array(), 
+	'AddQueueMember'     => array(), 
+	'AddQueueClient'     => array(), 
+	'AddQueueMemberCall' => array(), 
+	'QueueParams'        => array()
+);
+
 $json             = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
 $template         = new TemplatePower('template/index.html');
-$peerStatus       = array();
-$channels         = array();
-$calls            = array();
-$meetmeRooms      = array();
-$meetmeJoins      = array();
-$parkedCalls      = array();
-$queues           = array();
-$queueParams      = array();
-$queueMembers     = array();
-$queueClients     = array();
-$queueMemberCalls = array();
 $isStatus         = false;
 
 $errno  = null;
@@ -93,38 +97,10 @@ while (!feof($fp))
 			}
 			elseif ($isStatus)
 			{
-				if (strpos($message, 'PeerStatus: ') === 0)
-					$peerStatus[] = substr($message, strlen('PeerStatus: '));
-
-				if (strpos($message, 'NewChannel: ') === 0)
-					$channels[] = substr($message, strlen('NewChannel: '));	
-
-				if (strpos($message, 'Call: ') === 0)
-					$calls[] = substr($message, strlen('Call: '));	
-					
-				if (strpos($message, 'MeetmeCreate: ') === 0)
-				    $meetmeRooms[] = substr($message, strlen('MeetmeCreate: '));
-				    
-				if (strpos($message, 'MeetmeJoin: ') === 0)
-				    $meetmeJoins[] = substr($message, strlen('MeetmeJoin: '));
-				    
-				if (strpos($message, 'ParkedCall: ') === 0)
-				    $parkedCalls[] = substr($message, strlen('ParkedCall: '));
-				    
-				if (strpos($message, 'Queue: ') === 0)
-				    $queues[] = substr($message, strlen('Queue: '));
-				    
-				if (strpos($message, 'AddQueueMember: ') === 0)
-				    $queueMembers[] = substr($message, strlen('AddQueueMember: '));
-				    
-				if (strpos($message, 'AddQueueClient: ') === 0)
-				    $queueClients[] = substr($message, strlen('AddQueueClient: '));
-				    
-				if (strpos($message, 'AddQueueMemberCall: ') === 0)
-					$queueMemberCalls[] = substr($message, strlen('AddQueueMemberCall: '));
+				$object = $json->decode($message);
 				
-				if (strpos($message, 'QueueParams: ') === 0)
-				    $queueParams[] = substr($message, strlen('QueueParams: '));
+				if (array_key_exists($object['Action'], $validActions))
+					$validActions[$object['Action']][] = $object;
 			}
 		}
 	}
@@ -150,10 +126,9 @@ if (MONAST_DEBUG_TAB || getValor('debug'))
 
 // Counter
 $peerCounter = array();
-foreach ($peerStatus as $idx => $peer)
+foreach ($validActions['PeerStatus'] as $idx => $peer)
 {
-	list($peer, $status, $peerCalls, $CallerID) = explode(':::', $peer);
-	list($tech, $tmp) = explode('/', $peer);
+	list($tech, $tmp) = explode('/', $peer['Peer']);
 	
 	if (array_key_exists($tech, $peerCounter))
 		$peerCounter[$tech] += 1;
@@ -161,11 +136,11 @@ foreach ($peerStatus as $idx => $peer)
 		$peerCounter[$tech] = 1;
 }
 
+// Peers
 $lastTech = null;
-foreach ($peerStatus as $idx => $peer)
+foreach ($validActions['PeerStatus'] as $idx => $peer)
 {
-    list($peer, $status, $peerCalls, $CallerID) = explode(':::', $peer);
-	list($tech, $tmp) = explode('/', $peer);
+	list($tech, $tmp) = explode('/', $peer['Peer']);
 	
 	if ($tech != $lastTech)
 	{
@@ -176,186 +151,34 @@ foreach ($peerStatus as $idx => $peer)
 	}
     
     $template->newBlock('peer');
-    $template->assign('peer', $peer);
-    $template->assign('CallerID', $CallerID);
-    $template->assign('status', $status);
-    $template->assign('status-color', color($status));
-    $template->assign('calls', "$peerCalls call(s)");
-    $template->assign('calls-color', ($peerCalls > 0 ? '#ffffb0' : '#b0ffb0'));
+    $template->assign('peer', $peer['Peer']);
+    $template->assign('CallerID', $peer['CallerID']);
+    $template->assign('status', $peer['Status']);
+    $template->assign('status-color', color($peer['Status']));
+    $template->assign('calls', $peer['Calls'] . " call(s)");
+    $template->assign('calls-color', ($peer['Calls'] > 0 ? '#ffffb0' : '#b0ffb0'));
 }
+unset($validActions['PeerStatus']);
 
-foreach ($meetmeRooms as $idx => $meetmeRoom)
-{
-	$tmp = array
-	(
-		'Action' => 'MeetmeCreate',
-		'Meetme' => $meetmeRoom
-	);
-	
-	$template->newBlock('process');
-	$template->assign('json', $json->encode($tmp));
-}
-
-foreach ($meetmeJoins as $idx => $meetmeJoin)
-{
-    list($Meetme, $Uniqueid, $Usernum, $Channel, $CallerIDNum, $CallerIDName) = explode(':::', $meetmeJoin);
-    $tmp = array
-    (
-        'Action'       => 'MeetmeJoin',
-        'Meetme'       => $Meetme, 
-        'Uniqueid'     => $Uniqueid, 
-        'Usernum'      => $Usernum,
-        'Channel'      => $Channel,
-        'CallerIDNum'  => $CallerIDNum, 
-        'CallerIDName' => $CallerIDName
-    );
-    
-    $template->newBlock('process');
-	$template->assign('json', $json->encode($tmp));
-}
-
-foreach ($channels as $channel)
-{
-	list($Channel, $State, $CallerIDNum, $CallerIDName, $Uniqueid, $Monitor) = explode(':::', $channel);
-	$tmp = array
-	(
-		'Action'       => 'NewChannel',
-		'Channel'      => $Channel, 
-		'State'        => $State, 
-		'CallerIDNum'  => $CallerIDNum, 
-		'CallerIDName' => $CallerIDName, 
-		'Uniqueid'     => $Uniqueid,
-		'Monitor'      => $Monitor
-	); 
-	
-	$template->newBlock('process');
-	$template->assign('json', $json->encode($tmp));
-}
-
-foreach ($calls as $call)
-{
-	list($Source, $Destination, $CallerID1, $CallerID2, $SrcUniqueID, $DestUniqueID, $Status, $Seconds) = explode(':::', $call);
-	$tmp = array
-	(
-		'Action'       => 'Call',
-		'Source'       => $Source, 
-		'Destination'  => $Destination, 
-		'CallerID1'    => $CallerID1, 
-	    'CallerID2'    => $CallerID2,
-		'SrcUniqueID'  => $SrcUniqueID, 
-		'DestUniqueID' => $DestUniqueID, 
-		'Status'       => $Status,
-	    'Seconds'      => $Seconds
-	);
-	
-	$template->newBlock('process');
-	$template->assign('json', $json->encode($tmp));
-}
-
-foreach ($parkedCalls as $park)
-{
-	list($Exten, $Channel, $From, $Timeout, $CallerID, $CallerIDName) = explode(':::', $park);
-	$tmp = array
-	(
-		'Action'       => 'ParkedCall',
-		'Exten'        => $Exten, 
-		'Channel'      => $Channel, 
-		'From'         => $From, 
-		'Timeout'      => $Timeout, 
-	    'CallerID'     => $CallerID,
-		'CallerIDName' => $CallerIDName, 
-	);
-	
-	$template->newBlock('process');
-	$template->assign('json', $json->encode($tmp));
-}
-
-foreach ($queues as $idx => $queue)
+// Queues
+foreach ($validActions['Queue'] as $idx => $queue)
 {
 	if ($idx % 2 == 0)
 		$template->newBlock('queueDualDiv');
 	
 	$template->newBlock('queue');
-	$template->assign('queue', $queue);
+	$template->assign('queue', $queue['Queue']);
 }
+unset($validActions['Queue']);
 
-foreach ($queueMembers as $member)
+// All Other Actions
+foreach ($validActions as $item => $actions)
 {
-	list($Queue, $Member, $MemberName, $Penalty, $CallsTaken, $LastCall, $Status, $Paused) = explode(':::', $member);
-	$tmp = array
-	(
-		'Action'     => 'AddQueueMember',
-		'Queue'      => $Queue,
-		'Member'     => $Member,
-		'MemberName' => $MemberName,
-		'Penalty'    => $Penalty, 
-		'CallsTaken' => $CallsTaken, 
-		'LastCall'   => $LastCall, 
-		'Status'     => $Status, 
-		'Paused'     => $Paused
-	);
-	
-	$template->newBlock('process');
-	$template->assign('json', $json->encode($tmp));
-}
-
-foreach ($queueClients as $client)
-{
-	list($Queue, $Uniqueid, $Channel, $CallerID, $CallerIDName, $Position, $Count, $Wait) = explode(':::', $client);
-	$tmp = array
-	(
-		'Action'       => 'AddQueueClient',
-		'Queue'        => $Queue,
-		'Uniqueid'     => $Uniqueid, 
-		'Channel'      => $Channel, 
-		'CallerID'     => $CallerID, 
-		'CallerIDName' => $CallerIDName, 
-		'Position'     => $Position, 
-		'Count'        => $Count,
-		'Wait'         => $Wait
-	);
-	
-	$template->newBlock('process');
-	$template->assign('json', $json->encode($tmp));
-}
-
-foreach ($queueMemberCalls as $call)
-{
-	list($Queue, $Member, $Uniqueid, $Channel, $CallerID, $Seconds) = explode(':::', $call);
-	$tmp = array
-	(
-		'Action'   => 'AddQueueMemberCall',
-		'Queue'    => $Queue,
-		'Member'   => $Member,
-		'Uniqueid' => $Uniqueid, 
-		'Channel'  => $Channel, 
-		'CallerID' => $CallerID,
-		'Seconds'  => $Seconds
-	);
-	
-	$template->newBlock('process');
-	$template->assign('json', $json->encode($tmp));
-}
-
-foreach ($queueParams as $params)
-{
-	list($Queue, $Max, $Calls, $Holdtime, $Completed, $Abandoned, $ServiceLevel, $ServicelevelPerf, $Weight) = explode(':::', $params);
-	$tmp = array
-	(
-		'Action'           => 'QueueParams',
-		'Queue'            => $Queue,
-		'Max'              => $Max, 
-		'Calls'            => $Calls, 
-		'Holdtime'         => $Holdtime, 
-		'Completed'        => $Completed, 
-		'Abandoned'        => $Abandoned, 
-		'ServiceLevel'     => $ServiceLevel,
-		'ServicelevelPerf' => $ServicelevelPerf,
-		'Weight'           => $Weight
-	);
-	
-	$template->newBlock('process');
-	$template->assign('json', $json->encode($tmp));
+	foreach ($actions as $action)
+	{
+		$template->newBlock('process');
+		$template->assign('json', $json->encode($action));
+	}
 }
 
 $template->printToScreen();
