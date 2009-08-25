@@ -399,11 +399,15 @@ else
 	}
 }
 
-var _state = YAHOO.util.Cookie.get("_state").evalJSON();
+var _state = YAHOO.util.Cookie.get("_state");
 if (!_state)
 {
 	_state = {activeIndex: 1, buttons: {'checkBoxTab1': false, 'checkBoxTab2': false, 'checkBoxTab3': false, 'checkBoxTab4': false, 'checkBoxTab5': false}}
 	YAHOO.util.Cookie.set('_state', Object.toJSON(_state));
+}
+else
+{
+	_state = _state.evalJSON();
 }
 
 var _buttons = new Array(ocheckBoxTab1, ocheckBoxTab2, ocheckBoxTab3, ocheckBoxTab4, ocheckBoxTab5);
