@@ -2277,7 +2277,7 @@ class MonAst:
 		if sendReload:
 			self.clientQueuelock.acquire()
 			for session in self.clientQueues:
-				self.clientQueues[session]['q'].put('Reload: 10')
+				self.clientQueues[session]['q'].put(self.parseJson(Action = 'Reload', Time = 10))
 			self.clientQueuelock.release()
 		
 	
