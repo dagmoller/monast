@@ -54,10 +54,8 @@
 <script type="text/javascript" src="lib/yui_2.5.2/menu/menu-min.js"></script>
 <script type="text/javascript" src="lib/yui_2.5.2/cookie/cookie-beta-min.js"></script> 
 
-<script type="text/javascript" src="js/prototype-1.5.1.2.js"></script>
-<script type="text/javascript" src="js/json.js"></script>
+<script type="text/javascript" src="js/prototype-1.6.0.3.js"></script>
 <script type="text/javascript" src="js/monast.js"></script>
-<script type="text/javascript" src="js/shortcut.js"></script>
 
 <link rel="stylesheet" type="text/css" href="css/styles.css"> 
 
@@ -401,11 +399,11 @@ else
 	}
 }
 
-var _state = json.decode(YAHOO.util.Cookie.get("_state"));
+var _state = YAHOO.util.Cookie.get("_state").evalJSON();
 if (!_state)
 {
 	_state = {activeIndex: 1, buttons: {'checkBoxTab1': false, 'checkBoxTab2': false, 'checkBoxTab3': false, 'checkBoxTab4': false, 'checkBoxTab5': false}}
-	YAHOO.util.Cookie.set('_state', json.encode(_state));
+	YAHOO.util.Cookie.set('_state', Object.toJSON(_state));
 }
 
 var _buttons = new Array(ocheckBoxTab1, ocheckBoxTab2, ocheckBoxTab3, ocheckBoxTab4, ocheckBoxTab5);
@@ -422,7 +420,7 @@ _tabPannel.addListener('beforeActiveTabChange', function(e){
 		if (tabs[i].get('label') == e.newValue.get('label'))
 		{
 			_state.activeIndex = i;
-			YAHOO.util.Cookie.set('_state', json.encode(_state));
+			YAHOO.util.Cookie.set('_state', Object.toJSON(_state));
 			break;
 		}
 	}
@@ -447,7 +445,7 @@ var _dPark   = new YAHOO.util.DDTarget("park");
 var _dRecord = new YAHOO.util.DDTarget("record");
 
 <!-- START BLOCK : process -->
-Process('{json}');
+Process('{json}'.evalJSON());
 <!-- END BLOCK : process -->
 
 getStatus();
