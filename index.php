@@ -152,7 +152,7 @@ foreach ($validActions['PeerStatus'] as $idx => $peer)
     
     $template->newBlock('peer');
     $template->assign('peer', $peer['Peer']);
-    $template->assign('CallerID', $peer['CallerID']);
+    $template->assign('CallerID', str_replace('<', '&lt;', str_replace('>', '&gt;', $peer['CallerID'])));
     $template->assign('status', $peer['Status']);
     $template->assign('status-color', color($peer['Status']));
     $template->assign('calls', $peer['Calls'] . " call(s)");

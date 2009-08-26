@@ -154,6 +154,22 @@ function Process(o)
 		return; 
 	}
 	
+	// Fix all CallerIDs
+	if (o['CallerID'])
+		o['CallerID'] = o['CallerID'].replace('<unknown>', 'unknown').replace('<', '&lt;').replace('>', '&gt;');
+	
+	if (o['CallerID1'])
+		o['CallerID1'] = o['CallerID1'].replace('<unknown>', 'unknown').replace('<', '&lt;').replace('>', '&gt;');
+	
+	if (o['CallerID2'])
+		o['CallerID2'] = o['CallerID2'].replace('<unknown>', 'unknown').replace('<', '&lt;').replace('>', '&gt;');
+		
+	if (o['CallerIDName'])
+		o['CallerIDName'] = o['CallerIDName'].replace('<unknown>', 'unknown').replace('<', '&lt;').replace('>', '&gt;');
+		
+	if (o['CallerIDNum'])
+		o['CallerIDNum'] = o['CallerIDNum'].replace('<unknown>', 'unknown').replace('<', '&lt;').replace('>', '&gt;');
+	
 	if (o['Action'] == 'PeerStatus')
 	{
 		var td = $('peerStatus-' + o['Peer']);
@@ -223,7 +239,7 @@ function Process(o)
 		template    += "</tr></table>";
 		
 		if (o['CallerID'])
-			o['CallerID1'] = o['CallerIDName'] + ' <' + o['CallerID'] + '>';
+			o['CallerID1'] = o['CallerIDName'] + ' &lt;' + o['CallerID'] + '&gt;';
 		
 		template = template.replace(/\{SrcUniqueID\}/g, o['SrcUniqueID']);
 		template = template.replace(/\{DestUniqueID\}/g, o['DestUniqueID']);
@@ -339,7 +355,7 @@ function Process(o)
 	{
 		td = $('callChannel-' + o['Uniqueid']);
 		if (td)
-			td.innerHTML = o['Channel'] + '<br>' + o['CallerIDName'] + ' <' + o['CallerID'] + '>';
+			td.innerHTML = o['Channel'] + '<br>' + o['CallerIDName'] + ' &lt;' + o['CallerID'] + '&gt;';
 		
 		return;
 	}
@@ -352,7 +368,7 @@ function Process(o)
 			
 		td = $('callChannel-' + o['Uniqueid']);
 		if (td)
-			td.innerHTML = o['Newname'] + '<br>' + o['CallerIDName'] + ' <' + o['CallerID'] + '>';
+			td.innerHTML = o['Newname'] + '<br>' + o['CallerIDName'] + ' &lt;' + o['CallerID'] + '&gt';
 			
 		return;
 	}
@@ -405,7 +421,7 @@ function Process(o)
 			div.id        = id;
 			div.className = 'meetmeDiv';
 			
-			var UserInfo = o['CallerIDName'] + ' <' + o['CallerIDNum'] + '>';		
+			var UserInfo = o['CallerIDName'] + ' &lt;' + o['CallerIDNum'] + '&gt;';		
 			//if (o['CallerIDName'] == 'None' && o['CallerIDNum'] == 'None')
 			if (o['CallerIDName'] == null && o['CallerIDNum'] == null)
 				UserInfo = o['Channel'];
@@ -464,7 +480,7 @@ function Process(o)
 			var template = "<table width='600'><tr>";
 			template    += "<td class='status' align='center' width='80'>{Exten}</td>";
 			template    += "<td class='status' align='center' width='260'>{From}<br>{CallerIDFrom}</td>";
-			template    += "<td class='status' align='center' width='260'>{Channel}<br>{CallerIDName} <{CallerID}></td>";
+			template    += "<td class='status' align='center' width='260'>{Channel}<br>{CallerIDName} &lt;{CallerID}&gt;</td>";
 			template    += "</tr></table>";
 			template     = template.replace(/\{Exten\}/g, o['Exten']);
 			template     = template.replace(/\{From\}/g, o['From']);
@@ -526,7 +542,7 @@ function Process(o)
 			
 			template     = template.replace(/\{Queue\}/g, o['Queue']);
 			template     = template.replace(/\{Member\}/g, o['Member']);
-			template     = template.replace(/\{MemberName\}/g, o['MemberName']);
+			template     = template.replace(/\{MemberName\}/g, o['MemberName'].replace('<', '&lt;').replace('>', '&gt;'));
 			template     = template.replace(/\{CallsTaken\}/g, o['CallsTaken']);
 			template     = template.replace(/\{Status\}/g, o['Status']);
 			template     = template.replace(/\{color\}/g, color(o['Status']));
@@ -596,7 +612,7 @@ function Process(o)
 			
 			UserInfo = o['Channel'];
 			if (o['CallerID'])
-				UserInfo = o['CallerIDName'] + ' <' + o['CallerID'] + '>'; 
+				UserInfo = o['CallerIDName'] + ' &lt;' + o['CallerID'] + '&gt;'; 
 			
 			var template = "<table width='220'><tr>";
 			template    += "<td class='status' align='center'>{UserInfo}<br><span style='font-family: monospace;' id='chrono-{ID}'></span></td>";
