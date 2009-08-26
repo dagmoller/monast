@@ -842,28 +842,48 @@ class MonAst:
 		dic = self.list2Dict(lines)
 		
 		SubEvent = dic.get('SubEvent', None)
-		if SubEvent != 'Begin':
-			return			
+		if SubEvent == 'Begin':
+			Source       = dic.get('Channel', dic.get('Source'))
+			Destination  = dic['Destination']
+			CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
+			CallerIDName = dic['CallerIDName']
+			SrcUniqueID  = dic.get('UniqueID', dic.get('SrcUniqueID'))
+			DestUniqueID = dic['DestUniqueID']
+						
+			self.callsLock.acquire()
+			self.channelsLock.acquire()
+			c = self.channels[SrcUniqueID]
+			self.calls[(SrcUniqueID, DestUniqueID)] = {
+				'Source': Source, 'Destination': Destination, 'SrcUniqueID': SrcUniqueID, 'DestUniqueID': DestUniqueID, 
+				'Status': 'Dial', 'startTime': 0
+			}
+			self.channelsLock.release()
+			self.callsLock.release()
+			
+			#self.enqueue('Dial: %s:::%s:::%s:::%s:::%s:::%s' % (Source, Destination, CallerID, CallerIDName, SrcUniqueID, DestUniqueID))
+			self.enqueueJson(Action = 'Dial', Source = Source, Destination = Destination, CallerID = CallerID, CallerIDName = CallerIDName, SrcUniqueID = SrcUniqueID, DestUniqueID = DestUniqueID)
 		
-		Source       = dic.get('Channel', dic.get('Source'))
-		Destination  = dic['Destination']
-		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
-		CallerIDName = dic['CallerIDName']
-		SrcUniqueID  = dic.get('UniqueID', dic.get('SrcUniqueID'))
-		DestUniqueID = dic['DestUniqueID']
-					
-		self.callsLock.acquire()
-		self.channelsLock.acquire()
-		c = self.channels[SrcUniqueID]
-		self.calls[(SrcUniqueID, DestUniqueID)] = {
-			'Source': Source, 'Destination': Destination, 'SrcUniqueID': SrcUniqueID, 'DestUniqueID': DestUniqueID, 
-			'Status': 'Dial', 'startTime': 0
-		}
-		self.channelsLock.release()
-		self.callsLock.release()
-		
-		#self.enqueue('Dial: %s:::%s:::%s:::%s:::%s:::%s' % (Source, Destination, CallerID, CallerIDName, SrcUniqueID, DestUniqueID))
-		self.enqueueJson(Action = 'Dial', Source = Source, Destination = Destination, CallerID = CallerID, CallerIDName = CallerIDName, SrcUniqueID = SrcUniqueID, DestUniqueID = DestUniqueID)
+		elif SubEvent == 'End':
+			Channel  = dic['Channel']
+			Uniqueid = dic['Uniqueid']
+			
+			self.callsLock.acquire()
+			calls = self.calls.keys()
+			for call in calls:
+				if Uniqueid in call:
+					del self.calls[call]
+					self.enqueueJson(Action = 'Unlink', Channel1 = None, Channel2 = None, Uniqueid1 = call[0], Uniqueid2 = call[1], CallerID1 = None, CallerID2 = None)
+			self.callsLock.release()
+			
+			self.queuesLock.acquire()
+			if self.queueMemberCalls.has_key(Uniqueid1):
+				self.queueMemberCalls[Uniqueid1]['Link'] = False
+				qmc = self.queueMemberCalls[Uniqueid1]
+				self.enqueueJson(Action = 'RemoveQueueMemberCall', Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = Uniqueid1)
+			self.queuesLock.release()
+			
+		else:
+			log.info('MonAst.handlerDial :: Unhandled Dial subevent %s' % SubEvent)
 		
 		
 	def handlerLink(self, lines):
