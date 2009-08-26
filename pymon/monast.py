@@ -1225,6 +1225,16 @@ class MonAst:
 				self.enqueue(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
 			self.monitoredUsersLock.release()
 			
+		## Search for lost calls
+		lostCalls = [call for call in self.calls.keys() if call[0] not in self.channelStatus or call[1] not in self.channelStatus]
+		for call in lostCalls:
+			log.warning('MonAst.handlerStatusComplete :: Removing lost call %s-%s' % (call[0], call[1]))
+			try:
+				del self.calls[call]
+				self.enqueue(Action = 'Unlink', Channel1 = None, Channel2 = None, Uniqueid1 = call[0], Uniqueid2 = call[1], CallerID1 = None, CallerID2 = None)
+			except:
+				pass
+			
 		self.queuesLock.acquire()
 		for Uniqueid in self.queueMemberCalls:
 			if not self.channels.has_key(Uniqueid):
