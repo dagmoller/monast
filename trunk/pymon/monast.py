@@ -526,18 +526,7 @@ class MonAst:
 			self.queuesLock.release()
 	
 	
-	def enqueue(self, msg, session = None):
-		
-		self.clientQueuelock.acquire()
-		if session:
-			self.clientQueues[session]['q'].put(msg)
-		else:
-			for session in self.clientQueues:
-				self.clientQueues[session]['q'].put(msg)
-		self.clientQueuelock.release()
-		
-		
-	def enqueueJson(self, **args):
+	def enqueue(self, **args):
 		
 		self.clientQueuelock.acquire()
 		if args.has_key('__session'):
@@ -666,8 +655,7 @@ class MonAst:
 		if self.monitoredUsers.has_key(Peer):
 			mu = self.monitoredUsers[Peer]
 			mu['Status'] = PeerStatus
-			#self.enqueue('PeerStatus: %s:::%s:::%s' % (Peer, mu['Status'], mu['Calls']))
-			self.enqueueJson(Action = 'PeerStatus', Peer = Peer, Status = mu['Status'], Calls = mu['Calls'])
+			self.enqueue(Action = 'PeerStatus', Peer = Peer, Status = mu['Status'], Calls = mu['Calls'])
 		self.monitoredUsersLock.release()
 		
 		
@@ -683,8 +671,7 @@ class MonAst:
 		if self.monitoredUsers.has_key(Username):
 			mu = self.monitoredUsers[Username]
 			mu['Status'] = Status
-			#self.enqueue('PeerStatus: %s:::%s:::%s' % (Username, mu['Status'], mu['Calls']))
-			self.enqueueJson(Action = 'PeerStatus', Peer = Username, Status = mu['Status'], Calls = mu['Calls'])
+			self.enqueue(Action = 'PeerStatus', Peer = Username, Status = mu['Status'], Calls = mu['Calls'])
 		self.monitoredUsersLock.release()
 				
 					
@@ -703,8 +690,7 @@ class MonAst:
 			mu           = self.monitoredUsers[user]
 			mu['Calls']  = 0
 			mu['Status'] = "Not in Use"
-			#self.enqueue('PeerStatus: %s:::%s:::%s' % (user, self.monitoredUsers[user]['Status'], self.monitoredUsers[user]['Calls']))
-			self.enqueueJson(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
+			self.enqueue(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
 		self.monitoredUsersLock.release()
 
 
@@ -722,8 +708,7 @@ class MonAst:
 		if self.monitoredUsers.has_key(user):
 			mu           = self.monitoredUsers[user]
 			mu['Status'] = "In Use"
-			#self.enqueue('PeerStatus: %s:::%s:::%s' % (user, self.monitoredUsers[user]['Status'], self.monitoredUsers[user]['Calls']))
-			self.enqueueJson(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
+			self.enqueue(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
 		self.monitoredUsersLock.release()
 	
 	
@@ -750,12 +735,10 @@ class MonAst:
 		if self.monitoredUsers.has_key(user):
 			mu           = self.monitoredUsers[user]
 			mu['Calls'] += 1
-			#self.enqueue('PeerStatus: %s:::%s:::%s' % (user, self.monitoredUsers[user]['Status'], self.monitoredUsers[user]['Calls']))
-			self.enqueueJson(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
+			self.enqueue(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
 		self.monitoredUsersLock.release()
 		
-		#self.enqueue('NewChannel: %s:::%s:::%s:::%s:::%s:::%s' % (Channel, State, CallerIDNum, CallerIDName, Uniqueid, Monitor))
-		self.enqueueJson(Action = 'NewChannel', Channel = Channel, State = State, CallerIDNum = CallerIDNum, CallerIDName = CallerIDName, Uniqueid = Uniqueid, Monitor = Monitor)
+		self.enqueue(Action = 'NewChannel', Channel = Channel, State = State, CallerIDNum = CallerIDNum, CallerIDName = CallerIDName, Uniqueid = Uniqueid, Monitor = Monitor)
 		
 		
 	def handlerNewstate(self, lines):
@@ -774,8 +757,7 @@ class MonAst:
 			self.channels[Uniqueid]['State']        = State
 			self.channels[Uniqueid]['CallerIDNum']  = CallerID
 			self.channels[Uniqueid]['CallerIDName'] = CallerIDName
-			#self.enqueue('NewState: %s:::%s:::%s:::%s:::%s' % (Channel, State, CallerID, CallerIDName, Uniqueid))
-			self.enqueueJson(Action = 'NewState', Channel = Channel, State = State, CallerID = CallerID, CallerIDName = CallerIDName, Uniqueid = Uniqueid)
+			self.enqueue(Action = 'NewState', Channel = Channel, State = State, CallerID = CallerID, CallerIDName = CallerIDName, Uniqueid = Uniqueid)
 		except:
 			log.warning("MonAst.handlerNewstate :: Uniqueid %s not found on self.channels" % Uniqueid)
 		self.channelsLock.release()
@@ -794,8 +776,7 @@ class MonAst:
 		self.channelsLock.acquire()
 		try:
 			del self.channels[Uniqueid]
-			#self.enqueue('Hangup: %s:::%s:::%s:::%s' % (Channel, Uniqueid, Cause, Cause_txt))
-			self.enqueueJson(Action = 'Hangup', Channel = Channel, Uniqueid = Uniqueid, Cause = Cause, Cause_txt = Cause_txt)
+			self.enqueue(Action = 'Hangup', Channel = Channel, Uniqueid = Uniqueid, Cause = Cause, Cause_txt = Cause_txt)
 		except:
 			pass
 		self.channelsLock.release()
@@ -803,7 +784,7 @@ class MonAst:
 		self.callsLock.acquire()
 		toDelete = None
 		for id in self.calls:
-			if Uniqueid in id and self.calls[id]['Status'] == 'Dial':
+			if Uniqueid in id and self.calls[id]['Status'] in ('Dial', 'Unlink'):
 			#if Uniqueid in id:
 				toDelete = id
 				break
@@ -811,8 +792,7 @@ class MonAst:
 			#log.warning('MonAst.handlerHangup :: Removing ununlinked call %s-%s for hangup channel %s' % (toDelete[0], toDelete[1], Uniqueid))
 			del self.calls[toDelete]
 			src, dst = toDelete
-			#self.enqueue('Unlink: FAKE:::FAKE:::%s:::%s:::FAKE:::FAKE' % (src, dst))
-			self.enqueueJson(Action = 'Unlink', Channel1 = None, Channel2 = None, Uniqueid1 = src, Uniqueid2 = dst, CallerID1 = None, CallerID2 = None)
+			self.enqueue(Action = 'Unlink', Channel1 = None, Channel2 = None, Uniqueid1 = src, Uniqueid2 = dst, CallerID1 = None, CallerID2 = None)
 		self.callsLock.release()
 		
 		self.monitoredUsersLock.acquire()
@@ -822,8 +802,7 @@ class MonAst:
 		if self.monitoredUsers.has_key(user) and self.monitoredUsers[user]['Calls'] > 0:
 			mu           = self.monitoredUsers[user] 
 			mu['Calls'] -= 1
-			#self.enqueue('PeerStatus: %s:::%s:::%s' % (user, self.monitoredUsers[user]['Status'], self.monitoredUsers[user]['Calls']))
-			self.enqueueJson(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
+			self.enqueue(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
 		self.monitoredUsersLock.release()
 		
 		self.queuesLock.acquire()
@@ -831,8 +810,7 @@ class MonAst:
 			Queue  = self.queueMemberCalls[Uniqueid]['Queue']
 			Member = self.queueMemberCalls[Uniqueid]['Member']
 			del self.queueMemberCalls[Uniqueid]
-			#self.enqueue('RemoveQueueMemberCall: %s:::%s:::%s' % (Queue, Member, Uniqueid))
-			self.enqueueJson(Action = 'RemoveQueueMemberCall', Queue = Queue, Member = Member, Uniqueid = Uniqueid)
+			self.enqueue(Action = 'RemoveQueueMemberCall', Queue = Queue, Member = Member, Uniqueid = Uniqueid)
 		self.queuesLock.release()
 		
 		
@@ -860,26 +838,25 @@ class MonAst:
 			self.channelsLock.release()
 			self.callsLock.release()
 			
-			#self.enqueue('Dial: %s:::%s:::%s:::%s:::%s:::%s' % (Source, Destination, CallerID, CallerIDName, SrcUniqueID, DestUniqueID))
-			self.enqueueJson(Action = 'Dial', Source = Source, Destination = Destination, CallerID = CallerID, CallerIDName = CallerIDName, SrcUniqueID = SrcUniqueID, DestUniqueID = DestUniqueID)
+			self.enqueue(Action = 'Dial', Source = Source, Destination = Destination, CallerID = CallerID, CallerIDName = CallerIDName, SrcUniqueID = SrcUniqueID, DestUniqueID = DestUniqueID)
 		
 		elif SubEvent == 'End':
 			Channel  = dic['Channel']
-			Uniqueid = dic['Uniqueid']
+			Uniqueid = dic['UniqueID']
 			
 			self.callsLock.acquire()
 			calls = self.calls.keys()
 			for call in calls:
 				if Uniqueid in call:
 					del self.calls[call]
-					self.enqueueJson(Action = 'Unlink', Channel1 = None, Channel2 = None, Uniqueid1 = call[0], Uniqueid2 = call[1], CallerID1 = None, CallerID2 = None)
+					self.enqueue(Action = 'Unlink', Channel1 = None, Channel2 = None, Uniqueid1 = call[0], Uniqueid2 = call[1], CallerID1 = None, CallerID2 = None)
 			self.callsLock.release()
 			
 			self.queuesLock.acquire()
-			if self.queueMemberCalls.has_key(Uniqueid1):
-				self.queueMemberCalls[Uniqueid1]['Link'] = False
-				qmc = self.queueMemberCalls[Uniqueid1]
-				self.enqueueJson(Action = 'RemoveQueueMemberCall', Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = Uniqueid1)
+			if self.queueMemberCalls.has_key(Uniqueid):
+				self.queueMemberCalls[Uniqueid]['Link'] = False
+				qmc = self.queueMemberCalls[Uniqueid]
+				self.enqueue(Action = 'RemoveQueueMemberCall', Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = Uniqueid)
 			self.queuesLock.release()
 			
 		else:
@@ -920,16 +897,14 @@ class MonAst:
 				'Status': 'Link', 'startTime': time.time()
 			}
 		Seconds = time.time() - self.calls[call]['startTime']
-		#self.enqueue('Link: %s:::%s:::%s:::%s:::%s:::%s:::%d' % (Channel1, Channel2, Uniqueid1, Uniqueid2, CallerID1, CallerID2, Seconds))
-		self.enqueueJson(Action = 'Link', Channel1 = Channel1, Channel2 = Channel2, Uniqueid1 = Uniqueid1, Uniqueid2 = Uniqueid2, CallerID1 = CallerID1, CallerID2 = CallerID2, Seconds = Seconds)
+		self.enqueue(Action = 'Link', Channel1 = Channel1, Channel2 = Channel2, Uniqueid1 = Uniqueid1, Uniqueid2 = Uniqueid2, CallerID1 = CallerID1, CallerID2 = CallerID2, Seconds = Seconds)
 
 		self.queuesLock.acquire()
 		if self.queueMemberCalls.has_key(Uniqueid1):
 			self.queueMemberCalls[Uniqueid1]['Member'] = Channel2[:Channel2.rfind('-')]
 			self.queueMemberCalls[Uniqueid1]['Link']   = True
 			qmc = self.queueMemberCalls[Uniqueid1]
-			#self.enqueue('AddQueueMemberCall: %s:::%s:::%s:::%s:::%s:::%d' % (qmc['Queue'], qmc['Member'], Uniqueid1, qmc['Channel'], CallerID1, Seconds))
-			self.enqueueJson(Action = 'AddQueueMemberCall', Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = Uniqueid1, Channel = qmc['Channel'], CallerID = CallerID1, Seconds = Seconds)
+			self.enqueue(Action = 'AddQueueMemberCall', Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = Uniqueid1, Channel = qmc['Channel'], CallerID = CallerID1, Seconds = Seconds)
 		self.queuesLock.release()
 		
 		self.callsLock.release()
@@ -955,9 +930,9 @@ class MonAst:
 		
 		self.callsLock.acquire()
 		try:
-			del self.calls[(Uniqueid1, Uniqueid2)]
-			#self.enqueue('Unlink: %s:::%s:::%s:::%s:::%s:::%s' % (Channel1, Channel2, Uniqueid1, Uniqueid2, CallerID1, CallerID2))
-			self.enqueueJson(Action = 'Unlink', Channel1 = Channel1, Channel2 = Channel2, Uniqueid1 = Uniqueid1, Uniqueid2 = Uniqueid2, CallerID1 = CallerID1, CallerID2 = CallerID2)
+			#del self.calls[(Uniqueid1, Uniqueid2)]
+			self.calls[(Uniqueid1, Uniqueid2)]['Status'] = 'Unlink'
+			self.enqueue(Action = 'Unlink', Channel1 = Channel1, Channel2 = Channel2, Uniqueid1 = Uniqueid1, Uniqueid2 = Uniqueid2, CallerID1 = CallerID1, CallerID2 = CallerID2)
 		except:
 			log.warning("MonAst.handlerUnlink :: Call %s-%s not found on self.calls" % (Uniqueid1, Uniqueid2))
 		self.callsLock.release()
@@ -966,8 +941,7 @@ class MonAst:
 		if self.queueMemberCalls.has_key(Uniqueid1):
 			self.queueMemberCalls[Uniqueid1]['Link'] = False
 			qmc = self.queueMemberCalls[Uniqueid1]
-			#self.enqueue('RemoveQueueMemberCall: %s:::%s:::%s' % (qmc['Queue'], qmc['Member'], Uniqueid1))
-			self.enqueueJson(Action = 'RemoveQueueMemberCall', Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = Uniqueid1)
+			self.enqueue(Action = 'RemoveQueueMemberCall', Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = Uniqueid1)
 		self.queuesLock.release()
 		
 		
@@ -986,8 +960,7 @@ class MonAst:
 		try:
 			self.channels[Uniqueid]['CallerIDName'] = CallerIDName
 			self.channels[Uniqueid]['CallerIDNum']  = CallerID
-			#self.enqueue('NewCallerid: %s:::%s:::%s:::%s:::%s' % (Channel, CallerID, CallerIDName, Uniqueid, CIDCallingPres))
-			self.enqueueJson(Action = 'NewCallerid', Channel = Channel, CallerID = CallerID, CallerIDName = CallerIDName, Uniqueid = Uniqueid, CIDCallingPres = CIDCallingPres)
+			self.enqueue(Action = 'NewCallerid', Channel = Channel, CallerID = CallerID, CallerIDName = CallerIDName, Uniqueid = Uniqueid, CIDCallingPres = CIDCallingPres)
 		except KeyError:
 			log.warning("MonAst.handlerNewcallerid :: UniqueID '%s' not found on self.channels" % Uniqueid)
 		self.channelsLock.release()
@@ -1024,8 +997,7 @@ class MonAst:
 					break							
 			self.callsLock.release()
 			
-			#self.enqueue('Rename: %s:::%s:::%s:::%s:::%s' % (Oldname, Newname, Uniqueid, CallerIDName, CallerID))
-			self.enqueueJson(Action = 'Rename', Oldname = Oldname, Newname = Newname, Uniqueid = Uniqueid, CallerIDName = CallerIDName, CallerID = CallerID)
+			self.enqueue(Action = 'Rename', Oldname = Oldname, Newname = Newname, Uniqueid = Uniqueid, CallerIDName = CallerIDName, CallerID = CallerID)
 		except:
 			log.warn('MonAst.handlerRename :: Channel %s not found in self.channels, ignored.' % Oldname)
 			
@@ -1051,10 +1023,8 @@ class MonAst:
 					'dynamic': True,
 					'users'  : {Usernum: {'Uniqueid': Uniqueid, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName}}
 			}
-			#self.enqueue('MeetmeCreate: %s' % Meetme)
-			self.enqueueJson(Action = 'MeetmeCreate', Meetme = Meetme)
-		#self.enqueue('MeetmeJoin: %s:::%s:::%s:::%s:::%s:::%s' % (Meetme, Uniqueid, Usernum, ch['Channel'], CallerIDNum, CallerIDName))
-		self.enqueueJson(Action = 'MeetmeJoin', Meetme = Meetme, Uniqueid = Uniqueid, Usernum = Usernum, Channel = ch['Channel'], CallerIDNum = CallerIDNum, CallerIDName = CallerIDName)
+			self.enqueue(Action = 'MeetmeCreate', Meetme = Meetme)
+		self.enqueue(Action = 'MeetmeJoin', Meetme = Meetme, Uniqueid = Uniqueid, Usernum = Usernum, Channel = ch['Channel'], CallerIDNum = CallerIDNum, CallerIDName = CallerIDName)
 		self.channelsLock.release()
 		self.meetmeLock.release()
 					
@@ -1072,12 +1042,10 @@ class MonAst:
 		self.meetmeLock.acquire()
 		try:
 			del self.meetme[Meetme]['users'][Usernum]
-			#self.enqueue('MeetmeLeave: %s:::%s:::%s:::%s' % (Meetme, Uniqueid, Usernum, Duration))
-			self.enqueueJson(Action = 'MeetmeLeave', Meetme = Meetme, Uniqueid = Uniqueid, Usernum = Usernum, Duration = Duration)
+			self.enqueue(Action = 'MeetmeLeave', Meetme = Meetme, Uniqueid = Uniqueid, Usernum = Usernum, Duration = Duration)
 			if (self.meetme[Meetme]['dynamic'] and len(self.meetme[Meetme]['users']) == 0):
 				del self.meetme[Meetme]
-				#self.enqueue('MeetmeDestroy: %s' % Meetme)
-				self.enqueueJson(Action = 'MeetmeDestroy', Meetme = Meetme)
+				self.enqueue(Action = 'MeetmeDestroy', Meetme = Meetme)
 		except Exception, e:
 			log.warn('MonAst.handlerMeetmeLeave :: Meetme or Usernum not found in self.meetme[\'%s\'][\'users\'][\'%s\']' % (Meetme, Usernum))
 		self.meetmeLock.release()
@@ -1097,8 +1065,7 @@ class MonAst:
 					
 		self.parkedLock.acquire()
 		self.parked[Exten] = {'Channel': Channel, 'From': From, 'Timeout': Timeout, 'CallerID': CallerID, 'CallerIDName': CallerIDName}
-		#self.enqueue('ParkedCall: %s:::%s:::%s:::%s:::%s:::%s' % (Exten, Channel, From, Timeout, CallerID, CallerIDName))
-		self.enqueueJson(Action = 'ParkedCall', Exten = Exten, Channel = Channel, From = From, Timeout = Timeout, CallerID = CallerID, CallerIDName = CallerIDName)
+		self.enqueue(Action = 'ParkedCall', Exten = Exten, Channel = Channel, From = From, Timeout = Timeout, CallerID = CallerID, CallerIDName = CallerIDName)
 		self.parkedLock.release()
 					
 					
@@ -1116,8 +1083,7 @@ class MonAst:
 		self.parkedLock.acquire()
 		try:
 			del self.parked[Exten]
-			#self.enqueue('UnparkedCall: %s' % (Exten))
-			self.enqueueJson(Action = 'UnparkedCall', Exten = Exten)
+			self.enqueue(Action = 'UnparkedCall', Exten = Exten)
 		except:
 			log.warn('MonAst.handlerUnParkedCall :: Parked Exten not found: %s' % Exten)
 		self.parkedLock.release()
@@ -1136,8 +1102,7 @@ class MonAst:
 		self.parkedLock.acquire()
 		try:
 			del self.parked[Exten]
-			#self.enqueue('UnparkedCall: %s' % (Exten))
-			self.enqueueJson(Action = 'UnparkedCall', Exten = Exten)
+			self.enqueue(Action = 'UnparkedCall', Exten = Exten)
 		except:
 			log.warn('MonAst.handlerParkedCallTimeOut :: Parked Exten not found: %s' % Exten)
 		self.parkedLock.release()
@@ -1156,8 +1121,7 @@ class MonAst:
 		self.parkedLock.acquire()
 		try:
 			del self.parked[Exten]
-			#self.enqueue('UnparkedCall: %s' % (Exten))
-			self.enqueueJson(Action = 'UnparkedCall', Exten = Exten)
+			self.enqueue(Action = 'UnparkedCall', Exten = Exten)
 		except:
 			log.warn('MonAst.handlerParkedCallGiveUp :: Parked Exten not found: %s' % Exten)
 		self.parkedLock.release()
@@ -1189,11 +1153,9 @@ class MonAst:
 			if self.monitoredUsers.has_key(user):
 				mu           = self.monitoredUsers[user] 
 				mu['Calls'] += 1
-				#self.enqueue('PeerStatus: %s:::%s:::%s' % (user, self.monitoredUsers[user]['Status'], self.monitoredUsers[user]['Calls']))
-				self.enqueueJson(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
+				self.enqueue(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
 			self.monitoredUsersLock.release()
-			#self.enqueue('NewChannel: %s:::%s:::%s:::%s:::%s:::%s' % (Channel, State, CallerIDNum, CallerIDName, Uniqueid, Monitor))
-			self.enqueueJson(Action = 'NewChannel', Channel = Channel, State = State, CallerIDNum = CallerIDNum, CallerIDName = CallerIDName, Uniqueid = Uniqueid, Monitor = Monitor)
+			self.enqueue(Action = 'NewChannel', Channel = Channel, State = State, CallerIDNum = CallerIDNum, CallerIDName = CallerIDName, Uniqueid = Uniqueid, Monitor = Monitor)
 			if Link:
 				for UniqueidLink in self.channels:
 					if self.channels[UniqueidLink]['Channel'] == Link:
@@ -1205,9 +1167,7 @@ class MonAst:
 						self.callsLock.release()
 						CallerID1 = '%s <%s>' % (self.channels[Uniqueid]['CallerIDName'], self.channels[Uniqueid]['CallerIDNum'])
 						CallerID2 = '%s <%s>' % (self.channels[UniqueidLink]['CallerIDName'], self.channels[UniqueidLink]['CallerIDNum'])
-						#self.enqueue('Link: %s:::%s:::%s:::%s:::%s:::%s:::%d' % \
-						#			(Channel, Link, Uniqueid, UniqueidLink, CallerID1, CallerID2, int(Seconds)))
-						self.enqueueJson(Action = 'Link', Channel = Channel, Link = Link, Uniqueid = Uniqueid, UniqueidLink = UniqueidLink, CallerID1 = CallerID1, CallerID2 = CallerID2, Seconds = int(Seconds))
+						self.enqueue(Action = 'Link', Channel1 = Channel, Channel2 = Link, Uniqueid1 = Uniqueid, Uniqueid2 = UniqueidLink, CallerID1 = CallerID1, CallerID2 = CallerID2, Seconds = int(Seconds))
 		
 		## Update call duration
 		if self.channels.has_key(Uniqueid) and Seconds > 0 and Link:
@@ -1219,8 +1179,7 @@ class MonAst:
 					Seconds  = int(Seconds)
 					if duration < (Seconds - 10) or duration > (Seconds + 10):
 						self.calls[call]['startTime'] = time.time() - Seconds
-						#self.enqueue('UpdateCallDuration: %s:::%s:::%s' % (Uniqueid, UniqueidLink, Seconds))
-						self.enqueueJson(Action = 'UpdateCallDuration', Uniqueid = Uniqueid, UniqueidLink = UniqueidLink, Seconds = Seconds)
+						self.enqueue(Action = 'UpdateCallDuration', Uniqueid1 = Uniqueid, Uniqueid2 = UniqueidLink, Seconds = Seconds)
 					self.callsLock.release()
 			
 		self.channelsLock.release()
@@ -1239,8 +1198,7 @@ class MonAst:
 			try:
 				Channel = self.channels[Uniqueid]['Channel']
 				del self.channels[Uniqueid]
-				#self.enqueue('Hangup: %s:::%s:::FAKE:::FAKE' % (Channel, Uniqueid))
-				self.enqueueJson(Action = 'Hangup', Channel = Channel, Uniqueid = Uniqueid, Cause = None, Cause_txt = None)
+				self.enqueue(Action = 'Hangup', Channel = Channel, Uniqueid = Uniqueid, Cause = None, Cause_txt = None)
 			except:
 				pass
 			
@@ -1254,8 +1212,7 @@ class MonAst:
 				log.warning('MonAst.handlerStatusComplete :: Removing call %s-%s for lost channel %s' % (toDelete[0], toDelete[1], Uniqueid))
 				del self.calls[toDelete]
 				src, dst = toDelete
-				#self.enqueue('Unlink: FAKE:::FAKE:::%s:::%s:::FAKE:::FAKE' % (src, dst))
-				self.enqueueJson(Action = 'Unlink', Channel1 = None, Channel2 = None, Uniqueid1 = src, Uniqueid2 = dst, CallerID1 = None, CallerID2 = None)
+				self.enqueue(Action = 'Unlink', Channel1 = None, Channel2 = None, Uniqueid1 = src, Uniqueid2 = dst, CallerID1 = None, CallerID2 = None)
 			
 			self.monitoredUsersLock.acquire()
 			user = Channel
@@ -1264,8 +1221,7 @@ class MonAst:
 			if self.monitoredUsers.has_key(user) and self.monitoredUsers[user]['Calls'] > 0:
 				mu           = self.monitoredUsers[user] 
 				mu['Calls'] -= 1
-				#self.enqueue('PeerStatus: %s:::%s:::%s' % (user, self.monitoredUsers[user]['Status'], self.monitoredUsers[user]['Calls']))
-				self.enqueueJson(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
+				self.enqueue(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
 			self.monitoredUsersLock.release()
 			
 		self.queuesLock.acquire()
@@ -1275,8 +1231,7 @@ class MonAst:
 				Queue  = self.queueMemberCalls[Uniqueid]['Queue']
 				Member = self.queueMemberCalls[Uniqueid]['Member']
 				del self.queueMemberCalls[Uniqueid]
-				#self.enqueue('RemoveQueueMemberCall: %s:::%s:::%s' % (Queue, Member, Uniqueid))
-				self.enqueueJson(Action = 'RemoveQueueMemberCall', Queue = Queue, Member = Member, Uniqueid = Uniqueid)
+				self.enqueue(Action = 'RemoveQueueMemberCall', Queue = Queue, Member = Member, Uniqueid = Uniqueid)
 		self.queuesLock.release()
 			
 		self.callsLock.release()
@@ -1314,14 +1269,12 @@ class MonAst:
 			self.queues[Queue]['members'][Location]['LastCall']   = LastCall
 			self.queues[Queue]['members'][Location]['Status']     = Status
 			self.queues[Queue]['members'][Location]['Paused']     = Paused
-			#self.enqueue('QueueMemberStatus: %s:::%s:::%s:::%s:::%s:::%s:::%s' % (Queue, Location, Penalty, CallsTaken, LastCall, AST_DEVICE_STATES[Status], Paused))
-			self.enqueueJson(Action = 'QueueMemberStatus', Queue = Queue, Member = Location, Penalty = Penalty, CallsTaken = CallsTaken, LastCall = LastCall, Status = AST_DEVICE_STATES[Status], Paused = Paused)
+			self.enqueue(Action = 'QueueMemberStatus', Queue = Queue, Member = Location, Penalty = Penalty, CallsTaken = CallsTaken, LastCall = LastCall, Status = AST_DEVICE_STATES[Status], Paused = Paused)
 		except KeyError:
 			self.queues[Queue]['members'][Location] = {
 				'Name': Name, 'Penalty': Penalty, 'CallsTaken': CallsTaken, 'LastCall': LastCall, 'Status': Status, 'Paused': Paused
 			}
-			#self.enqueue('AddQueueMember: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % (Queue, Location, Name, Penalty, CallsTaken, LastCall, AST_DEVICE_STATES[Status], Paused))
-			self.enqueueJson(Action = 'AddQueueMember', Queue = Queue, Member = Location, MemberName = Name, Penalty = Penalty, CallsTaken = CallsTaken, LastCall = LastCall, Status = AST_DEVICE_STATES[Status], Paused = Paused)
+			self.enqueue(Action = 'AddQueueMember', Queue = Queue, Member = Location, MemberName = Name, Penalty = Penalty, CallsTaken = CallsTaken, LastCall = LastCall, Status = AST_DEVICE_STATES[Status], Paused = Paused)
 		self.queueMemberStatus[Queue].append(Location)
 		self.queuesLock.release()
 		
@@ -1382,8 +1335,7 @@ class MonAst:
 		except KeyError:
 			self.queues[Queue]['clients'][Uniqueid] = {'Uniqueid': Uniqueid, 'Channel': Channel, 'CallerID': CallerID, 'CallerIDName': CallerIDName, \
 													'Position': Position, 'JoinTime': time.time() - int(Wait)}
-			#self.enqueue('AddQueueClient: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % (Queue, Uniqueid, Channel, CallerID, CallerIDName, Position, Count, Wait))
-			self.enqueueJson(Action = 'AddQueueClient', Queue = Queue, Uniqueid = Uniqueid, Channel = Channel, CallerID = CallerID, CallerIDName = CallerIDName, Position = Position, Count = Count, Wait = Wait)
+			self.enqueue(Action = 'AddQueueClient', Queue = Queue, Uniqueid = Uniqueid, Channel = Channel, CallerID = CallerID, CallerIDName = CallerIDName, Position = Position, Count = Count, Wait = Wait)
 		self.queuesLock.release()
 		
 		
@@ -1399,8 +1351,7 @@ class MonAst:
 		
 		self.queuesLock.acquire()
 		self.queues[Queue]['members'][Location] = {'Name': MemberName, 'Penalty': Penalty, 'CallsTaken': 0, 'LastCall': 0, 'Status': '0', 'Paused': 0} 
-		#self.enqueue('AddQueueMember: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % (Queue, Location, MemberName, Penalty, 0, 0, AST_DEVICE_STATES['0'], 0))
-		self.enqueueJson(Action = 'AddQueueMember', Queue = Queue, Member = Location, MemberName = MemberName, Penalty = Penalty, CallsTaken = 0, LastCall = 0, Status = AST_DEVICE_STATES['0'], Paused = 0)
+		self.enqueue(Action = 'AddQueueMember', Queue = Queue, Member = Location, MemberName = MemberName, Penalty = Penalty, CallsTaken = 0, LastCall = 0, Status = AST_DEVICE_STATES['0'], Paused = 0)
 		self.queuesLock.release()
 		
 		
@@ -1416,8 +1367,7 @@ class MonAst:
 		self.queuesLock.acquire()
 		try:
 			del self.queues[Queue]['members'][Location]
-			#self.enqueue('RemoveQueueMember: %s:::%s:::%s' % (Queue, Location, MemberName))
-			self.enqueueJson(Action = 'RemoveQueueMember', Queue = Queue, Member = Location, MemberName = MemberName)
+			self.enqueue(Action = 'RemoveQueueMember', Queue = Queue, Member = Location, MemberName = MemberName)
 		except KeyError:
 			log.warn("MonAst.handlerQueueMemberRemoved :: Queue or Member not found in self.queues['%s']['members']['%s']" % (Queue, Location))
 		self.queuesLock.release()
@@ -1441,8 +1391,7 @@ class MonAst:
 			self.queues[Queue]['clients'][Uniqueid] = {'Uniqueid': Uniqueid, 'Channel': Channel, 'CallerID': CallerID, 'CallerIDName': CallerIDName, \
 													'Position': Position, 'JoinTime': time.time()}
 			self.queues[Queue]['stats']['Calls'] += 1
-			#self.enqueue('AddQueueClient: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % (Queue, Uniqueid, Channel, CallerID, CallerIDName, Position, Count, 0))
-			self.enqueueJson(Action = 'AddQueueClient', Queue = Queue, Uniqueid = Uniqueid, Channel = Channel, CallerID = CallerID, CallerIDName = CallerIDName, Position = Position, Count = Count, Wait = 0)
+			self.enqueue(Action = 'AddQueueClient', Queue = Queue, Uniqueid = Uniqueid, Channel = Channel, CallerID = CallerID, CallerIDName = CallerIDName, Position = Position, Count = Count, Wait = 0)
 		except KeyError:
 			log.warning("MonAst.handlerJoin :: Queue '%s' not found." % Queue)
 		self.queuesLock.release()
@@ -1471,8 +1420,7 @@ class MonAst:
 			self.queues[Queue]['stats']['Calls'] -= 1
 			
 			del self.queues[Queue]['clients'][Uniqueid]
-			#self.enqueue('RemoveQueueClient: %s:::%s:::%s:::%s:::%s' % (Queue, Uniqueid, Channel, Count, cause))
-			self.enqueueJson(Action = 'RemoveQueueClient', Queue = Queue, Uniqueid = Uniqueid, Channel = Channel, Count = Count, Cause = cause)
+			self.enqueue(Action = 'RemoveQueueClient', Queue = Queue, Uniqueid = Uniqueid, Channel = Channel, Count = Count, Cause = cause)
 		except KeyError:
 			log.warn("MonAst.handlerLeave :: Queue or Client not found in self.queues['%s']['clients']['%s']" % (Queue, Uniqueid))
 		self.queuesLock.release()
@@ -1490,8 +1438,7 @@ class MonAst:
 		self.queues[Queue]['clients'][Uniqueid]['Abandoned'] = True
 		self.queuesLock.release()
 		
-		#self.enqueue('AbandonedQueueClient: %s' % Uniqueid)
-		#self.enqueueJson(Action = 'AbandonedQueueClient', Uniqueid = Uniqueid)
+		#self.enqueue(Action = 'AbandonedQueueClient', Uniqueid = Uniqueid)
 		
 		
 	def handlerQueueParams(self, lines):
@@ -1534,9 +1481,7 @@ class MonAst:
 			self.queueStatusOrder.append(Queue)
 		self.queuesLock.release()
 		
-		#self.enqueue('QueueParams: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % \
-		#			(Queue, Max, Calls, Holdtime, Completed, Abandoned, ServiceLevel, ServicelevelPerf, Weight))
-		self.enqueueJson(Action = 'QueueParams', Queue = Queue, Max = Max, Calls = Calls, Holdtime = Holdtime, Completed = Completed, Abandoned = Abandoned, ServiceLevel = ServiceLevel, ServicelevelPerf = ServicelevelPerf, Weight = Weight)
+		self.enqueue(Action = 'QueueParams', Queue = Queue, Max = Max, Calls = Calls, Holdtime = Holdtime, Completed = Completed, Abandoned = Abandoned, ServiceLevel = ServiceLevel, ServicelevelPerf = ServicelevelPerf, Weight = Weight)
 		
 		
 	def handlerQueueStatusComplete(self, lines):
@@ -1559,8 +1504,7 @@ class MonAst:
 				for member in lostMembers:
 					log.log(logging.NOTICE, 'MonAst.handlerQueueStatusComplete :: Removing lost member %s from queue %s' % (member, queue))
 					del self.queues[queue]['members'][member]
-					#self.enqueue('RemoveQueueMember: %s:::%s:::FAKE' % (queue, member))
-					self.enqueueJson(Action = 'RemoveQueueMember', Queue = queue, Member = member, MemberName = None)
+					self.enqueue(Action = 'RemoveQueueMember', Queue = queue, Member = member, MemberName = None)
 				
 				lostClients = [i for i in self.queues[queue]['clients'].keys() if i not in self.queueClientStatus[queue]]
 				for client in lostClients:
@@ -1568,8 +1512,7 @@ class MonAst:
 					Channel = self.queues[queue]['clients'][client]['Channel']
 					del self.queues[queue]['clients'][client]
 					Count = len(self.queues[queue]['clients'])
-					#self.enqueue('RemoveQueueClient: %s:::%s:::%s:::%s:::FAKE' % (queue, client, Channel, Count))
-					self.enqueueJson(Action = 'RemoveQueueClient', Queue = queue, Uniqueid = client, Channel = Channel, Count = Count, Cause = None)
+					self.enqueue(Action = 'RemoveQueueClient', Queue = queue, Uniqueid = client, Channel = Channel, Count = Count, Cause = None)
 			except:
 				log.exception('MonAst.handlerQueueStatusComplete :: Unhandled Exception')
 		self.queuesLock.release()
@@ -1586,8 +1529,7 @@ class MonAst:
 		self.channelsLock.acquire()
 		try:
 			self.channels[Uniqueid]['Monitor'] = True
-			#self.enqueue('MonitorStart: %s:::%s' % (Channel, Uniqueid))
-			self.enqueueJson(Action = 'MonitorStart', Channel = Channel, Uniqueid = Uniqueid)
+			self.enqueue(Action = 'MonitorStart', Channel = Channel, Uniqueid = Uniqueid)
 		except:
 			log.warning('MonAst.handlerMonitorStart :: Uniqueid %s not found in self.channels' % Uniqueid)
 		self.channelsLock.release()
@@ -1604,8 +1546,7 @@ class MonAst:
 		self.channelsLock.acquire()
 		try:
 			self.channels[Uniqueid]['Monitor'] = False
-			#self.enqueue('MonitorStop: %s:::%s' % (Channel, Uniqueid))
-			self.enqueueJson(Action = 'MonitorStop', Channel = Channel, Uniqueid = Uniqueid)
+			self.enqueue(Action = 'MonitorStop', Channel = Channel, Uniqueid = Uniqueid)
 		except:
 			log.warning('MonAst.handlerMonitorStop :: Uniqueid %s not found in self.channels' % Uniqueid)
 		self.channelsLock.release()
@@ -1711,8 +1652,7 @@ class MonAst:
 						if type.lower() == 'dynamic':
 							dynamic = True
 						self.meetme[conf] = {'dynamic': dynamic, 'users': {}}
-						#self.enqueue('MeetmeCreate: %s' % conf)
-						self.enqueueJson(Action = 'MeetmeCreate', Meetme = conf)
+						self.enqueue(Action = 'MeetmeCreate', Meetme = conf)
 						
 					self.AMI.execute(['Action: Command', 'Command: meetme list %s concise' % conf], self.handlerParseMeetmeConcise, 'meetmeList-%s' % conf)				
 				except:
@@ -1737,8 +1677,7 @@ class MonAst:
 				for Uniqueid in self.channels:
 					if self.channels[Uniqueid]['Channel'] == user[3]:
 						self.meetme[meetme]['users'][user[0]] = {'Uniqueid': Uniqueid, 'CallerIDNum': user[1], 'CallerIDName': user[2]}
-						#self.enqueue('MeetmeJoin: %s:::%s:::%s:::%s:::%s:::%s' % (meetme, Uniqueid, user[0], user[3], user[1], user[2]))
-						self.enqueueJson(Action = 'MeetmeJoin', Meetme = meetme, Uniqueid = Uniqueid, Usernum = user[0], Channel = user[3], CallerIDNum = user[1], CallerIDName = user[2])
+						self.enqueue(Action = 'MeetmeJoin', Meetme = meetme, Uniqueid = Uniqueid, Usernum = user[0], Channel = user[3], CallerIDNum = user[1], CallerIDName = user[2])
 						break
 		self.channelsLock.release()
 		self.meetmeLock.release()
@@ -1769,8 +1708,7 @@ class MonAst:
 					
 				if c:
 					self.parked[Exten] = {'Channel': c['Channel'], 'From': 'Undefined', 'Timeout': Timeout, 'CallerID': c['CallerIDNum'], 'CallerIDName': c['CallerIDName']}
-					#self.enqueue('ParkedCall: %s:::%s:::%s:::%s:::%s:::%s' % (Exten, Channel, 'Undefined', Timeout, c['CallerIDNum'], c['CallerIDName']))
-					self.enqueueJson(Action = 'ParkedCall', Exten = Exten, Channel = Channel, From = 'Undefined', Timeout = Timeout, CallerID = c['CallerIDNum'], CallerIDName = c['CallerIDName'])
+					self.enqueue(Action = 'ParkedCall', Exten = Exten, Channel = Channel, From = 'Undefined', Timeout = Timeout, CallerID = c['CallerIDNum'], CallerIDName = c['CallerIDName'])
 				else:
 					log.warn('MonAst.handlerShowParkedCalls :: No Channel found for parked call exten %s' % Exten)
 				
@@ -1785,8 +1723,7 @@ class MonAst:
 		ActionID = lines[2][10:]
 		Response = lines[3].replace('--END COMMAND--', '')
 
-		#self.enqueue('CliResponse: %s' % Response.replace('\n', '<br>'), ActionID)
-		self.enqueueJson(Action = 'CliResponse', Response = Response.replace('\n', '<br>'), __session = ActionID)
+		self.enqueue(Action = 'CliResponse', Response = Response.replace('\n', '<br>'), __session = ActionID)
 	
 	
 	##
@@ -2380,8 +2317,7 @@ class MonAst:
 			
 		self.reloading = True
 		
-		#self.enqueue('Reload: 10')
-		self.enqueueJson(Action = 'Reload', Time = 10)
+		self.enqueue(Action = 'Reload', Time = 10)
 
 		self.AMI.close()
 		while self.AMI.isConnected:

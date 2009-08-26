@@ -322,11 +322,15 @@ function Process(o)
 	
 	if (o['Action'] == 'Unlink')
 	{
-		stopChrono('callStatus-' + o['Uniqueid1'] + '+++' + o['Uniqueid2']);
-		$('callsDiv').removeChild($('call-' + o['Uniqueid1'] + '+++' + o['Uniqueid2']));
+		var table = $('call-' + o['Uniqueid1'] + '+++' + o['Uniqueid2']);
+		if (table)
+		{	
+			stopChrono('callStatus-' + o['Uniqueid1'] + '+++' + o['Uniqueid2']);
+			$('callsDiv').removeChild(table);
 		
-		_countCalls -= 1;
-		$('countCalls').innerHTML = _countCalls;
+			_countCalls -= 1;
+			$('countCalls').innerHTML = _countCalls;
+		}
 		
 		return;
 	}
