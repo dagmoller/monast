@@ -848,7 +848,8 @@ class MonAst:
 			calls = self.calls.keys()
 			for call in calls:
 				if Uniqueid in call:
-					del self.calls[call]
+					#del self.calls[call]
+					self.calls[call]['Status'] == 'Unlink'
 					self.enqueue(Action = 'Unlink', Channel1 = None, Channel2 = None, Uniqueid1 = call[0], Uniqueid2 = call[1], CallerID1 = None, CallerID2 = None)
 			self.callsLock.release()
 			
