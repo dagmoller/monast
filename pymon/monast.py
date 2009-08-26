@@ -1765,12 +1765,10 @@ class MonAst:
 			for tech in techs:
 				for user in users[tech]:
 					mu = self.monitoredUsers[user[0]]
-					#output.append('PeerStatus: %s:::%s:::%s:::%s' % (user[0], mu['Status'], mu['Calls'], user[2]))
 					output.append(self.parseJson(Action = 'PeerStatus', Peer = user[0], Status = mu['Status'], Calls = mu['Calls'], CallerID = user[2]))
 					
 			for Uniqueid in self.channels:
 				ch = self.channels[Uniqueid]
-				#output.append('NewChannel: %s:::%s:::%s:::%s:::%s:::%s' % (ch['Channel'], ch['State'], ch['CallerIDNum'], ch['CallerIDName'], Uniqueid, ch['Monitor']))
 				output.append(self.parseJson(Action = 'NewChannel', Channel = ch['Channel'], State = ch['State'], CallerIDNum = ch['CallerIDNum'], CallerIDName = ch['CallerIDName'], Uniqueid = Uniqueid, Monitor = ch['Monitor']))
 			for call in self.calls:
 				c = self.calls[call]
@@ -1786,48 +1784,40 @@ class MonAst:
 					log.warning('MonAst.clientGetStatus (%s) :: UniqueID %s or %s not found on self.channels' % (threadId, src, dst))
 				
 				try:
-					#output.append('Call: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%d' % (c['Source'], c['Destination'], \
-					#	CallerID1, CallerID2, c['SrcUniqueID'], c['DestUniqueID'], c['Status'], time.time() - c['startTime']))
-					output.append(self.parseJson(Action = 'Call', Source = c['Source'], Destination = c['Destination'], \
-						CallerID1 = CallerID1, CallerID2 = CallerID2, SrcUniqueID = c['SrcUniqueID'], DestUniqueID = c['DestUniqueID'], Status = c['Status'], Seconds = time.time() - c['startTime']))
+					if c['Status'] != 'Unlink':
+						output.append(self.parseJson(Action = 'Call', Source = c['Source'], Destination = c['Destination'], \
+							CallerID1 = CallerID1, CallerID2 = CallerID2, SrcUniqueID = c['SrcUniqueID'], DestUniqueID = c['DestUniqueID'], Status = c['Status'], Seconds = time.time() - c['startTime']))
 				except:
 					log.exception('MonAst.clientGetStatus (%s) :: Unhandled Exception' % threadId)
 					
 				if self.queueMemberCalls.has_key(src) and self.queueMemberCalls[src]['Link']:
 					qmc = self.queueMemberCalls[src]
-					#theEnd.append('AddQueueMemberCall: %s:::%s:::%s:::%s:::%s:::%d' % (qmc['Queue'], qmc['Member'], src, qmc['Channel'], CallerID1, time.time() - c['startTime']))
 					theEnd.append(self.parseJson(Action = 'AddQueueMemberCall', Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = src, Channel = qmc['Channel'], CallerID = CallerID1, Seconds = time.time() - c['startTime']))
 				
 			meetmeRooms = self.meetme.keys()
 			meetmeRooms.sort()
 			for meetme in meetmeRooms:
-				#output.append('MeetmeCreate: %s' % meetme)
 				output.append(self.parseJson(Action = 'MeetmeCreate', Meetme = meetme))
 				for Usernum in self.meetme[meetme]['users']:
 					mm = self.meetme[meetme]['users'][Usernum]
 					ch = self.channels[mm['Uniqueid']]
-					#output.append('MeetmeJoin: %s:::%s:::%s:::%s:::%s:::%s' % (meetme, mm['Uniqueid'], Usernum, ch['Channel'], mm['CallerIDNum'], mm['CallerIDName']))
 					output.append(self.parseJson(Action = 'MeetmeJoin', Meetme = meetme, Uniqueid = mm['Uniqueid'], Usernum = Usernum, Channel = ch['Channel'], CallerIDNum = mm['CallerIDNum'], CallerIDName = mm['CallerIDName']))
 			
 			parkedCalls = self.parked.keys()
 			parkedCalls.sort()
 			for Exten in parkedCalls:
 				pc = self.parked[Exten]
-				#output.append('ParkedCall: %s:::%s:::%s:::%s:::%s:::%s' % (Exten, pc['Channel'], pc['From'], pc['Timeout'], pc['CallerID'], pc['CallerIDName']))
 				output.append(self.parseJson(Action = 'ParkedCall', Exten = Exten, Channel = pc['Channel'], From = pc['From'], Timeout = pc['Timeout'], CallerID = pc['CallerID'], CallerIDName = pc['CallerIDName']))
 				
 			queues = self.queues.keys()
 			queues.sort()
 			for queue in queues:
 				q = self.queues[queue]
-				#output.append('Queue: %s' % queue)
 				output.append(self.parseJson(Action = 'Queue', Queue = queue))
 				members = q['members'].keys()
 				members.sort()
 				for member in members:
 					m = q['members'][member]
-					#output.append('AddQueueMember: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % (queue, member, m['Name'], \
-					#	m['Penalty'], m['CallsTaken'], m['LastCall'], AST_DEVICE_STATES[m['Status']], m['Paused']))
 					output.append(self.parseJson(Action = 'AddQueueMember', Queue = queue, Member = member, MemberName = m['Name'], \
 						Penalty = m['Penalty'], CallsTaken = m['CallsTaken'], LastCall = m['LastCall'], Status = AST_DEVICE_STATES[m['Status']], Paused = m['Paused']))
 					
@@ -1835,8 +1825,6 @@ class MonAst:
 				clients.sort(lambda x, y: cmp(x['Position'], y['Position']))
 				for i in xrange(len(clients)):
 					c = clients[i]
-					#output.append('AddQueueClient: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % (queue, c['Uniqueid'], c['Channel'], c['CallerID'], \
-					#				c['CallerIDName'], c['Position'], i, time.time() - c['JoinTime']))
 					output.append(self.parseJson(Action = 'AddQueueClient', Queue = queue, Uniqueid = c['Uniqueid'], Channel = c['Channel'], CallerID = c['CallerID'], \
 									CallerIDName = c['CallerIDName'], Position = c['Position'], Count = i, Wait = time.time() - c['JoinTime']))
 					
@@ -1849,8 +1837,6 @@ class MonAst:
 				ServicelevelPerf = q['stats']['ServicelevelPerf']
 				Weight           = q['stats']['Weight']
 				
-				#output.append('QueueParams: %s:::%s:::%s:::%s:::%s:::%s:::%s:::%s:::%s' % \
-				#			(queue, Max, Calls, Holdtime, Completed, Abandoned, ServiceLevel, ServicelevelPerf, Weight))
 				output.append(self.parseJson(Action = 'QueueParams', Queue = queue, Max = Max, Calls = Calls, Holdtime = Holdtime, Completed = Completed, Abandoned = Abandoned, ServiceLevel = ServiceLevel, ServicelevelPerf = ServicelevelPerf, Weight = Weight))
 			
 			output += theEnd
