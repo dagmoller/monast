@@ -1145,6 +1145,8 @@ class MonAst:
 		self.channelStatus.append(Uniqueid)
 		
 		self.channelsLock.acquire()
+		self.callsLock.acquire()
+		
 		if not self.channels.has_key(Uniqueid):
 			self.channels[Uniqueid] = {'Channel': Channel, 'State': State, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName, 'Monitor': Monitor}
 			self.monitoredUsersLock.acquire()
@@ -1160,12 +1162,10 @@ class MonAst:
 			if Link:
 				for UniqueidLink in self.channels:
 					if self.channels[UniqueidLink]['Channel'] == Link:
-						self.callsLock.acquire()
 						self.calls[(Uniqueid, UniqueidLink)] = {
 							'Source': Channel, 'Destination': Link, 'SrcUniqueID': Uniqueid, 'DestUniqueID': UniqueidLink, 
 							'Status': 'Link', 'startTime': time.time() - int(Seconds)
 						}
-						self.callsLock.release()
 						CallerID1 = '%s <%s>' % (self.channels[Uniqueid]['CallerIDName'], self.channels[Uniqueid]['CallerIDNum'])
 						CallerID2 = '%s <%s>' % (self.channels[UniqueidLink]['CallerIDName'], self.channels[UniqueidLink]['CallerIDNum'])
 						self.enqueue(Action = 'Link', Channel1 = Channel, Channel2 = Link, Uniqueid1 = Uniqueid, Uniqueid2 = UniqueidLink, CallerID1 = CallerID1, CallerID2 = CallerID2, Seconds = int(Seconds))
@@ -1175,14 +1175,13 @@ class MonAst:
 			for UniqueidLink in self.channels:
 				if self.channels[UniqueidLink]['Channel'] == Link:
 					call = (Uniqueid, UniqueidLink)
-					self.callsLock.acquire()
 					duration = time.time() - self.calls[call]['startTime']
 					Seconds  = int(Seconds)
 					if duration < (Seconds - 10) or duration > (Seconds + 10):
 						self.calls[call]['startTime'] = time.time() - Seconds
 						self.enqueue(Action = 'UpdateCallDuration', Uniqueid1 = Uniqueid, Uniqueid2 = UniqueidLink, Seconds = Seconds)
-					self.callsLock.release()
-			
+		
+		self.callsLock.release()
 		self.channelsLock.release()
 		
 		
