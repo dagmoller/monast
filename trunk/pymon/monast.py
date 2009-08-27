@@ -1192,6 +1192,10 @@ class MonAst:
 		
 		self.channelsLock.acquire()
 		self.callsLock.acquire()
+		self.queuesLock.acquire()
+		self.monitoredUsersLock.acquire()
+		
+		## Search for lost channels
 		lostChannels = [i for i in self.channels.keys() if i not in self.channelStatus]
 		for Uniqueid in lostChannels:
 			log.warning('MonAst.handlerStatusComplete :: Removing lost channel %s' % Uniqueid)
@@ -1200,21 +1204,10 @@ class MonAst:
 				del self.channels[Uniqueid]
 				self.enqueue(Action = 'Hangup', Channel = Channel, Uniqueid = Uniqueid, Cause = None, Cause_txt = None)
 			except:
-				pass
+				#pass ## added to debug purposes
+				log.exception('MonAst.handlerStatusComplete :: Exception removing lost channel %s' % Uniqueid)
 			
-			toDelete = None
-			for id in self.calls:
-				#if Uniqueid in id and self.calls[id]['Status'] == 'Dial':
-				if Uniqueid in id:
-					toDelete = id
-					break
-			if toDelete:
-				log.warning('MonAst.handlerStatusComplete :: Removing call %s-%s for lost channel %s' % (toDelete[0], toDelete[1], Uniqueid))
-				del self.calls[toDelete]
-				src, dst = toDelete
-				self.enqueue(Action = 'Unlink', Channel1 = None, Channel2 = None, Uniqueid1 = src, Uniqueid2 = dst, CallerID1 = None, CallerID2 = None)
-			
-			self.monitoredUsersLock.acquire()
+			## Decrease number of peer calls 
 			user = Channel
 			if Channel.rfind('-') != -1:
 				user = Channel[:Channel.rfind('-')]
@@ -1222,28 +1215,33 @@ class MonAst:
 				mu           = self.monitoredUsers[user] 
 				mu['Calls'] -= 1
 				self.enqueue(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
-			self.monitoredUsersLock.release()
 			
 		## Search for lost calls
-		lostCalls = [call for call in self.calls.keys() if call[0] not in self.channelStatus or call[1] not in self.channelStatus]
+		lostCalls = [call for call in self.calls.keys() if not self.channels.has_key(call[0]) or not self.channels.has_key(call[1])]
 		for call in lostCalls:
 			log.warning('MonAst.handlerStatusComplete :: Removing lost call %s-%s' % (call[0], call[1]))
 			try:
 				del self.calls[call]
 				self.enqueue(Action = 'Unlink', Channel1 = None, Channel2 = None, Uniqueid1 = call[0], Uniqueid2 = call[1], CallerID1 = None, CallerID2 = None)
 			except:
-				pass
+				#pass ## added to debug purposes
+				log.exception('MonAst.handlerStatusComplete :: Exception removing lost call %s-%s' % (call[0], call[1]))
 			
-		self.queuesLock.acquire()
-		for Uniqueid in self.queueMemberCalls:
-			if not self.channels.has_key(Uniqueid):
-				log.warning('MonAst.handlerStatusComplete :: Removing lost Queue Member Call %s' % Uniqueid)
+		## Search for lost queue member calls
+		lostQueueMemberCalls = [Uniqueid for Uniqueid in self.queueMemberCalls if not self.channels.has_key(Uniqueid)]
+		for Uniqueid in lostQueueMemberCalls:
+			log.warning('MonAst.handlerStatusComplete :: Removing lost Queue Member Call %s' % Uniqueid)
+			try:
 				Queue  = self.queueMemberCalls[Uniqueid]['Queue']
 				Member = self.queueMemberCalls[Uniqueid]['Member']
 				del self.queueMemberCalls[Uniqueid]
 				self.enqueue(Action = 'RemoveQueueMemberCall', Queue = Queue, Member = Member, Uniqueid = Uniqueid)
-		self.queuesLock.release()
-			
+			except:
+				#pass ## added to debug purposes
+				log.exception('MonAst.handlerStatusComplete :: Exception removing lost Queue Member Call %s' % Uniqueid)
+
+		self.monitoredUsersLock.release()
+		self.queuesLock.release()	
 		self.callsLock.release()
 		self.channelsLock.release()
 		
