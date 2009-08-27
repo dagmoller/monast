@@ -2230,7 +2230,7 @@ class MonAst:
 		if sendReload:
 			self.clientQueuelock.acquire()
 			for session in self.clientQueues:
-				self.clientQueues[session]['q'].put(self.parseJson(Action = 'Reload', Time = 10))
+				self.clientQueues[session]['q'].put(self.parseJson(Action = 'Reload', Time = 10000))
 			self.clientQueuelock.release()
 		
 	
@@ -2313,7 +2313,7 @@ class MonAst:
 			
 		self.reloading = True
 		
-		self.enqueue(Action = 'Reload', Time = 10)
+		self.enqueue(Action = 'Reload', Time = 10000)
 
 		self.AMI.close()
 		while self.AMI.isConnected:
