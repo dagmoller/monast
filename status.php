@@ -157,7 +157,7 @@ while (!feof($fp))
 		
 		if ($now >= (getValor('started', 'session') + MONAST_BROWSER_REFRESH))
 		{
-			$events[] = array('Action' => 'Reload', 'Time' => 2500);
+			$events[] = array('Action' => 'Reload', 'Time' => 3000);
 		}
 		break;
 	}
