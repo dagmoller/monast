@@ -29,6 +29,7 @@
 
 BODY {
 	margin-top: 5px;
+	font-family: verdana,arial,helvetica,sans-serif;
 }
 
 .monast-logo {
@@ -72,9 +73,9 @@ BODY {
 .peerTable {
 	float: left; 
 	/*margin: 5px;*/
-	margin-right: 10px;
-	margin-bottom: 5px;
-	margin-top: 5px;
+	margin-right: 6px;
+	margin-bottom: 3px;
+	margin-top: 3px;
 	background-color: #ffffff;
 	z-index: 1;
 }
@@ -96,25 +97,25 @@ BODY {
 	padding: 5px; 
 }
 #channelsDiv {
-	width: 350px;
+	width: 330px;
 	float: left;
 	margin: 5px;
 }
 .channelDiv {
-	width: 350px;
+	width: 330px;
 	border: 1px solid #aaaaaa;
 	margin-bottom: 2px;
 	background-color: #ffffff;
 	z-index: 1;
 }
 #callsDiv {
-	width: 600px;
+	width: 570px;
 	float: left;
 	margin: 5px;
-	margin-left: 40px;
+	margin-left: 20px;
 }
 .callDiv {
-	width: 600px;
+	width: 570px;
 	border: 1px solid #aaaaaa;
 	margin-bottom: 2px;
 	background-color: #ffffff;
@@ -181,19 +182,16 @@ BODY {
 	margin: 0 auto;
 }
 .tableTitle {
-	font-family: Verdana;
 	font-size: 0.7em;
 	font-weight: bold;
 	background-color: #bbbbbb;
 }
 .statusHeader {
-	font-family: Verdana;
 	font-size: 0.7em;
 	font-weight: bold;
 	background-color: #dddddd;
 }
 .status {
-	font-family: Verdana;
 	font-size: 0.7em;
 	text-align: center;
 	border: 1px solid #aaaaaa;
@@ -204,7 +202,6 @@ BODY {
 }
 .campo {
 	border: 1px solid #dddddd;
-	font-family: Verdana;
 	font-size: 0.9em;
 }
 
@@ -220,7 +217,6 @@ BODY {
 }
 
 fieldset legend {
-	font-family: Verdana;
 	font-size: 0.8em;
 }
 

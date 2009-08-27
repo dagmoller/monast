@@ -202,9 +202,9 @@ function Process(o)
 			if (o['Monitor'] == 'True')
 				rec = "<a href='javascript:recordStop(\"" + o['Uniqueid'] + "\")' title='Stop Monitor'><img src='image/record.png' border='0' width='8' height='8'></a>&nbsp;&nbsp;";
 			
-			var template = "<table width='350'><tr>";
-			template    += "<td id='channel-{Uniqueid}' class='status' width='270'>{Channel}</td>";
-			template    += "<td id='channelStatus-{Uniqueid}' bgcolor='{color}' class='status' width='80'>{State}</td>";
+			var template = "<table width='330'><tr>";
+			template    += "<td id='channel-{Uniqueid}' class='status' width='260'>{Channel}</td>";
+			template    += "<td id='channelStatus-{Uniqueid}' bgcolor='{color}' class='status' width='70'>{State}</td>";
 			template    += "</tr></table>";
 			template     = template.replace(/\{Uniqueid\}/g, o['Uniqueid']);
 			template     = template.replace(/\{Channel\}/g, rec + o['Channel']);
@@ -232,10 +232,10 @@ function Process(o)
 	
 	if (o['Action'] == 'Call')
 	{
-		var template = "<table width='600'><tr>";
-		template    += "<td class='status' width='260' id='callChannel-{SrcUniqueID}'>{Source}</td>";
-		template    += "<td class='status' width='80' bgcolor='{color}' id='callStatus-{SrcUniqueID}+++{DestUniqueID}'>{Status}<br><span style='font-family: monospace;' id='chrono-callStatus-{SrcUniqueID}+++{DestUniqueID}'></span></td>";
-		template    += "<td class='status' width='260' id='callChannel-{DestUniqueID}'>{Destination}</td>";
+		var template = "<table width='570'><tr>";
+		template    += "<td class='status' width='250' id='callChannel-{SrcUniqueID}'>{Source}</td>";
+		template    += "<td class='status' width='70' bgcolor='{color}' id='callStatus-{SrcUniqueID}+++{DestUniqueID}'>{Status}<br><span style='font-family: monospace;' id='chrono-callStatus-{SrcUniqueID}+++{DestUniqueID}'></span></td>";
+		template    += "<td class='status' width='250' id='callChannel-{DestUniqueID}'>{Destination}</td>";
 		template    += "</tr></table>";
 		
 		if (o['CallerID'])
