@@ -103,7 +103,7 @@ while (!feof($fp))
 		sleep(1);
 	}
 	
-	$messages = fread($fp, 1024 * 64);
+	$messages = fread($fp, 1024 * 256);
 	$messages = explode("\r\n", $messages);
 	
 	foreach ($messages as $idx => $message)
