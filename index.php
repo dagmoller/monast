@@ -75,7 +75,7 @@ fwrite($fp, "SESSION: $sessionId\r\n");
 
 while (!feof($fp))
 {
-	$messages = fread($fp, 1024 * 64);
+	$messages = fread($fp, 1024 * 1024);
 	$messages = explode("\r\n", $messages);
 	
 	foreach ($messages as $idx => $message)
