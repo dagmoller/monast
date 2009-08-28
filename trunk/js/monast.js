@@ -232,40 +232,46 @@ function Process(o)
 	
 	if (o['Action'] == 'Call')
 	{
-		var template = "<table width='570'><tr>";
-		template    += "<td class='status' width='250' id='callChannel-{SrcUniqueID}'>{Source}</td>";
-		template    += "<td class='status' width='70' bgcolor='{color}' id='callStatus-{SrcUniqueID}+++{DestUniqueID}'>{Status}<br><span style='font-family: monospace;' id='chrono-callStatus-{SrcUniqueID}+++{DestUniqueID}'></span></td>";
-		template    += "<td class='status' width='250' id='callChannel-{DestUniqueID}'>{Destination}</td>";
-		template    += "</tr></table>";
+		var id  = 'call-' + o['SrcUniqueID'] + '+++' + o['DestUniqueID'];
+		var div = $(id); 
+		if (!div)
+		{
+			div           = document.createElement('div');
+			div.id        = id;
+			div.className = 'callDiv';
 		
-		if (o['CallerID'])
-			o['CallerID1'] = o['CallerIDName'] + ' &lt;' + o['CallerID'] + '&gt;';
-		
-		template = template.replace(/\{SrcUniqueID\}/g, o['SrcUniqueID']);
-		template = template.replace(/\{DestUniqueID\}/g, o['DestUniqueID']);
-		template = template.replace(/\{Source\}/g, o['Source'] + (o['CallerID1'] ? '<br>' + o['CallerID1'] : ''));
-		template = template.replace(/\{Destination\}/g, o['Destination'] + (o['CallerID2'] ? '<br>' + o['CallerID2'] : ''));
-		template = template.replace(/\{Status\}/g, o['Status']);
-		template = template.replace(/\{color\}/g, color(o['Status']));
-		
-		var div       = document.createElement('div');
-		div.id        = 'call-' + o['SrcUniqueID'] + '+++' + o['DestUniqueID'];
-		div.className = 'callDiv'; 
-		div.innerHTML = template;
-		
-		$('callsDiv').appendChild(div);
-		if (o['Status'] == 'Link')
-			chrono('callStatus-' + o['SrcUniqueID'] + '+++' + o['DestUniqueID'], o['Seconds']);
-		
-		ddDivs[div.id]               = new YAHOO.util.DD(div.id);
-		ddDivs[div.id].onMouseDown   = setStartPosition;
-		ddDivs[div.id].onDragDrop    = channelCallDrop;
-		ddDivs[div.id].onInvalidDrop = invalidDrop;
-		ddDivs[div.id].onDragOver    = dragOver;
-		ddDivs[div.id].onDragOut     = dragOut;
-
-		_countCalls += 1;
-		$('countCalls').innerHTML = _countCalls;
+			var template = "<table width='570'><tr>";
+			template    += "<td class='status' width='250' id='callChannel-{SrcUniqueID}'>{Source}</td>";
+			template    += "<td class='status' width='70' bgcolor='{color}' id='callStatus-{SrcUniqueID}+++{DestUniqueID}'>{Status}<br><span style='font-family: monospace;' id='chrono-callStatus-{SrcUniqueID}+++{DestUniqueID}'></span></td>";
+			template    += "<td class='status' width='250' id='callChannel-{DestUniqueID}'>{Destination}</td>";
+			template    += "</tr></table>";
+			
+			if (o['CallerID'])
+				o['CallerID1'] = o['CallerIDName'] + ' &lt;' + o['CallerID'] + '&gt;';
+			
+			template = template.replace(/\{SrcUniqueID\}/g, o['SrcUniqueID']);
+			template = template.replace(/\{DestUniqueID\}/g, o['DestUniqueID']);
+			template = template.replace(/\{Source\}/g, o['Source'] + (o['CallerID1'] ? '<br>' + o['CallerID1'] : ''));
+			template = template.replace(/\{Destination\}/g, o['Destination'] + (o['CallerID2'] ? '<br>' + o['CallerID2'] : ''));
+			template = template.replace(/\{Status\}/g, o['Status']);
+			template = template.replace(/\{color\}/g, color(o['Status']));
+			
+			div.innerHTML = template;
+			
+			$('callsDiv').appendChild(div);
+			if (o['Status'] == 'Link')
+				chrono('callStatus-' + o['SrcUniqueID'] + '+++' + o['DestUniqueID'], o['Seconds']);
+			
+			ddDivs[div.id]               = new YAHOO.util.DD(div.id);
+			ddDivs[div.id].onMouseDown   = setStartPosition;
+			ddDivs[div.id].onDragDrop    = channelCallDrop;
+			ddDivs[div.id].onInvalidDrop = invalidDrop;
+			ddDivs[div.id].onDragOver    = dragOver;
+			ddDivs[div.id].onDragOut     = dragOut;
+	
+			_countCalls += 1;
+			$('countCalls').innerHTML = _countCalls;
+		}
 
 		return;
 	}
