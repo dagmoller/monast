@@ -124,7 +124,7 @@ function getStatus()
 		onFailure: function()
 		{
 			_statusError = true;
-			alert('getStatus() ERROR');
+			alert('!! MonAst ERROR !!\n\nAn error ocurred while requesting status!\nPlease press F5 to reload MonAst.');
 		}
 	});
 }
