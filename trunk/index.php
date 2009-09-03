@@ -55,60 +55,59 @@ $validActions = array
 	'QueueParams'        => array()
 );
 
-$json             = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
-$template         = new TemplatePower('template/index.html');
-$isStatus         = false;
+$json     = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
+$template = new TemplatePower('template/index.html');
+$isStatus = false;
+$buffer   = "";
 
-$errno  = null;
-$errstr = null;
-$fp     = @fsockopen(HOSTNAME, HOSTPORT, $errno, $errstr, 60);
-
-if ($errstr)
+$sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+if ($sock === false)
 {
 	echo "<title>Monast Error</title>\n";
-	echo "<h1>Monast Error</h1>\n<p>Could not connect to " . HOSTNAME . ":" . HOSTPORT . " (" . $errstr . ").</p>\n";
+	echo "<h1>Monast Error</h1>\n<p>Could not create socket!</p>\n";
+	echo "<p>" . socket_strerror(socket_last_error()) . "</p>";
+	die;
+}
+
+$conn = socket_connect($sock, HOSTNAME, HOSTPORT);
+if ($conn === false)
+{
+	echo "<title>Monast Error</title>\n";
+	echo "<h1>Monast Error</h1>\n<p>Could not connect to " . HOSTNAME . ":" . HOSTPORT . " (" . socket_strerror(socket_last_error()) . ").</p>\n";
 	echo "<p>Make sure monast.py is running so the panel can connect to its port properly.</p>";
 	die;
 }
 
-fwrite($fp, "SESSION: $sessionId\r\n");
-
-while (!feof($fp))
+socket_write($sock, "SESSION: $sessionId");
+while ($message = socket_read($sock, 1024 * 16)) 
 {
-	usleep(500);
+	$buffer .= $message;
 	
-	$messages = fread($fp, 1024 * 1024);
-	$messages = explode("\r\n", $messages);
-	
-	foreach ($messages as $idx => $message)
+	if ($buffer == "NEW SESSION" || $buffer == "OK")
 	{
-		if ($message)
-		{
-			if ($message == "NEW SESSION" || $message == "OK")
-			{
-				fwrite($fp, "GET STATUS\r\n");
-			}
-			elseif ($message == "BEGIN STATUS")
-			{
-				$isStatus = true;
-			}
-			elseif ($message == "END STATUS")
-			{
-				$isStatus = false;
-				fwrite($fp, "BYE\r\n");
-			}
-			elseif ($isStatus)
-			{
-				$object = $json->decode($message);
-				
-				if (array_key_exists($object['Action'], $validActions))
-					$validActions[$object['Action']][] = $object;
-			}
-		}
+		$buffer = "";
+		socket_write($sock, "GET STATUS");
+	}
+	
+	if (strpos($buffer, "BEGIN STATUS") !== false)
+		$isStatus = true;
+		
+	if (strpos($buffer, "END STATUS") !== false)
+	{
+		$buffer   = trim(str_replace("BEGIN STATUS", "", str_replace("END STATUS", "", $buffer)));
+		$isStatus = false;
+		socket_write($sock, "BYE");
 	}
 }
+socket_close($sock);
 
-fclose($fp);
+$messages = explode("\r\n", $buffer);
+foreach ($messages as $idx => $message)
+{
+	$object = $json->decode($message);
+	if (array_key_exists($object['Action'], $validActions))
+		$validActions[$object['Action']][] = $object;
+}
 
 $template->prepare();
 
