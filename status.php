@@ -74,102 +74,116 @@ session_start();
 $sessid = session_id();
 session_write_close();
 
-$inicio = time();
+$inicio     = time();
+$buffer     = "";
+$events     = array();
+$lastEvents = array();
 
-$errno  = null;
-$errstr = null;
-$fp     = @fsockopen(HOSTNAME, HOSTPORT, $errno, $errstr, 60);
+$isOk     = false;
+$isStatus = false;
+$complete = false;
 
-if ($errstr)
+$sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+if ($sock === false)
 {
-    $error  = "!! MonAst ERROR !!\n\nCould not connect to " . HOSTNAME . ":" . HOSTPORT . ": $errstr\n";
+	$error  = "!! Monast Error !!\n\nCould not create socket!\n";
+	$error .= "reason: " . socket_strerror(socket_last_error());
+	echo $json->encode(array(array('Action' => 'Error', 'Message' => $error)));
+	die;
+}
+
+$conn = socket_connect($sock, HOSTNAME, HOSTPORT);
+if ($conn === false)
+{
+	$error  = "!! MonAst ERROR !!\n\nCould not connect to " . HOSTNAME . ":" . HOSTPORT . ": " . socket_strerror(socket_last_error()) . "\n";
     $error .= "Make sure monast.py is running so the panel can connect to its port properly.";
 	echo $json->encode(array(array('Action' => 'Error', 'Message' => $error)));
 	die;
 }
 
-fwrite($fp, "SESSION: $sessid\r\n");
-
-$isStatus = false;
-$isOK     = false;
-$events   = array();
-$complete = false;
-
-while (!feof($fp))
+socket_write($sock, "SESSION: $sessid");
+while ($message = socket_read($sock, 1024 * 16)) 
 {
-	if ($isOK && !$isStatus && !$complete)
+	$buffer .= $message;
+	
+	if ($buffer == "OK")
 	{
-		fwrite($fp, "GET CHANGES\r\n");
+		$buffer = "";
+		$isOk   = true;
+		socket_write($sock, "GET CHANGES");
+	}
+	elseif ($buffer == "NO SESSION")
+	{
+		$buffer       = "";
+		$complete     = true;
+		$lastEvents[] = array('Action' => 'Reload', 'Time' => 5000);
+	}
+	elseif ($buffer == "NO CHANGES")
+	{
+		$buffer = "";
+		socket_write($sock, "GET CHANGES");
 		sleep(1);
 	}
 	
-	$messages = fread($fp, 1024 * 256);
-	$messages = explode("\r\n", $messages);
-	
-	foreach ($messages as $idx => $message)
+	if (strpos($buffer, "BEGIN CHANGES") !== false)
+		$isStatus = true;
+
+	if (strpos($buffer, "END CHANGES") !== false)
 	{
-		if ($message)
+		$buffer   = trim(str_replace("BEGIN CHANGES", "", str_replace("END CHANGES", "", $buffer)));
+		$isStatus = false;
+		$complete = true;
+	}
+	
+	if ($isOk && !$isStatus && !$complete)
+	{
+		session_start();
+		$actions = getValor('Actions', 'session');
+		if (count($actions) > 0)
 		{
-			if ($message == "OK")
-			{
-				fwrite($fp, "GET CHANGES\r\n");
-				$isOK = true;
-			}
-			elseif ($message == "BEGIN CHANGES")
-			{
-				$isStatus = true;
-			}
-			elseif ($message == "END CHANGES")
-			{
-				$isStatus = false;
-				if (count($events) > 0)
-					$complete = true;
-			}
-			elseif ($isStatus)
-			{
-				$object = $json->decode($message);
-				
-				if (array_search($object['Action'], $validActions) !== false)
-					$events[] = $object;
-				else 
-					$events[] = array('Action' => 'None', 'Message' => $message);
-			}
+		    foreach ($actions as $action)
+		    {
+		        socket_write($sock, $action . "\r\n");
+		    }
+		    setValor('Actions', array());
 		}
+		session_write_close();
 	}
-	
-	session_start();
-	$actions = getValor('Actions', 'session');
-	if (count($actions) > 0)
-	{
-	    foreach ($actions as $action)
-	    {
-	        fwrite($fp, "$action\r\n");
-	    }
-	    setValor('Actions', array());
-	}
-	session_write_close();
 	
 	$now = time();
-	if ($now >= ($inicio + MONAST_SOCKET_DURATION) && !$isStatus && $isOK)
+	
+	if ($isOk && !$isStatus && $now >= (getValor('started', 'session') + MONAST_BROWSER_REFRESH))
 	{
-		$isOK = false;
-		fwrite($fp, "BYE\r\n");
+		$isOK         = false;
+		$complete     = true;
+		$lastEvents[] = array('Action' => 'Reload', 'Time' => 3000);
+	}
 		
-		if ($now >= (getValor('started', 'session') + MONAST_BROWSER_REFRESH))
-		{
-			$events[] = array('Action' => 'Reload', 'Time' => 3000);
-		}
-		break;
+	if ($isOk && !$isStatus && !$complete && $now >= ($inicio + MONAST_SOCKET_DURATION))
+	{
+		$isOK     = false;
+		$complete = true;
 	}
 	
 	if ($complete)
+		socket_write($sock, "BYE");
+}
+socket_close($sock);
+
+$messages = explode("\r\n", $buffer);
+foreach ($messages as $idx => $message)
+{
+	if ($message)
 	{
-		fwrite($fp, "BYE\r\n");
-		break;
+		$object = $json->decode($message);
+		if (array_search($object['Action'], $validActions) !== false)
+			$events[] = $object;
+		else 
+			$events[] = array('Action' => 'None', 'Message' => $message);
 	}
 }
 
-fclose($fp);
+$events = array_merge($events, $lastEvents);
 
 echo $json->encode($events);
 

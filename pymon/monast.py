@@ -149,8 +149,8 @@ class ColorFormatter(logging.Formatter):
 class MyConfigParser(SafeConfigParser):
 	def optionxform(self, optionstr):
 		return optionstr
-
-
+	
+	
 class MonAst:
 	
 	##
@@ -452,8 +452,10 @@ class MonAst:
 							
 						## Send messages to client
 						if len(output) > 0:
-							log.debug('MonAst.threadClient (%s) :: Sending: %s\r\n' % (threadId, '\r\n'.join(output)))
-							sock.send('%s\r\n' % '\r\n'.join(output))
+							#log.debug('MonAst.threadClient (%s) :: Sending: %s\r\n' % (threadId, '\r\n'.join(output)))
+							#sock.send('%s\r\n' % '\r\n'.join(output))
+							log.debug('MonAst.threadClient (%s) :: Sending: %s' % (threadId, '\r\n'.join(output)))
+							sock.send('\r\n'.join(output))
 				
 				else:
 					count += 1
@@ -1872,15 +1874,21 @@ class MonAst:
 		
 		self.clientQueuelock.acquire()
 		self.clientQueues[session]['t'] = time.time()
-		output.append('BEGIN CHANGES')
+		#output.append('BEGIN CHANGES')
 		while True:
 			try:
 				msg = self.clientQueues[session]['q'].get(False)
 				output.append(msg)
 			except Queue.Empty:
 				break
-		output.append('END CHANGES')
+		#output.append('END CHANGES')
 		self.clientQueuelock.release()
+		
+		if len(output) > 0:
+			output.insert(0, 'BEGIN CHANGES')
+			output.append('END CHANGES')
+		else:
+			output.append('NO CHANGES')
 		
 		return output
 	
