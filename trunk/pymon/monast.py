@@ -1777,11 +1777,16 @@ class MonAst:
 				for user in users[tech]:
 					mu = self.monitoredUsers[user[0]]
 					output.append(self.parseJson(Action = 'PeerStatus', Peer = user[0], Status = mu['Status'], Calls = mu['Calls'], CallerID = user[2]))
-					
-			for Uniqueid in self.channels:
+			
+			chans = self.channels.keys()
+			chans.sort()			
+			for Uniqueid in chans:
 				ch = self.channels[Uniqueid]
 				output.append(self.parseJson(Action = 'NewChannel', Channel = ch['Channel'], State = ch['State'], CallerIDNum = ch['CallerIDNum'], CallerIDName = ch['CallerIDName'], Uniqueid = Uniqueid, Monitor = ch['Monitor']))
-			for call in self.calls:
+			
+			orderedCalls = self.calls.keys()
+			orderedCalls.sort(lambda x, y: cmp(self.calls[x]['startTime'], self.calls[y]['startTime']))
+			for call in orderedCalls:
 				c = self.calls[call]
 				src, dst = call
 			
