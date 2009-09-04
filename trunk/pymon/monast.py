@@ -787,7 +787,7 @@ class MonAst:
 			del self.channels[Uniqueid]
 			self.enqueue(Action = 'Hangup', Channel = Channel, Uniqueid = Uniqueid, Cause = Cause, Cause_txt = Cause_txt)
 		except:
-			pass
+			log.warning("MonAst.handlerHangup :: Channel %s not found on self.channels" % Uniqueid)
 		
 		toDelete = None
 		for id in self.calls:
