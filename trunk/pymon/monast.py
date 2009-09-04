@@ -300,6 +300,8 @@ class MonAst:
 			
 		self.AMI = AsteriskManager(host, port, username, password)
 		
+		self.AMI.registerEventHandler('_AUTHENTICATED', self._GetConfig)
+		
 		self.AMI.registerEventHandler('Reload', self.handlerReload)
 		self.AMI.registerEventHandler('ChannelReload', self.handlerChannelReload)
 		self.AMI.registerEventHandler('PeerEntry', self.handlerPeerEntry)
@@ -2213,6 +2215,8 @@ class MonAst:
 	
 	def _GetConfig(self, sendReload = True):
 		
+		log.info('MonAst._GetConfig :: Requesting Asterisk Configuration (reload clients: %s)' % sendReload)
+		
 		self.clientQueuelock.acquire()
 		self.monitoredUsersLock.acquire()
 		self.meetmeLock.acquire()
@@ -2272,7 +2276,7 @@ class MonAst:
 			self.tcs  = thread.start_new_thread(self.threadSocketClient, ('threadSocketClient', 2))
 			self.tcqr = thread.start_new_thread(self.threadClientQueueRemover, ('threadClientQueueRemover', 2))
 			
-			self._GetConfig()
+			#self._GetConfig() # Commented, this now is executted when monast is authenticated in AMI
 				
 			while self.running:
 				time.sleep(1)
