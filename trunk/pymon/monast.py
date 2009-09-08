@@ -517,6 +517,9 @@ class MonAst:
 			count = 0
 			
 			log.info('MonAst.threadCheckStatus :: Requesting Status...')
+			if not self.AMI.isConnected or not self.AMI.isAuthenticated:
+				log.warning('MonAst.threadCheckStatus :: AMI Not Connected...')
+				continue
 			
 			self.channelStatus = []
 			self.AMI.execute(['Action: Status']) # generate Event: Status
