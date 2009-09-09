@@ -67,6 +67,11 @@ if [ $inst -eq 1 ]; then
 		cp contrib/init.d/rc.debian.monast $INITD/monast
 		echo "Instaling init.d scripts"
 	fi
+
+	if [ -f /etc/SuSE-release ]; then
+		cp contrib/init.d/rc.suse.monast $INITD/monast
+		echo "Instaling init.d scripts"
+	fi
 fi
 
 echo
