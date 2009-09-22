@@ -65,3 +65,13 @@ SIP/user-3 = force
 
 # force CallerID (only in forced mode)
 SIP/user-4 = force,Diego Aguirre <5555>
+
+[queues]
+# defualt show/hide
+default = show
+
+# show queue test01
+teste01 = show
+
+# hide queue teste02
+teste02 = hide
