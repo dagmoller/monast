@@ -175,6 +175,7 @@ class MonAst:
 	meetmePrefix    = None
 	
 	userDisplay     = {}
+	queuesDisplay   = {}
 	
 	#enqueue        = Queue.Queue()
 	
@@ -257,6 +258,7 @@ class MonAst:
 		self.meetmeContext = cp.get('global', 'meetme_context')
 		self.meetmePrefix  = cp.get('global', 'meetme_prefix')
 		
+		## Users
 		try:
 			self.sortby = cp.get('users', 'sortby')
 		except NoOptionError:
@@ -288,6 +290,16 @@ class MonAst:
 				self.monitoredUsers[user] = {
 					'Channeltype': tech, 'Status': Status, 'Calls': 0, 'CallerID': CallerID, 'Context': self.defaultContext, 'Variables': [], 'forced': True
 				}
+		
+		## Queues
+		if cp.get('queues', 'default') == 'show':
+			self.queuesDisplay['DEFAULT'] = True
+		else:
+			self.queuesDisplay['DEFAULT'] = False
+			
+		for queue, display in cp.items('queues'):
+			if (self.queuesDisplay['DEFAULT'] and display == 'hide') or (not self.queuesDisplay['DEFAULT'] and display == 'show'):
+				self.queuesDisplay[queue] = True
 				
 		try:
 			self.socketClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1281,6 +1293,9 @@ class MonAst:
 		Status     = dic['Status']
 		Paused     = dic['Paused']
 		
+		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
+			return
+		
 		self.queuesLock.acquire()
 		if not self.queues.has_key(Queue):
 			log.warning("MonAst.handlerQueueMember :: Can not add location '%s' to queue '%s'. Queue not found." % (Location, Queue))
@@ -1320,6 +1335,9 @@ class MonAst:
 		Queue    = dic['Queue']
 		Location = dic['Location']
 		
+		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
+			return
+		
 		self.queuesLock.acquire()
 		lines.append('Penalty: %s' % self.queues[Queue]['members'][Location]['Penalty'])
 		lines.append('CallsTaken: %s' % self.queues[Queue]['members'][Location]['CallsTaken'])
@@ -1343,6 +1361,9 @@ class MonAst:
 		CallerIDName = dic['CallerIDName']
 		Wait         = dic['Wait']
 		Uniqueid     = None
+		
+		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
+			return
 		
 		# I need to get Uniqueid from this entry
 		self.channelsLock.acquire()
@@ -1375,6 +1396,9 @@ class MonAst:
 		MemberName = dic['MemberName']
 		Penalty    = dic['Penalty']
 		
+		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
+			return
+		
 		self.queuesLock.acquire()
 		self.queues[Queue]['members'][Location] = {'Name': MemberName, 'Penalty': Penalty, 'CallsTaken': 0, 'LastCall': 0, 'Status': '0', 'Paused': 0} 
 		self.enqueue(Action = 'AddQueueMember', Queue = Queue, Member = Location, MemberName = MemberName, Penalty = Penalty, CallsTaken = 0, LastCall = 0, Status = AST_DEVICE_STATES['0'], Paused = 0)
@@ -1389,6 +1413,9 @@ class MonAst:
 		Queue      = dic['Queue']
 		Location   = dic['Location']
 		MemberName = dic['MemberName']
+		
+		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
+			return
 		
 		self.queuesLock.acquire()
 		try:
@@ -1412,6 +1439,9 @@ class MonAst:
 		Count        = dic['Count']
 		Uniqueid     = dic['Uniqueid']
 		
+		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
+			return
+		
 		self.queuesLock.acquire()
 		try:
 			self.queues[Queue]['clients'][Uniqueid] = {'Uniqueid': Uniqueid, 'Channel': Channel, 'CallerID': CallerID, 'CallerIDName': CallerIDName, \
@@ -1432,6 +1462,9 @@ class MonAst:
 		Queue        = dic['Queue']
 		Count        = dic['Count']
 		Uniqueid     = dic['Uniqueid']
+		
+		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
+			return
 		
 		self.queuesLock.acquire()
 		try:
@@ -1460,6 +1493,9 @@ class MonAst:
 		Queue    = dic['Queue']
 		Uniqueid = dic['Uniqueid']
 		
+		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
+			return
+		
 		self.queuesLock.acquire()
 		self.queues[Queue]['clients'][Uniqueid]['Abandoned'] = True
 		self.queuesLock.release()
@@ -1481,6 +1517,9 @@ class MonAst:
 		ServiceLevel     = int(dic['ServiceLevel'])
 		ServicelevelPerf = float(dic['ServicelevelPerf'].replace(',', '.'))
 		Weight           = int(dic['Weight'])
+		
+		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
+			return
 		
 		self.queuesLock.acquire()
 		if self.queues.has_key(Queue):
@@ -2363,6 +2402,7 @@ class MonAst:
 		self.calls          = {}
 		self.channels       = {}
 		self.monitoredUsers = {}
+		self.queuesDisplay  = {}
 		self.queues         = {}
 		
 		self.parkedLock.release()
