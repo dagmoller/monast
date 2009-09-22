@@ -176,6 +176,10 @@ foreach ($messages as $idx => $message)
 	if ($message)
 	{
 		$object = $json->decode($message);
+		
+		if ($object['Action'] == 'CliResponse')
+			$object['Response'] = rawurlencode($object['Response']);
+		
 		if (array_search($object['Action'], $validActions) !== false)
 			$events[] = $object;
 		else 
