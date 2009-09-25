@@ -203,6 +203,7 @@ class MonAst:
 	queueClientStatus = {}
 	
 	queueMemberCalls  = {}
+	queueMemberPaused = {}
 	
 	queueStatusFirst = False
 	queueStatusOrder = []
@@ -1301,6 +1302,21 @@ class MonAst:
 			log.warning("MonAst.handlerQueueMember :: Can not add location '%s' to queue '%s'. Queue not found." % (Location, Queue))
 			self.queuesLock.release()
 			return
+
+		PausedTime = 1
+		if Paused == '1':
+			if self.queueMemberPaused.has_key(Queue):
+				try:
+					PausedTime = time.time() - self.queueMemberPaused[Queue][Location]
+				except:
+					self.queueMemberPaused[Queue][Location] = time.time()
+			else:
+				self.queueMemberPaused[Queue] = {Location: time.time()}
+		else:
+			try:
+				del self.queueMemberPaused[Queue][Location]
+			except:
+				pass
 		
 		try:
 			self.queues[Queue]['members'][Location]['Penalty']    = Penalty
@@ -1308,12 +1324,12 @@ class MonAst:
 			self.queues[Queue]['members'][Location]['LastCall']   = LastCall
 			self.queues[Queue]['members'][Location]['Status']     = Status
 			self.queues[Queue]['members'][Location]['Paused']     = Paused
-			self.enqueue(Action = 'QueueMemberStatus', Queue = Queue, Member = Location, Penalty = Penalty, CallsTaken = CallsTaken, LastCall = LastCall, Status = AST_DEVICE_STATES[Status], Paused = Paused)
+			self.enqueue(Action = 'QueueMemberStatus', Queue = Queue, Member = Location, Penalty = Penalty, CallsTaken = CallsTaken, LastCall = LastCall, Status = AST_DEVICE_STATES[Status], Paused = Paused, PausedTime = PausedTime)
 		except KeyError:
 			self.queues[Queue]['members'][Location] = {
 				'Name': Name, 'Penalty': Penalty, 'CallsTaken': CallsTaken, 'LastCall': LastCall, 'Status': Status, 'Paused': Paused
 			}
-			self.enqueue(Action = 'AddQueueMember', Queue = Queue, Member = Location, MemberName = Name, Penalty = Penalty, CallsTaken = CallsTaken, LastCall = LastCall, Status = AST_DEVICE_STATES[Status], Paused = Paused)
+			self.enqueue(Action = 'AddQueueMember', Queue = Queue, Member = Location, MemberName = Name, Penalty = Penalty, CallsTaken = CallsTaken, LastCall = LastCall, Status = AST_DEVICE_STATES[Status], Paused = Paused, PausedTime = PausedTime)
 		self.queueMemberStatus[Queue].append(Location)
 		self.queuesLock.release()
 		
@@ -1878,8 +1894,13 @@ class MonAst:
 				members.sort()
 				for member in members:
 					m = q['members'][member]
+					PausedTime = 1
+					try:
+						PausedTime = time.time() - self.queueMemberPaused[queue][member]
+					except:
+						pass
 					output.append(self.parseJson(Action = 'AddQueueMember', Queue = queue, Member = member, MemberName = m['Name'], \
-						Penalty = m['Penalty'], CallsTaken = m['CallsTaken'], LastCall = m['LastCall'], Status = AST_DEVICE_STATES[m['Status']], Paused = m['Paused']))
+						Penalty = m['Penalty'], CallsTaken = m['CallsTaken'], LastCall = m['LastCall'], Status = AST_DEVICE_STATES[m['Status']], Paused = m['Paused'], PausedTime = PausedTime))
 					
 				clients = q['clients'].values()
 				clients.sort(lambda x, y: cmp(x['Position'], y['Position']))
@@ -2395,15 +2416,16 @@ class MonAst:
 		self.monitoredUsersLock.acquire()
 		self.queuesLock.acquire()
 		
-		self.userDisplay    = {}
-		self.monitoredUsers = {}
-		self.parked         = {}
-		self.meetme         = {}
-		self.calls          = {}
-		self.channels       = {}
-		self.monitoredUsers = {}
-		self.queuesDisplay  = {}
-		self.queues         = {}
+		self.userDisplay       = {}
+		self.monitoredUsers    = {}
+		self.parked            = {}
+		self.meetme            = {}
+		self.calls             = {}
+		self.channels          = {}
+		self.queuesDisplay     = {}
+		self.queues            = {}
+		self.queueMemberCalls  = {}
+		self.queueMemberPaused = {}
 		
 		self.parkedLock.release()
 		self.meetmeLock.release()
