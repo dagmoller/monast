@@ -27,8 +27,9 @@
 * OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-var ddDivs    = new Array();
-var callerIDs = new Array();
+var ddDivs        = new Array();
+var callerIDs     = new Array();
+var pausedMembers = new Array();
 
 String.prototype.trim = function() { return this.replace(/^\s*/, "").replace(/\s*$/, ""); }
 //function $(id) { return document.getElementById(id); }
@@ -82,6 +83,13 @@ function blink(id, cor)
 		t += 200;
 		setTimeout("$('" + id + "').style.backgroundColor = '" + cor + "'", t);
 	}
+}
+
+function getCallerId(peer)
+{
+	if (callerIDs[peer])
+		return callerIDs[peer].replace('&lt;', '<').replace('&gt;', '>');
+	return '';
 }
 
 var _statusError  = false;
@@ -490,7 +498,7 @@ function Process(o)
 			template    += "</tr></table>";
 			template     = template.replace(/\{Exten\}/g, o['Exten']);
 			template     = template.replace(/\{From\}/g, o['From']);
-			template     = template.replace(/\{CallerIDFrom\}/g, callerIDs[user]);
+			template     = template.replace(/\{CallerIDFrom\}/g, getCallerId(user));
 			template     = template.replace(/\{CallerIDName\}/g, o['CallerIDName']);
 			template     = template.replace(/\{CallerID\}/g, o['CallerID']);
 			template     = template.replace(/\{Channel\}/g, o['Channel']);
@@ -537,8 +545,14 @@ function Process(o)
 			div.id        = id;
 			div.className = 'queueMembersDiv';
 			
+			pausedMembers[o['Queue'] + '-' + o['Member']] = false;
 			if (o['Paused'] == '1')
+			{
+				pausedMembers[o['Queue'] + '-' + o['Member']] = true;
 				o['Status'] = 'Paused';
+				if (MONAST_CALL_TIME)
+					o['Status'] = 'Paused<br><span style="font-family: monospace;" id="chrono-queueMemberStatus-{Queue}-{Member}">00:00</span>';
+			}
 			
 			var template = "<table width='300'><tr>";
 			template    += "<td class='status' width='170' align='center'><a href='javascript:void(0)' title='Options' onClick='showMemberOptionsMenu(\"{Queue}:::{Member}\")'>{MemberName}</a></td>";
@@ -546,16 +560,19 @@ function Process(o)
 			template    += "<td class='status' width='90' align='center' id='queueMemberStatus-{Queue}-{Member}' bgcolor='{color}'>{Status}</td>";
 			template    += "</tr></table>";
 			
+			template     = template.replace(/\{Status\}/g, o['Status']);
+			template     = template.replace(/\{color\}/g, color(o['Status']));
 			template     = template.replace(/\{Queue\}/g, o['Queue']);
 			template     = template.replace(/\{Member\}/g, o['Member']);
 			template     = template.replace(/\{MemberName\}/g, o['MemberName'].replace('<', '&lt;').replace('>', '&gt;'));
 			template     = template.replace(/\{CallsTaken\}/g, o['CallsTaken']);
-			template     = template.replace(/\{Status\}/g, o['Status']);
-			template     = template.replace(/\{color\}/g, color(o['Status']));
 			
 			div.innerHTML = template;
 			
 			$('queueMembers-' + o['Queue']).appendChild(div);
+			
+			if (MONAST_CALL_TIME && pausedMembers[o['Queue'] + '-' + o['Member']])
+				chrono('queueMemberStatus-' + o['Queue'] + '-' + o['Member'], o['PausedTime'], true);
 			
 			_countMembers[o['Queue']] += 1;
 			
@@ -578,6 +595,9 @@ function Process(o)
 		var div = $(id);
 		if (div)
 		{
+			stopChrono('queueMemberStatus-' + o['Queue'] + '-' + o['Member']);
+			pausedMembers[o['Queue'] + '-' + o['Member']] = false;
+			
 			$('queueMembers-' + o['Queue']).removeChild(div);
 			_countMembers[o['Queue']] -= 1;
 		}
@@ -596,11 +616,65 @@ function Process(o)
 		var td = $('queueMemberStatus-' + o['Queue'] + '-' + o['Member']);
 		if (td)
 		{
+			/*
 			if (o['Paused'] == '1')
+			{
+				if (MONAST_CALL_TIME)
+				{
+					if (!pausedMembers[o['Queue'] + '-' + o['Member']])
+					{
+						pausedMembers[o['Queue'] + '-' + o['Member']] = true;
+						o['Status'] = 'Paused<br><span style="font-family: monospace;" id="chrono-' + td.id + '">00:00</span>';
+						chrono(td.id, o['PausedTime'], true);
+					}
+				}
+				else
+					o['Status'] = 'Paused';
+				td.innerHTML = o['Status'];
+				td.style.backgroundColor = color(o['Status']);
+			}
+			else if (pausedMembers[o['Queue'] + '-' + o['Member']])
+			{
+				pausedMembers[o['Queue'] + '-' + o['Member']] = false;
+				stopChrono(td.id);
+			}
+			else
+			{
+				td.innerHTML = o['Status'];
+				td.style.backgroundColor = color(o['Status']);
+			}
+			*/
+			
+			if (o['Paused'] == '1')
+			{
 				o['Status'] = 'Paused';
-				
-			td.innerHTML = o['Status'];
-			td.style.backgroundColor = color(o['Status']);
+				if (MONAST_CALL_TIME)
+				{
+					if (!pausedMembers[o['Queue'] + '-' + o['Member']])
+					{
+						pausedMembers[o['Queue'] + '-' + o['Member']] = true;
+						td.innerHTML = 'Paused<br><span style="font-family: monospace;" id="chrono-' + td.id + '">00:00</span>';
+						td.style.backgroundColor = color(o['Status']);
+						chrono(td.id, o['PausedTime'], true);
+					}
+				}
+				else
+				{
+					td.innerHTML = o['Status'];
+					td.style.backgroundColor = color(o['Status']);
+				}
+			}
+			else if (pausedMembers[o['Queue'] + '-' + o['Member']])
+			{
+				pausedMembers[o['Queue'] + '-' + o['Member']] = false;
+				td.innerHTML = o['Status'];
+				td.style.backgroundColor = color(o['Status']);
+			}
+			else
+			{
+				td.innerHTML = o['Status'];
+				td.style.backgroundColor = color(o['Status']);
+			}
 		}
 			
 		return;
@@ -902,7 +976,7 @@ function transferCall(src, dst, type)
 	}
 	else
 	{
-		dest = callerIDs[dst];
+		dest = getCallerId(dst);
 	}
 	
 	var c = confirm("Transfer call to " + comp + dest + '?');
@@ -969,7 +1043,7 @@ function parkedHangup(exten)
 // Add/Remove Pause/Unpause Queue members
 function queueMemberAdd(queue, member)
 {
-	var c = confirm('Add member ' + (callerIDs[member] ? callerIDs[member] : member) + ' to queue ' + queue + '?');
+	var c = confirm('Add member ' + (getCallerId(member) ? getCallerId(member) : member) + ' to queue ' + queue + '?');
 	if (c)
 	{
 		new Ajax.Request('action.php', 
@@ -985,7 +1059,7 @@ function queueMemberAdd(queue, member)
 
 function queueMemberRemove(queue, member)
 {
-	var c = confirm('Remove member ' + (callerIDs[member] ? callerIDs[member] : member) + ' from queue ' + queue + '?');
+	var c = confirm('Remove member ' + (getCallerId(member) ? getCallerId(member) : member) + ' from queue ' + queue + '?');
 	if (c)
 	{
 		new Ajax.Request('action.php', 
@@ -1009,7 +1083,7 @@ function queueMemberPause(p_sType, p_aArgs, id)
 	var tmp    = id.split(':::');
 	var queue  = tmp[0];
 	var member = tmp[1];
-	var c      = confirm('Pause member ' + (callerIDs[member] ? callerIDs[member] : member) + ' in queue ' + queue + '?');
+	var c      = confirm('Pause member ' + (getCallerId(member) ? getCallerId(member) : member) + ' in queue ' + queue + '?');
 	if (c)
 	{
 		new Ajax.Request('action.php', 
@@ -1028,7 +1102,7 @@ function queueMemberUnpause(p_sType, p_aArgs, id)
 	var tmp    = id.split(':::');
 	var queue  = tmp[0];
 	var member = tmp[1];
-	var c      = confirm('Unpause member ' + (callerIDs[member] ? callerIDs[member] : member) + ' in queue ' + queue + '?');
+	var c      = confirm('Unpause member ' + (getCallerId(member) ? getCallerId(member) : member) + ' in queue ' + queue + '?');
 	if (c)
 	{
 		new Ajax.Request('action.php', 
@@ -1119,7 +1193,7 @@ function peerDrop(e, id)
 	{
 		var src = this.id.replace('peerDiv-', '');
 		var dst = id.replace('peerDiv-', '');
-		var c   = confirm('Originate a call from "' + callerIDs[src] + '" to "' + callerIDs[dst] + '"?');
+		var c   = confirm('Originate a call from "' + getCallerId(src) + '" to "' + getCallerId(dst) + '"?');
 		
 		if (c)
 			originateDial(src, dst, 'default');
@@ -1128,7 +1202,7 @@ function peerDrop(e, id)
 	{
 		var src = this.id.replace('peerDiv-', '');
 		var dst = id.replace('meetme-', '');
-		var c   = confirm('Invite "' + callerIDs[src] + '" to meetme ' + dst + '?');
+		var c   = confirm('Invite "' + getCallerId(src) + '" to meetme ' + dst + '?');
 		if (c)
 			originateCall(src, dst, 'meetme');
 	}
@@ -1200,7 +1274,7 @@ function parkedCallDrop(e, id)
 	if (id.indexOf('peerDiv-') != -1)
 	{
 		var source = id.replace('peerDiv-', '');
-		var c = confirm('Transfer Parked Call on exten ' + parked + ' to ' + callerIDs[source] + '?');
+		var c = confirm('Transfer Parked Call on exten ' + parked + ' to ' + getCallerId(source) + '?');
 		if (c)
 			originateCall(source, parked, 'default');
 	}
@@ -1262,7 +1336,7 @@ function showPeerOptionsMenu(id)
 		_POMENU[id] = new YAHOO.widget.Menu("peerOptionsMenu-" + id, { xy: YAHOO.util.Dom.getXY(YAHOO.util.Dom.get('peerDiv-' + id)) });
 		_POMENU[id].addItems(items);
 		
-		_POMENU[id].setItemGroupTitle('Options for "' + callerIDs[id] + '"', 0);
+		_POMENU[id].setItemGroupTitle('Options for "' + getCallerId(id) + '"', 0);
 		
 		if (id.indexOf('Skype') != -1)
 		{
@@ -1334,7 +1408,7 @@ function showTransferDialog(idA, srcA, idB, srcB, dst)
 		$('transferDestination').innerHTML = 'Park';
 	}
 	else
-		$('transferDestination').innerHTML = 'transfer to "' + callerIDs[dst] + '"';
+		$('transferDestination').innerHTML = 'transfer to "' + getCallerId(dst) + '"';
 		
 	$('transferSourceValueA').value    = idA;
 	$('transferSourceValueB').value    = idB;
@@ -1348,10 +1422,13 @@ function showTransferDialog(idA, srcA, idB, srcB, dst)
 
 // Chrono for calls linked
 var _chrono = new Array();
-function chrono(id, secs)
+function chrono(id, secs, hideSeconds)
 {
 	if (!MONAST_CALL_TIME)
 		return;
+
+	if (hideSeconds == undefined)
+		hideSeconds = false;
 
 	if (_chrono[id])
 	{
@@ -1381,10 +1458,10 @@ function chrono(id, secs)
 		if (secs)
 		{
 			var d = new Date(secs * 1000);
-			_chrono[id] = {hours: d.getUTCHours(), mins: d.getUTCMinutes(), secs: d.getUTCSeconds(), run: null};
+			_chrono[id] = {hours: d.getUTCHours(), mins: d.getUTCMinutes(), secs: d.getUTCSeconds(), run: null, showSeconds: !hideSeconds};
 		}
 		else
-			_chrono[id] = {hours: 0, mins: 0, secs: 0, run: null};
+			_chrono[id] = {hours: 0, mins: 0, secs: 0, run: null, showSeconds: !hideSeconds};
 	}
 	
 	var secs  = (_chrono[id].secs < 10 ? '0' + _chrono[id].secs : _chrono[id].secs);
@@ -1393,7 +1470,7 @@ function chrono(id, secs)
 	
 	var f = $('chrono-' + id);
 	if (f)
-		f.innerHTML = hours + ':' + mins + ':' + secs;
+		f.innerHTML = hours + ':' + mins + (_chrono[id].showSeconds ? ':' + secs : '');
 		
 	_chrono[id].run = setTimeout('chrono("' + id + '")', 1000);
 }
