@@ -551,7 +551,7 @@ function Process(o)
 				pausedMembers[o['Queue'] + '-' + o['Member']] = true;
 				o['Status'] = 'Paused';
 				if (MONAST_CALL_TIME)
-					o['Status'] = 'Paused<br><span style="font-family: monospace;" id="chrono-queueMemberStatus-{Queue}-{Member}">00:00</span>';
+					o['Status'] = 'Paused<br><span style="font-family: monospace;" id="chrono-queueMemberStatus-{Queue}-{Member}">00:00:00</span>';
 			}
 			
 			var template = "<table width='300'><tr>";
@@ -572,7 +572,7 @@ function Process(o)
 			$('queueMembers-' + o['Queue']).appendChild(div);
 			
 			if (MONAST_CALL_TIME && pausedMembers[o['Queue'] + '-' + o['Member']])
-				chrono('queueMemberStatus-' + o['Queue'] + '-' + o['Member'], o['PausedTime'], true);
+				chrono('queueMemberStatus-' + o['Queue'] + '-' + o['Member'], o['PausedTime'], false);
 			
 			_countMembers[o['Queue']] += 1;
 			
@@ -624,8 +624,8 @@ function Process(o)
 					if (!pausedMembers[o['Queue'] + '-' + o['Member']])
 					{
 						pausedMembers[o['Queue'] + '-' + o['Member']] = true;
-						o['Status'] = 'Paused<br><span style="font-family: monospace;" id="chrono-' + td.id + '">00:00</span>';
-						chrono(td.id, o['PausedTime'], true);
+						o['Status'] = 'Paused<br><span style="font-family: monospace;" id="chrono-' + td.id + '">00:00:00</span>';
+						chrono(td.id, o['PausedTime'], false);
 					}
 				}
 				else
@@ -653,9 +653,9 @@ function Process(o)
 					if (!pausedMembers[o['Queue'] + '-' + o['Member']])
 					{
 						pausedMembers[o['Queue'] + '-' + o['Member']] = true;
-						td.innerHTML = 'Paused<br><span style="font-family: monospace;" id="chrono-' + td.id + '">00:00</span>';
+						td.innerHTML = 'Paused<br><span style="font-family: monospace;" id="chrono-' + td.id + '">00:00:00</span>';
 						td.style.backgroundColor = color(o['Status']);
-						chrono(td.id, o['PausedTime'], true);
+						chrono(td.id, o['PausedTime'], false);
 					}
 				}
 				else
