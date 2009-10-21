@@ -60,7 +60,7 @@ $template = new TemplatePower('template/index.html');
 $isStatus = false;
 $buffer   = "";
 
-$sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+$sock = @socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 if ($sock === false)
 {
 	echo "<title>Monast Error</title>\n";
@@ -69,7 +69,7 @@ if ($sock === false)
 	die;
 }
 
-$conn = socket_connect($sock, HOSTNAME, HOSTPORT);
+$conn = @socket_connect($sock, HOSTNAME, HOSTPORT);
 if ($conn === false)
 {
 	echo "<title>Monast Error</title>\n";
