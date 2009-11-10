@@ -28,75 +28,65 @@
 * OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+header('Content-Type: application/json;');
+
 require_once 'lib/include.php';
 
-header("Cache-Control: no-cache, must-revalidate");
-header("Pragma: no-cache");
-header("Expires: -1");
-
 session_start();
-$login = getValor('login', 'session');
-setValor('started', time());
-setValor('Actions', array());
+
+$json      = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
+$saida     = array();
 $sessionId = session_id();
-session_write_close();
+$username  = getValor('username');
+$secret    = getValor('secret'); 
 
-$json     = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
-$template = new TemplatePower('template/index.html');
-
-if (!$login)
+$sock = @socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+if ($sock === false)
 {
-	$sock = @socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-	if ($sock === false)
-	{
-		echo "<title>Monast Error</title>\n";
-		echo "<h1>Monast Error</h1>\n<p>Could not create socket!</p>\n";
-		echo "<p>" . socket_strerror(socket_last_error()) . "</p>";
-		die;
-	}
-	
+	$saida['error']  = "<font size='3'><b>Monast Error</b></font>\n<p>Could not create socket!</p>\n";
+	$saida['error'] .= "<p>" . socket_strerror(socket_last_error()) . "</p>";
+}
+else 
+{
 	$conn = @socket_connect($sock, HOSTNAME, HOSTPORT);
 	if ($conn === false)
 	{
-		echo "<title>Monast Error</title>\n";
-		echo "<h1>Monast Error</h1>\n<p>Could not connect to " . HOSTNAME . ":" . HOSTPORT . " (" . socket_strerror(socket_last_error()) . ").</p>\n";
-		echo "<p>Make sure monast.py is running so the panel can connect to its port properly.</p>";
-		die;
+		$saida['error']  = "<font size='3'><b>Monast Error</b></font>\n<p>Could not connect to " . HOSTNAME . ":" . HOSTPORT . " (" . socket_strerror(socket_last_error()) . ").</p>\n";
+		$saida['error'] .= "<p>Make sure monast.py is running so the panel can connect to its port properly.</p>";
 	}
-	
-	$buffer = "";
-	socket_write($sock, "SESSION: $sessionId");
-	while ($message = socket_read($sock, 1024 * 16)) 
+	else 
 	{
-		$buffer .= $message;
+		$buffer = "";
+		$action = array('Action' => 'Login', 'username' => $username, 'secret' => $secret, 'session' => $sessionId);
+		socket_write($sock, $json->encode($action));
 		
-		if ($buffer == "NEW SESSION" || $buffer == "OK")
+		while ($message = socket_read($sock, 1024 * 16)) 
 		{
-			$login = true;
-			session_start();
-			setValor('login', true);
-			session_write_close();
-			socket_write($sock, "BYE");
+			$buffer .= $message;
+			
+			if ($buffer == "OK")
+			{
+				setValor('login', true);
+				setValor('username', $username);
+				$saida['success'] = true;
+				
+				socket_write($sock, "BYE");
+			}
+			
+			if (strpos($buffer, "ERROR: ") !== false)
+			{
+				$message        = str_replace("ERROR: ", "", $buffer);
+				$saida['error'] = $message;
+				
+				socket_write($sock, "BYE");
+			}
 		}
-		
-		if ($buffer == "ERROR: Authentication Required")
-		{
-			session_start();
-			setValor('login', false);
-			session_write_close();
-			socket_write($sock, "BYE");
-		}
+		socket_close($sock);
 	}
-	socket_close($sock);
 }
 
-if (!$login)
-	$template->assignInclude('main', 'template/login.html');
-else 
-	$template->assignInclude('main', 'monast.php');
+echo $json->encode($saida);
 
-$template->prepare();
-
-$template->printToScreen();
+session_write_close();
 
 ?>
