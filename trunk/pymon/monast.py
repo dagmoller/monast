@@ -406,6 +406,8 @@ class MonAst:
 						object = {'Action': None}
 						try:
 							object = json.loads(message)
+							if not object.has_key('session'):
+								object['session'] = session
 						except:
 							pass
 						
@@ -592,7 +594,21 @@ class MonAst:
 			for session in self.clientQueues:
 				self.clientQueues[session]['q'].put(json.dumps(args))
 		self.clientQueuelock.release()
+	
+	
+	def checkPermission(self, object, role):
 		
+		username = object['username']
+		
+		if self.authRequired:
+			if self.clients.has_key(username) and role in self.clients[username]['roles']:
+				return True
+			else:
+				self.enqueue(__session = object['session'], Action = 'doAlertError', Message = 'You do not have permission to execute this action.')
+				return False
+		else:
+			return True
+	
 		
 	def parseJson(self, **args):
 		
@@ -2000,6 +2016,9 @@ class MonAst:
 	
 	def clientOriginateCall(self, threadId, object):
 		
+		if not self.checkPermission(object, 'calls'):
+			return False
+		
 		log.info('MonAst.clientOriginateCall (%s) :: Running...' % threadId)
 		src  = object['Source']
 		dst  = object['Destination']
@@ -2026,6 +2045,9 @@ class MonAst:
 	
 	def clientOriginateDial(self, threadId, object):
 		
+		if not self.checkPermission(object, 'calls'):
+			return False
+				
 		log.info('MonAst.clientOriginateDial (%s) :: Running...' % threadId)
 		src = object['Source']
 		dst = object['Destination']
@@ -2042,6 +2064,9 @@ class MonAst:
 		
 		
 	def clientHangupChannel(self, threadId, object):
+		
+		if not self.checkPermission(object, 'calls'):
+			return False
 		
 		log.info('MonAst.clientHangupChannel (%s) :: Running...' % threadId)
 		Uniqueid = object['Uniqueid']
@@ -2060,6 +2085,9 @@ class MonAst:
 		
 		
 	def clientMonitorChannel(self, threadId, object):
+		
+		if not self.checkPermission(object, 'calls'):
+			return False
 		
 		log.info('MonAst.clientMonitorChannel (%s) :: Running...' % threadId)
 		Uniqueid = object['Uniqueid']
@@ -2086,6 +2114,9 @@ class MonAst:
 		
 	def clientMonitorStop(self, threadId, object):
 		
+		if not self.checkPermission(object, 'calls'):
+			return False
+		
 		log.info('MonAst.clientMonitorStop (%s) :: Running...' % threadId)
 		Uniqueid = object['Uniqueid']
 		
@@ -2104,6 +2135,9 @@ class MonAst:
 	
 	
 	def clientTransferCall(self, threadId, object):
+		
+		if not self.checkPermission(object, 'calls'):
+			return False
 		
 		log.info('MonAst.clientTransferCall (%s) :: Running...' % threadId)
 		src  = object['Source']
@@ -2162,6 +2196,9 @@ class MonAst:
 	
 	def clientParkCall(self, threadId, object):
 
+		if not self.checkPermission(object, 'calls'):
+			return False
+
 		log.info('MonAst.clientParkCall (%s) :: Running...' % threadId)
 		park     = object['Park']
 		announce = object['Announce']
@@ -2181,6 +2218,9 @@ class MonAst:
 	
 	def clientMeetmeKick(self, threadId, object):
 		
+		if not self.checkPermission(object, 'calls'):
+			return False
+		
 		log.info('MonAst.clientMeetmeKick (%s) :: Running...' % threadId)
 		Meetme  = object['Meetme']
 		Usernum = object['Usernum']
@@ -2193,6 +2233,9 @@ class MonAst:
 	
 	
 	def clientParkedHangup(self, threadId, object):
+		
+		if not self.checkPermission(object, 'calls'):
+			return False
 		
 		log.info('MonAst.clientParkedHangup (%s) :: Running...' % threadId)
 		Exten = object['Exten']
@@ -2211,6 +2254,9 @@ class MonAst:
 		
 		
 	def clientAddQueueMember(self, threadId, object):
+		
+		if not self.checkPermission(object, 'queues'):
+			return False
 		
 		log.info('MonAst.clientAddQueueMember (%s) :: Running...' % threadId)
 		queue  = object['Queue']
@@ -2233,6 +2279,9 @@ class MonAst:
 		
 	def clientRemoveQueueMember(self, threadId, object):
 		
+		if not self.checkPermission(object, 'queues'):
+			return False
+		
 		log.info('MonAst.clientRemoveQueueMember (%s) :: Running...' % threadId)
 		queue  = object['Queue']
 		member = object['Member']
@@ -2247,6 +2296,9 @@ class MonAst:
 		
 	def clientPauseQueueMember(self, threadId, object):
 		
+		if not self.checkPermission(object, 'queues'):
+			return False
+		
 		log.info('MonAst.clientPauseQueueMember (%s) :: Running...' % threadId)
 		queue  = object['Queue']
 		member = object['Member']
@@ -2260,6 +2312,9 @@ class MonAst:
 		self.AMI.execute(command)
 		
 	def clientUnpauseQueueMember(self, threadId, object):
+		
+		if not self.checkPermission(object, 'queues'):
+			return False
 		
 		log.info('MonAst.clientPauseQueueMember (%s) :: Running...' % threadId)
 		queue  = object['Queue']
@@ -2276,6 +2331,9 @@ class MonAst:
 		
 	def clientSkypeLogin(self, threadId, object):
 		
+		if not self.checkPermission(object, 'calls'):
+			return False
+		
 		log.info('MonAst.clientSkypeLogin (%s) :: Running...' % threadId)
 		skypeName = object['SkypeName']
 		
@@ -2288,6 +2346,9 @@ class MonAst:
 	
 	def clientSkypeLogout(self, threadId, object):
 		
+		if not self.checkPermission(object, 'calls'):
+			return False
+		
 		log.info('MonAst.clientSkypeLogout (%s) :: Running...' % threadId)
 		skypeName = object['SkypeName']
 		
@@ -2299,6 +2360,9 @@ class MonAst:
 		
 	
 	def clientCliCommand(self, threadId, object, session):
+		
+		if not self.checkPermission(object, 'cli'):
+			return False
 		
 		log.info('MonAst.clientCliCommand (%s) :: Running...' % threadId)
 		cliCommand = object['CliCommand']
