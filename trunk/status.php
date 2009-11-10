@@ -71,7 +71,8 @@ $validActions = array
 );
 	
 session_start();
-$sessid = session_id();
+$sessid   = session_id();
+$username = getValor('username', 'session');
 session_write_close();
 
 $inicio     = time();
@@ -145,6 +146,9 @@ while ($message = socket_read($sock, 1024 * 16))
 		{
 		    foreach ($actions as $action)
 		    {
+		    	$action = $json->decode($action);
+		    	$action['username'] = $username;
+		    	$action = $json->encode($action);
 		        socket_write($sock, $action . "\r\n");
 		    }
 		    setValor('Actions', array());
