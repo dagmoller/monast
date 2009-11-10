@@ -379,7 +379,7 @@ var _tabPannel = new YAHOO.widget.TabView('TabPannel');
 _tabPannel.addListener('beforeActiveTabChange', function(e){
 	var pannels = new Array('peersDiv', 'meetmesDiv', 'chanCallDiv', 'parkedCallsDiv', 'queuesDiv');
 	for (i = 0; i < pannels.length; i++)
-		$(pannels[i]).style.display = 'none';
+		$(pannels[i]).className = 'yui-hidden';
 
 	var tabs = this.get('tabs');
 	for (i = 0; i < tabs.length; i++)
