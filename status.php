@@ -67,7 +67,10 @@ $validActions = array
 	'QueueParams',
 	'MonitorStart',
 	'MonitorStop',
-	'UpdateCallDuration'
+	'UpdateCallDuration',
+	'doAlertInfo',
+	'doAlertWarn',
+	'doAlertError',
 );
 	
 session_start();

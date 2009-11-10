@@ -162,6 +162,15 @@ function Process(o)
 		return; 
 	}
 	
+	if (o['Action'] == 'doAlertError')
+		doError(o['Message']);
+		
+	if (o['Action'] == 'doAlertWarn')
+		doWarn(o['Message']);
+		
+	if (o['Action'] == 'doAlertInfo')
+		doAlert(o['Message']);
+	
 	// Fix all CallerIDs
 	if (o['CallerID'])
 		o['CallerID'] = o['CallerID'].replace('<unknown>', 'unknown').replace('<', '&lt;').replace('>', '&gt;');
