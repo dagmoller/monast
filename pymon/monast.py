@@ -179,6 +179,9 @@ class MonAst:
 	
 	#enqueue        = Queue.Queue()
 	
+	authRequired   = False
+	
+	clients        = {}
 	clientSocks    = {}
 	clientQueues   = {}
 	parked         = {}
@@ -259,6 +262,19 @@ class MonAst:
 		self.meetmeContext = cp.get('global', 'meetme_context')
 		self.meetmePrefix  = cp.get('global', 'meetme_prefix')
 		
+		if cp.get('global', 'auth_required') == 'true':
+			self.authRequired = True
+		
+		users = [s for s in cp.sections() if s not in ('global', 'users', 'queues')]
+		for user in users:
+			try:
+				self.clients[user] = {
+					'secret': cp.get(user, 'secret'), 
+					'roles' : [r.strip() for r in cp.get(user, 'roles').split(',')]
+				}
+			except:
+				log.error("MonAst.__init__ :: Username %s has errors in config file!" % user)
+		
 		## Users
 		try:
 			self.sortby = cp.get('users', 'sortby')
@@ -301,7 +317,7 @@ class MonAst:
 		for queue, display in cp.items('queues'):
 			if (self.queuesDisplay['DEFAULT'] and display == 'hide') or (not self.queuesDisplay['DEFAULT'] and display == 'show'):
 				self.queuesDisplay[queue] = True
-				
+		
 		try:
 			self.socketClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			self.socketClient.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -393,16 +409,35 @@ class MonAst:
 						except:
 							pass
 						
-						if message.upper().startswith('SESSION: '):
+						isSession = message.upper().startswith('SESSION: ')
+						
+						if self.authRequired and object['Action'] == 'Login':
+							username = object['username']
+							secret   = object['secret']
+							session  = object['session']
+							if self.clients.has_key(username) and self.clients[username]['secret'] == secret:
+								output.append('OK')
+								self.clientQueuelock.acquire()
+								self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time(), 'roles': self.clients[username]['roles']}
+								self.clientQueuelock.release()
+								log.log(logging.NOTICE, 'MonAst.threadClient (%s) :: New (authenticated) client session %s for %s' % (threadId, session, username))
+							else:
+								log.error('MonAst.threadClient (%s) :: Invalid username or password for %s' % (threadId, username))
+								output.append('ERROR: Invalid user or secret!')
+						
+						elif isSession:
 							session = message[9:]
 							self.clientQueuelock.acquire()
 							try:
 								self.clientQueues[session]['t'] = time.time()
 								output.append('OK')
 							except KeyError:
-								self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time()}
-								output.append('NEW SESSION')
-								log.log(logging.NOTICE, 'MonAst.threadClient (%s) :: New client session: %s' % (threadId, session))
+								if self.authRequired:
+									output.append('ERROR: Authentication Required')
+								else:
+									output.append('NEW SESSION')
+									self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time()}
+									log.log(logging.NOTICE, 'MonAst.threadClient (%s) :: New client session: %s' % (threadId, session))
 							self.clientQueuelock.release()
 						
 						elif session and message.upper() == 'GET STATUS':

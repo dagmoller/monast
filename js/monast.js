@@ -132,7 +132,7 @@ function getStatus()
 		onFailure: function()
 		{
 			_statusError = true;
-			alert('!! MonAst ERROR !!\n\nAn error ocurred while requesting status!\nPlease press F5 to reload MonAst.');
+			doError('!! MonAst ERROR !!\n\nAn error ocurred while requesting status!\nPlease press F5 to reload MonAst.');
 		}
 	});
 }
@@ -145,7 +145,7 @@ function Process(o)
 	if (o['Action'] == 'Error')
 	{
 		_statusError = true;
-		alert(o['Message']);
+		doError(o['Message']);
 	}
 	
 	if (o['Action'] == 'Reload')
@@ -852,7 +852,7 @@ function originateCall(peer, number, type)
 {
 	if (!number)
 	{
-		alert('Destination number not defined!');
+		doWarn('Destination number not defined!');
 		return false;
 	}
 	
@@ -1503,6 +1503,73 @@ function sendCliCommand()
 			parameters: {
 				reqTime: new Date().getTime(),
 				action: Object.toJSON({Action: 'CliCommand', CliCommand: command})
+			}
+		});
+	}
+}
+
+// Alerts and Confirmations
+function doAlert(message)
+{
+	_alert.setHeader('Information');
+	_alert.setBody(message);
+	_alert.cfg.setProperty("icon", YAHOO.widget.SimpleDialog.ICON_INFO);
+	_alert.render();
+	_alert.show();
+}
+function doError(message)
+{
+	_alert.setHeader('Error');
+	_alert.setBody(message);
+	_alert.cfg.setProperty("icon", YAHOO.widget.SimpleDialog.ICON_BLOCK);
+	_alert.render();
+	_alert.show();
+}
+function doWarn(message)
+{
+	_alert.setHeader('Warning');
+	_alert.setBody(message);
+	_alert.cfg.setProperty("icon", YAHOO.widget.SimpleDialog.ICON_WARN);
+	_alert.render();
+	_alert.show();
+}
+
+// Auth
+function doLogin()
+{
+	var username = $('_username').value;
+	var secret   = $('_secret').value;
+	
+	if (!username)
+	{
+		doAlert('You must define an user.');
+		$('_reqStatus').innerHTML = "<font color='red'>User not defined!</font>";
+	}
+	else
+	{
+		new Ajax.Request('login.php', {
+			method: 'post',
+			parameters: {
+				reqTime: new Date().getTime(),
+				username: username,
+				secret: secret
+			},
+			onCreate: function () {
+				$('_reqStatus').innerHTML = 'Authenticating, please wait...';
+			},
+			onSuccess: function (r) {
+				var json = r.responseJSON;
+				if (json['error'])
+				{
+					$('_reqStatus').innerHTML = "<font color='red'>Monast Error!</font>";;
+					doError(json['error']);
+				}
+					
+				if (json['success'])
+				{
+					$('_reqStatus').innerHTML = "Authenticated, reloading...";
+					setTimeout("location.href = 'index.php'", 1000);
+				}
 			}
 		});
 	}

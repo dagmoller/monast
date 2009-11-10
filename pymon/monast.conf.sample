@@ -47,6 +47,9 @@ transfer_context = default
 meetme_context = default
 meetme_prefix = 
 
+# Use client autentication on browser 
+auth_required = false
+
 [users]
 # sort peers (options: peer, callerid, calleridname, calleridnum)
 sortby = callerid
@@ -75,3 +78,18 @@ teste01 = show
 
 # hide queue teste02
 teste02 = hide
+
+
+## Define users and roles to use on auth_required is set to true
+## roles must be:
+##                calls : user can originate, transfer, park and drop calls
+##                queues: user cans add, remove, pause and unpause members on queues
+##                cli:    user can execute asterisk cli commands
+
+[admin]
+secret = 12345
+roles  = calls,queues,cli
+
+[demo]
+secret = 
+roles  = 

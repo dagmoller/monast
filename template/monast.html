@@ -1,0 +1,418 @@
+
+<!--
+/*
+* Copyright (c) 2008, Diego Aguirre
+* All rights reserved.
+* 
+* Redistribution and use in source and binary forms, with or without modification,
+* are permitted provided that the following conditions are met:
+* 
+*     * Redistributions of source code must retain the above copyright notice, 
+*       this list of conditions and the following disclaimer.
+*     * Redistributions in binary form must reproduce the above copyright notice, 
+*       this list of conditions and the following disclaimer in the documentation 
+*       and/or other materials provided with the distribution.
+*     * Neither the name of the DagMoller nor the names of its contributors
+*       may be used to endorse or promote products derived from this software 
+*       without specific prior written permission.
+* 
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
+* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
+* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+* OF THE POSSIBILITY OF SUCH DAMAGE.
+*/ 
+ -->
+
+<script type="text/javascript">
+var MONAST_CALL_TIME = {MONAST_CALL_TIME};
+</script>
+
+<div id="actionsDiv">
+  <div id="park">
+    <img src="image/park.png" width="32" height="32" title="Park Calls"><br>Park
+  </div>
+  <div id="record">
+    <img src="image/record.png" width="32" height="32" title="Record Channels/Calls"><br>Record
+  </div>
+  <div id="trash">
+    <img src="image/trash.png" width="32" height="32" title="Hangup Channels/Calls or Kick meetme users"><br>Trash
+  </div>
+</div>
+
+<div id="TabPannel" class="yui-navset" >
+  <ul class="yui-nav">
+    <li><a href="#tab0"><em>Mixed Pannels</em></a></li>
+    <li><a href="#tab1"><em>Peers/Users</em></a></li>
+    <li><a href="#tab2"><em>Meetme Rooms</em></a></li>
+    <li><a href="#tab3"><em>Channels/Calls</em></a></li>
+    <li><a href="#tab4"><em>Parked Calls</em></a></li>
+    <li><a href="#tab5"><em>Queues</em></a></li>
+    <!-- START BLOCK : cli_tab -->
+    <li><a href="#tab6"><em>Asterisk CLI</em></a></li>
+    <!-- END BLOCK : cli_tab -->
+    <!-- START BLOCK : debug_tab -->
+    <li><a href="#tab7"><em>Debug</em></a></li>
+    <!-- END BLOCK : debug_tab -->
+  </ul>
+  
+  <div class="yui-content"> 
+    <div id="mixed">
+      <fieldset id="pannelsToShow">
+        <legend>Pannels to Show</legend> 
+        <input id="checkBoxTab1" type="checkbox" name="checkBoxTab1" value="peersDiv">
+        <input id="checkBoxTab2" type="checkbox" name="checkBoxTab2" value="meetmesDiv">
+        <input id="checkBoxTab3" type="checkbox" name="checkBoxTab3" value="chanCallDiv">
+        <input id="checkBoxTab4" type="checkbox" name="checkBoxTab4" value="parkedCallsDiv">
+        <input id="checkBoxTab5" type="checkbox" name="checkBoxTab5" value="queuesDiv">
+      </fieldset>
+      <script type="text/javascript">
+        var ocheckBoxTab1 = new YAHOO.widget.Button("checkBoxTab1", { label: "Peers/Users" });
+            ocheckBoxTab1.addListener('checkedChange', showHidePannels);
+        var ocheckBoxTab2 = new YAHOO.widget.Button("checkBoxTab2", { label:"Meetme Rooms" });
+            ocheckBoxTab2.addListener('checkedChange', showHidePannels);
+        var ocheckBoxTab3 = new YAHOO.widget.Button("checkBoxTab3", { label:"Channels/Calls" });
+            ocheckBoxTab3.addListener('checkedChange', showHidePannels);
+        var ocheckBoxTab4 = new YAHOO.widget.Button("checkBoxTab4", { label:"Parked Calls" });
+            ocheckBoxTab4.addListener('checkedChange', showHidePannels);
+        var ocheckBoxTab5 = new YAHOO.widget.Button("checkBoxTab5", { label:"Queues" });
+            ocheckBoxTab5.addListener('checkedChange', showHidePannels);
+      </script>
+    </div>
+  
+    <div id="peersDiv">
+    <fieldset>
+      <legend>Peers/Users</legend>
+      <div id="peersDivWraper"> 
+
+      <!-- START BLOCK : technology -->
+      <fieldset>
+        <legend>{technology} ({count})</legend>
+        <!-- START BLOCK : peer -->
+        <div id="peerDiv-{peer}" class="peerTable">
+          <table class="status" width="175px">
+            <tr>
+              <td colspan="2" bgcolor="#DDDDDD" nowrap="nowrap"><b><a href="javascript:void(0)" title="Options" onClick="showPeerOptionsMenu('{peer}')">{CallerID}</a></b></td>
+            </tr>
+            <tr>
+              <td id="peerStatus-{peer}" bgcolor="{status-color}" width="115px">{status}</td>
+              <td id="peerCalls-{peer}" bgcolor="{calls-color}" width="60px">{calls}</td>
+            </tr>
+          </table>
+        </div>
+        <script type="text/javascript">
+		  callerIDs['{peer}'] = '{CallerID}';
+		  ddDivs['peerDiv-{peer}']               = new YAHOO.util.DD("peerDiv-{peer}");
+		  ddDivs['peerDiv-{peer}'].onMouseDown   = setStartPosition;
+		  ddDivs['peerDiv-{peer}'].onDragDrop    = peerDrop; 
+		  ddDivs['peerDiv-{peer}'].onInvalidDrop = invalidDrop;
+		  ddDivs['peerDiv-{peer}'].onDragOver    = dragOver;
+		  ddDivs['peerDiv-{peer}'].onDragOut     = dragOut;
+        </script>
+        <!-- END BLOCK : peer -->
+      </fieldset>
+      <!-- END BLOCK : technology -->
+      
+      </div>
+      <div style="clear: both;"></div>
+    </fieldset>
+    </div>
+    
+    <div id="meetmesDiv">
+    <script type="text/javascript">
+    var _countMeetme = {};
+    </script>
+    <fieldset>
+      <legend>Meetme Rooms</legend> 
+      <div id="meetmeDivWrapper">
+      </div>
+    </fieldset>
+    </div>
+    
+    <div id="chanCallDiv">
+    <script type="text/javascript">
+    var _countChannels = 0;
+    var _countCalls    = 0;
+    </script>
+    <fieldset>
+      <legend>Channels/Calls</legend> 
+      <div id="channelsDiv">
+        <div class="channelDiv">
+          <table width="330">
+            <tr>
+              <td class="tableTitle" align="center" colspan="2">Channels (<span id="countChannels">0</span>)</td>
+            </tr>
+            <tr>
+              <td class="statusHeader" align="center" width="260">Channel</td>
+              <td class="statusHeader" align="center" width="70">Status</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div id="callsDiv">
+        <div class="callDiv">
+          <table width="570">
+            <tr>
+              <td class="tableTitle" align="center" colspan="3">Calls (<span id="countCalls">0</span>)</td>
+            </tr>
+            <tr>
+              <td class="statusHeader" align="center" width="250">SRC Channel</td>
+              <td class="statusHeader" align="center" width="70">Status</td>
+              <td class="statusHeader" align="center" width="250">DST Channel</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div style="clear: both;"></div>
+    </fieldset>
+    </div>
+    
+    <div id="parkedCallsDiv">
+    <script type="text/javascript">
+    var _countParked = 0;
+    </script>
+    <fieldset>
+      <legend>Parked Calls</legend>
+      <div id="parkedsDiv">
+        <div class="parkedDiv">
+          <table width="600">
+            <tr>
+              <td class="tableTitle" align="center" colspan="3">Parked Calls (<span id="countParked">0</span>)</td>
+            </tr>
+            <tr>
+              <td class="statusHeader" align="center" width="80">Exten</td>
+              <td class="statusHeader" align="center" width="260">Parked From</td>
+              <td class="statusHeader" align="center" width="260">Parked Channel</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </fieldset>
+    </div>
+    
+    <div id="queuesDiv">
+    <script type="text/javascript">
+    var _countMembers   = {};
+    var _countClients   = {};
+    var _countCompleted = {};
+    var _countAbandoned = {};
+    </script>
+    <fieldset>
+      <legend>Queues</legend>
+      <!-- START BLOCK : queueDualDiv -->
+      <div class="queueDualDiv"><!-- inicio -->
+      <!-- START BLOCK : queue -->
+      <script type="text/javascript">
+      _countMembers['{queue}']   = 0;
+      _countClients['{queue}']   = 0;
+      _countCompleted['{queue}'] = 0;
+      _countAbandoned['{queue}'] = 0;
+      </script>
+      <div class="queueDiv">
+        <fieldset>
+          <legend>Queue: {queue}</legend>
+          <div class="queueStatisticsDiv">
+            <table width="532">
+              <tr>
+                <td class="tableTitle" colspan="8" align="center">Statistics</td>
+              </tr>
+              <tr>
+                <td class="statusHeader" align="right">Max:&nbsp;</td>
+                <td class="status"><span id="queueStatsMax-{queue}">0</span></td>
+                
+                <td class="statusHeader" align="right">Calls:&nbsp;</td>
+                <td class="status"><span id="queueStatsCalls-{queue}">0</span></td>
+                
+                <td class="statusHeader" align="right">Holdtime:&nbsp;</td>
+                <td class="status"><span id="queueStatsHoldtime-{queue}">0</span></td>
+                
+                <td class="statusHeader" align="right">Completed:&nbsp;</td>
+                <td class="status"><span id="queueStatsCompleted-{queue}">0</span></td>
+              </tr>
+              <tr>
+                <td class="statusHeader" align="right">Abandoned:&nbsp;</td>
+                <td class="status"><span id="queueStatsAbandoned-{queue}">0</span></td>
+                
+                <td class="statusHeader" align="right">Service Level:&nbsp;</td>
+                <td class="status"><span id="queueStatsServiceLevel-{queue}">0</span></td>
+                
+                <td class="statusHeader" align="right">Service level Perf.:&nbsp;</td>
+                <td class="status"><span id="queueStatsServicelevelPerf-{queue}">0.0</span></td>
+                
+                <td class="statusHeader" align="right">Weight:&nbsp;</td>
+                <td class="status"><span id="queueStatsWeight-{queue}">0</span></td>
+              </tr>
+            </table>
+          </div>
+          <div class="queueMembersDivWrap" id="queueMembers-{queue}">
+            <div class="queueMembersDiv" id="queueMembersDrop-{queue}">
+              <table width="300">
+                <tr>
+                  <td class="tableTitle" colspan="3" align="center">Members (<span id="queueMembersCount-{queue}">0</span>)</td>
+                </tr>
+                <tr>
+                  <td class="statusHeader" width="170" align="center">Location/Name</td>
+                  <td class="statusHeader" width="40" align="center">Calls Taken</td>
+                  <td class="statusHeader" width="90" align="center">Status</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+          <div class="queueClientsDivWrap" id="queueClients-{queue}">
+            <div class="queueClientsDiv">
+              <table width="220">
+                <tr>
+                  <td class="tableTitle" align="center">Clients (<span id="queueClientsCount-{queue}">0</span>)</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </fieldset>
+      </div>
+      <script type="text/javascript">
+      new YAHOO.util.DDTarget("queueMembersDrop-{queue}");
+      </script>
+      <!-- END BLOCK : queue -->
+      </div><!-- fim -->
+      <!-- END BLOCK : queueDualDiv -->
+      <div style="clear: both;"></div>
+    </fieldset>
+    </div>
+
+    <!-- START BLOCK : cli_tab_div -->
+	<div id="cliDiv">
+	  <textarea id="cliResponse" rows="40" cols="160" readonly="readonly"></textarea><br>
+	  <input id="cliCommand" type="text" size="60" onkeypress="sendCliCommandOnEnter(event)">
+	  &nbsp;<button onclick="sendCliCommand()">Send</button>&nbsp;<button onclick="$('cliResponse').value=''">Clear</button>
+	</div>
+	<!-- END BLOCK : cli_tab_div -->
+
+    <!-- START BLOCK : debug_tab_div -->
+    <div id="debugMsg">
+    </div>
+    <!-- END BLOCK : debug_tab_div -->
+    
+  </div>
+</div>
+
+<div id="originateDiv">
+  <div class="hd">Please enter destination number</div>
+  <div class="bd">
+    <label for="originateNumber">Destination: </label><input type="text" id="originateNumber" size="15" />
+  </div>
+</div>
+<script type="text/javascript">
+var originateDialog = new YAHOO.widget.Dialog("originateDiv", 
+{
+	visible: false,
+	constraintoviewport: true,
+	buttons: [
+		{ text:"Originate", handler: handleOriginate },
+		{ text:"Cancel", handler: handleOriginateCancel, isDefault: true }
+	],
+	width: '300px',
+	zIndex: '999'
+});
+</script>
+
+<div id="transferDiv">
+  <div class="hd">Please select channel to <span id="transferDestination"></span></div>
+  <div class="bd">
+    <input type="radio" name="transferSource" id="transferSourceValueA" value=""><span id="transferSourceTextA"></span><br>
+    <input type="radio" name="transferSource" id="transferSourceValueB" value=""><span id="transferSourceTextB"></span>
+  </div>
+</div>
+<script type="text/javascript">
+var transferDialog = new YAHOO.widget.Dialog("transferDiv",
+{
+	fixedcenter: true, 
+	buttons: [
+		{ text:"Transfer", handler: handleTransfer },
+		{ text:"Cancel", handler: handleTransferCancel, isDefault: true }
+	],
+	visible: false,
+	constraintoviewport : true,
+	width: '500px',
+	zIndex: '999'
+});
+</script>
+
+<script type="text/javascript">
+YAHOO.util.DDM.mode = YAHOO.util.DDM.POINT;
+
+if (window.addEventListener)
+{
+	window.addEventListener('scroll', function()
+	{
+		$('actionsDiv').style.top = (document.documentElement.scrollTop + 10) + 'px';
+	}, false);
+}
+else
+{
+	window.onscroll = function()
+	{
+		$('actionsDiv').style.top = (document.documentElement.scrollTop + 10) + 'px';
+	}
+}
+
+var _state = YAHOO.util.Cookie.get("_state");
+if (!_state)
+{
+	_state = {activeIndex: 1, buttons: {'checkBoxTab1': false, 'checkBoxTab2': false, 'checkBoxTab3': false, 'checkBoxTab4': false, 'checkBoxTab5': false}}
+	YAHOO.util.Cookie.set('_state', Object.toJSON(_state));
+}
+else
+{
+	_state = _state.evalJSON();
+}
+
+var _buttons = new Array(ocheckBoxTab1, ocheckBoxTab2, ocheckBoxTab3, ocheckBoxTab4, ocheckBoxTab5);
+
+var _tabPannel = new YAHOO.widget.TabView('TabPannel');
+_tabPannel.addListener('beforeActiveTabChange', function(e){
+	var pannels = new Array('peersDiv', 'meetmesDiv', 'chanCallDiv', 'parkedCallsDiv', 'queuesDiv');
+	for (i = 0; i < pannels.length; i++)
+		$(pannels[i]).style.display = 'none';
+
+	var tabs = this.get('tabs');
+	for (i = 0; i < tabs.length; i++)
+	{
+		if (tabs[i].get('label') == e.newValue.get('label'))
+		{
+			_state.activeIndex = i;
+			YAHOO.util.Cookie.set('_state', Object.toJSON(_state));
+			break;
+		}
+	}
+});
+_tabPannel.getTab(0).addListener('click', function(e){
+	for (i = 0; i < _buttons.length; i++)
+	{
+		_buttons[i].set('checked', _state.buttons[_buttons[i].get('id')]);
+	}
+});
+_tabPannel.set('activeIndex', _state.activeIndex);
+if (_state.activeIndex == 0)
+{
+	for (i = 0; i < _buttons.length; i++)
+	{
+		_buttons[i].set('checked', _state.buttons[_buttons[i].get('id')]);
+	}
+}
+
+var _dTrash  = new YAHOO.util.DDTarget("trash");
+var _dPark   = new YAHOO.util.DDTarget("park");
+var _dRecord = new YAHOO.util.DDTarget("record");
+
+<!-- START BLOCK : process -->
+Process('{json}'.evalJSON());
+<!-- END BLOCK : process -->
+
+getStatus();
+
+</script>
