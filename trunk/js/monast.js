@@ -851,7 +851,7 @@ function Process(o)
 
 function showHidePannels(e)
 {
-	$(this.get('value')).style.display = (e.newValue ? 'block' : 'none');
+	$(this.get('value')).className = (e.newValue ? '' : 'yui-hidden');
 	_state.buttons[this.get('id')] = e.newValue;
 	YAHOO.util.Cookie.set('_state', Object.toJSON(_state));
 }
@@ -1220,8 +1220,8 @@ function channelCallDrop(e, id)
 	if (id.indexOf('peerDiv-') != -1 && this.id.indexOf('call-') != -1)
 	{
 		var ids  = this.id.substring(5).split('+++');
-		var srcA = $('callChannel-' + ids[0]).innerHTML.replace('<br>', ' (').replace('( ', '(') + ')';
-		var srcB = $('callChannel-' + ids[1]).innerHTML.replace('<br>', ' (').replace('( ', '(') + ')';
+		var srcA = $('callChannel-' + ids[0]).innerHTML.replace(/<br>/ig, ' (').replace(' ( ', ' (') + ')';
+		var srcB = $('callChannel-' + ids[1]).innerHTML.replace(/<br>/ig, ' (').replace(' ( ', ' (') + ')';
 		showTransferDialog(ids[0], srcA, ids[1], srcB, id.substring(8));
 	}
 	
@@ -1236,10 +1236,8 @@ function channelCallDrop(e, id)
 	if (this.id.indexOf('call-') != -1 && id == 'park')
 	{
 		var ids  = this.id.substring(5).split('+++');
-		//var srcA = $('channel-' + ids[0]).innerHTML;
-		//var srcB = $('channel-' + ids[1]).innerHTML;
-		var srcA = $('callChannel-' + ids[0]).innerHTML.replace('<br>', ' (').replace('( ', '(') + ')';
-		var srcB = $('callChannel-' + ids[1]).innerHTML.replace('<br>', ' (').replace('( ', '(') + ')';
+		var srcA = $('callChannel-' + ids[0]).innerHTML.replace(/<br>/ig, ' (').replace(' ( ', '(') + ')';
+		var srcB = $('callChannel-' + ids[1]).innerHTML.replace(/<br>/ig, ' (').replace(' ( ', '(') + ')';
 		showTransferDialog(ids[0], srcA, ids[1], srcB, 'ParkedCalls');
 	}
 	
