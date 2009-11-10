@@ -301,16 +301,17 @@ var MONAST_CALL_TIME = {MONAST_CALL_TIME};
 </div>
 
 <div id="originateDiv">
-  <div class="hd">Please enter destination number</div>
+  <div class="hd">Enter destination number</div>
   <div class="bd">
     <label for="originateNumber">Destination: </label><input type="text" id="originateNumber" size="15" />
   </div>
 </div>
 <script type="text/javascript">
-var originateDialog = new YAHOO.widget.Dialog("originateDiv", 
+var _originateDialog = new YAHOO.widget.Dialog("originateDiv", 
 {
 	visible: false,
 	constraintoviewport: true,
+	modal: true,
 	buttons: [
 		{ text:"Originate", handler: handleOriginate },
 		{ text:"Cancel", handler: handleOriginateCancel, isDefault: true }
@@ -321,14 +322,14 @@ var originateDialog = new YAHOO.widget.Dialog("originateDiv",
 </script>
 
 <div id="transferDiv">
-  <div class="hd">Please select channel to <span id="transferDestination"></span></div>
+  <div class="hd">Select channel to <span id="transferDestination"></span></div>
   <div class="bd">
     <input type="radio" name="transferSource" id="transferSourceValueA" value=""><span id="transferSourceTextA"></span><br>
     <input type="radio" name="transferSource" id="transferSourceValueB" value=""><span id="transferSourceTextB"></span>
   </div>
 </div>
 <script type="text/javascript">
-var transferDialog = new YAHOO.widget.Dialog("transferDiv",
+var _transferDialog = new YAHOO.widget.Dialog("transferDiv",
 {
 	fixedcenter: true, 
 	buttons: [
@@ -337,7 +338,8 @@ var transferDialog = new YAHOO.widget.Dialog("transferDiv",
 	],
 	visible: false,
 	constraintoviewport : true,
-	width: '500px',
+	modal: true,
+	width: '550px',
 	zIndex: '999'
 });
 </script>
