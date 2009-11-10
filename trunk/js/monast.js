@@ -869,7 +869,7 @@ function originateCall(peer, number, type)
 	{
 		if (msg == 'OK'){
 			$('originateNumber').value = '';
-			originateDialog.hide();
+			_originateDialog.hide();
 		}
 	}
 	
@@ -885,7 +885,7 @@ function originateCall(peer, number, type)
 			if (transport.responseText == 'OK') 
 			{
 				$('originateNumber').value = '';
-				originateDialog.hide();
+				_originateDialog.hide();
 			}
 		}
 	});
@@ -912,10 +912,8 @@ function hangupCall(chanId)
 		msg = "Hangup this Call?";
 		chanId = chanId.substring(5, chanId.lastIndexOf('+++'));
 	}
-		
-	var c = confirm(msg);
-	if (c)
-	{
+	
+	doConfirm(msg, function () {
 		new Ajax.Request('action.php', 
 		{
 			method: 'get',
@@ -924,7 +922,7 @@ function hangupCall(chanId)
 				action: Object.toJSON({Action: 'HangupChannel', Uniqueid: chanId})
 			}
 		});
-	}
+	});
 }
 
 // Rercord a call
@@ -939,9 +937,7 @@ function recordCall(chanId)
 		mix    = 1;
 	}
 	
-	var c = confirm(msg);
-	if (c)
-	{
+	doConfirm(msg, function () {
 		new Ajax.Request('action.php', 
 		{
 			method: 'get',
@@ -950,14 +946,12 @@ function recordCall(chanId)
 				action: Object.toJSON({Action: 'MonitorChannel', Uniqueid: chanId, Mix: mix})
 			}
 		});
-	}
+	});
 }
 
 function recordStop(chanId)
 {
-	var c = confirm('Stop this Record?');
-	if (c)
-	{
+	doConfirm('Stop this Record?', function () {
 		new Ajax.Request('action.php', 
 		{
 			method: 'get',
@@ -966,7 +960,7 @@ function recordStop(chanId)
 				action: Object.toJSON({Action: 'MonitorStop', Uniqueid: chanId})
 			}
 		});
-	}
+	});
 }
 
 // Transfer
@@ -988,17 +982,15 @@ function transferCall(src, dst, type)
 		dest = getCallerId(dst);
 	}
 	
-	var c = confirm("Transfer call to " + comp + dest + '?');
-	if (!c)
-		return;
-
-	new Ajax.Request('action.php', 
-	{
-		method: 'get',
-		parameters: {
-			reqTime: new Date().getTime(),
-			action: Object.toJSON({Action: 'TransferCall', Source: src, Destination: dst, Type: type})
-		}
+	doConfirm("Transfer this call to " + comp + dest + '?', function () {
+		new Ajax.Request('action.php', 
+		{
+			method: 'get',
+			parameters: {
+				reqTime: new Date().getTime(),
+				action: Object.toJSON({Action: 'TransferCall', Source: src, Destination: dst, Type: type})
+			}
+		});
 	});
 }
 
@@ -1018,9 +1010,7 @@ function parkCall(park, announce)
 // Meetme kick
 function meetmeKick(meetme, usernum)
 {
-	var c = confirm('Kick this user from meetme ' + meetme + '?');
-	if (c)
-	{
+	doConfirm('Kick this user from meetme ' + meetme + '?', function () {
 		new Ajax.Request('action.php', 
 		{
 			method: 'get',
@@ -1029,15 +1019,13 @@ function meetmeKick(meetme, usernum)
 				action: Object.toJSON({Action: 'MeetmeKick', Meetme: meetme, Usernum: usernum})
 			}
 		});
-	}
+	});
 }
 
 // Parked Hangup()
 function parkedHangup(exten)
 {
-	var c = confirm('Hangup parked call on exten ' + exten + '?');
-	if (c)
-	{
+	doConfirm('Hangup parked call on exten ' + exten + '?', function () {
 		new Ajax.Request('action.php', 
 		{
 			method: 'get',
@@ -1046,15 +1034,13 @@ function parkedHangup(exten)
 				action: Object.toJSON({Action: 'ParkedHangup', Exten: exten})
 			}
 		});
-	}
+	});
 }
 
 // Add/Remove Pause/Unpause Queue members
 function queueMemberAdd(queue, member)
 {
-	var c = confirm('Add member ' + (getCallerId(member) ? getCallerId(member) : member) + ' to queue ' + queue + '?');
-	if (c)
-	{
+	doConfirm('Add member ' + (getCallerId(member) ? getCallerId(member) : member) + ' to queue ' + queue + '?', function () {
 		new Ajax.Request('action.php', 
 		{
 			method: 'get',
@@ -1063,14 +1049,12 @@ function queueMemberAdd(queue, member)
 				action: Object.toJSON({Action: 'AddQueueMember', Queue: queue, Member: member})
 			}
 		});
-	}
+	});
 }
 
 function queueMemberRemove(queue, member)
 {
-	var c = confirm('Remove member ' + (getCallerId(member) ? getCallerId(member) : member) + ' from queue ' + queue + '?');
-	if (c)
-	{
+	doConfirm('Remove member ' + (getCallerId(member) ? getCallerId(member) : member) + ' from queue ' + queue + '?', function () {
 		new Ajax.Request('action.php', 
 		{
 			method: 'get',
@@ -1079,7 +1063,7 @@ function queueMemberRemove(queue, member)
 				action: Object.toJSON({Action: 'RemoveQueueMember', Queue: queue, Member: member})
 			}
 		});
-	}
+	});
 }
 function queueMemberRemove2(p_sType, p_aArgs, id)
 {
@@ -1092,9 +1076,8 @@ function queueMemberPause(p_sType, p_aArgs, id)
 	var tmp    = id.split(':::');
 	var queue  = tmp[0];
 	var member = tmp[1];
-	var c      = confirm('Pause member ' + (getCallerId(member) ? getCallerId(member) : member) + ' in queue ' + queue + '?');
-	if (c)
-	{
+
+	doConfirm('Pause member ' + (getCallerId(member) ? getCallerId(member) : member) + ' in queue ' + queue + '?', function () {
 		new Ajax.Request('action.php', 
 		{
 			method: 'get',
@@ -1103,7 +1086,7 @@ function queueMemberPause(p_sType, p_aArgs, id)
 				action: Object.toJSON({Action: 'PauseQueueMember', Queue: queue, Member: member})
 			}
 		});
-	}
+	});
 }
 
 function queueMemberUnpause(p_sType, p_aArgs, id)
@@ -1111,9 +1094,8 @@ function queueMemberUnpause(p_sType, p_aArgs, id)
 	var tmp    = id.split(':::');
 	var queue  = tmp[0];
 	var member = tmp[1];
-	var c      = confirm('Unpause member ' + (getCallerId(member) ? getCallerId(member) : member) + ' in queue ' + queue + '?');
-	if (c)
-	{
+
+	doConfirm('Unpause member ' + (getCallerId(member) ? getCallerId(member) : member) + ' in queue ' + queue + '?', function () {
 		new Ajax.Request('action.php', 
 		{
 			method: 'get',
@@ -1122,16 +1104,15 @@ function queueMemberUnpause(p_sType, p_aArgs, id)
 				action: Object.toJSON({Action: 'UnpauseQueueMember', Queue: queue, Member: member})
 			}
 		});
-	}
+	});
 }
 
 // Skype
 function skypeUserLogin(p_sType, p_aArgs, id)
 {
 	var skypeName = id.replace('Skype/', '');
-	var c         = confirm('Login skype user ' + skypeName + '?');
-	if (c)
-	{
+
+	doConfirm('Login skype user ' + skypeName + '?', function () {
 		new Ajax.Request('action.php', 
 		{
 			method: 'get',
@@ -1140,15 +1121,14 @@ function skypeUserLogin(p_sType, p_aArgs, id)
 				action: Object.toJSON({Action: 'SkypeLogin', SkypeName: skypeName})
 			}
 		});
-	}
+	});
 }
 
 function skypeUserLogout(p_sType, p_aArgs, id)
 {
 	var skypeName = id.replace('Skype/', '');
-	var c         = confirm('Logout skype user ' + skypeName + '?');
-	if (c)
-	{
+
+	doConfirm('Logout skype user ' + skypeName + '?', function () {
 		new Ajax.Request('action.php', 
 		{
 			method: 'get',
@@ -1157,7 +1137,7 @@ function skypeUserLogout(p_sType, p_aArgs, id)
 				action: Object.toJSON({Action: 'SkypeLogout', SkypeName: skypeName})
 			}
 		});
-	}
+	});
 }
 
 // Yahoo
@@ -1202,18 +1182,19 @@ function peerDrop(e, id)
 	{
 		var src = this.id.replace('peerDiv-', '');
 		var dst = id.replace('peerDiv-', '');
-		var c   = confirm('Originate a call from "' + getCallerId(src) + '" to "' + getCallerId(dst) + '"?');
 		
-		if (c)
+		doConfirm('Originate a call from ' + getCallerId(src) + ' to ' + getCallerId(dst) + '?', function () {
 			originateDial(src, dst, 'default');
+		});
 	}
 	if (id.indexOf('meetme-') != -1)
 	{
 		var src = this.id.replace('peerDiv-', '');
 		var dst = id.replace('meetme-', '');
-		var c   = confirm('Invite "' + getCallerId(src) + '" to meetme ' + dst + '?');
-		if (c)
+		
+		doConfirm('Invite ' + getCallerId(src) + ' to meetme ' + dst + '?', function () {
 			originateCall(src, dst, 'meetme');
+		});
 	}
 	if (id.indexOf('queueMembersDrop-') != -1)
 	{
@@ -1239,8 +1220,8 @@ function channelCallDrop(e, id)
 	if (id.indexOf('peerDiv-') != -1 && this.id.indexOf('call-') != -1)
 	{
 		var ids  = this.id.substring(5).split('+++');
-		var srcA = $('channel-' + ids[0]).innerHTML;
-		var srcB = $('channel-' + ids[1]).innerHTML;
+		var srcA = $('callChannel-' + ids[0]).innerHTML.replace('<br>', ' (').replace('( ', '(') + ')';
+		var srcB = $('callChannel-' + ids[1]).innerHTML.replace('<br>', ' (').replace('( ', '(') + ')';
 		showTransferDialog(ids[0], srcA, ids[1], srcB, id.substring(8));
 	}
 	
@@ -1255,8 +1236,10 @@ function channelCallDrop(e, id)
 	if (this.id.indexOf('call-') != -1 && id == 'park')
 	{
 		var ids  = this.id.substring(5).split('+++');
-		var srcA = $('channel-' + ids[0]).innerHTML;
-		var srcB = $('channel-' + ids[1]).innerHTML;
+		//var srcA = $('channel-' + ids[0]).innerHTML;
+		//var srcB = $('channel-' + ids[1]).innerHTML;
+		var srcA = $('callChannel-' + ids[0]).innerHTML.replace('<br>', ' (').replace('( ', '(') + ')';
+		var srcB = $('callChannel-' + ids[1]).innerHTML.replace('<br>', ' (').replace('( ', '(') + ')';
 		showTransferDialog(ids[0], srcA, ids[1], srcB, 'ParkedCalls');
 	}
 	
@@ -1283,9 +1266,10 @@ function parkedCallDrop(e, id)
 	if (id.indexOf('peerDiv-') != -1)
 	{
 		var source = id.replace('peerDiv-', '');
-		var c = confirm('Transfer Parked Call on exten ' + parked + ' to ' + getCallerId(source) + '?');
-		if (c)
+		
+		doConfirm('Transfer Parked Call on exten ' + parked + ' to ' + getCallerId(source) + '?', function () {
 			originateCall(source, parked, 'default');
+		});
 	}
 	
 	backToStartPosition(this.id);
@@ -1318,10 +1302,10 @@ var handleOriginate = function(){
 
 function showOriginateDialog(p_sType, p_aArgs, peerId)
 {
-	originateDialog.peerId = peerId;
-	originateDialog.cfg.queueProperty("xy", ddDivs['peerDiv-' + peerId].startPos);  
-	originateDialog.render();
-	originateDialog.show();
+	_originateDialog.peerId = peerId;
+	_originateDialog.cfg.queueProperty("xy", ddDivs['peerDiv-' + peerId].startPos);  
+	_originateDialog.render();
+	_originateDialog.show();
 }
 
 // Peer Options MENU
@@ -1417,16 +1401,16 @@ function showTransferDialog(idA, srcA, idB, srcB, dst)
 		$('transferDestination').innerHTML = 'Park';
 	}
 	else
-		$('transferDestination').innerHTML = 'transfer to "' + getCallerId(dst) + '"';
+		$('transferDestination').innerHTML = 'transfer to ' + getCallerId(dst);
 		
 	$('transferSourceValueA').value    = idA;
 	$('transferSourceValueB').value    = idB;
 	$('transferSourceValueA').checked  = true;
 	$('transferSourceTextA').innerHTML = srcA; 
 	$('transferSourceTextB').innerHTML = srcB;
-	transferDialog.destChannel         = dst;
-	transferDialog.render();
-	transferDialog.show();
+	_transferDialog.destChannel         = dst;
+	_transferDialog.render();
+	_transferDialog.show();
 }
 
 // Chrono for calls linked
@@ -1541,6 +1525,22 @@ function doWarn(message)
 	_alert.cfg.setProperty("icon", YAHOO.widget.SimpleDialog.ICON_WARN);
 	_alert.render();
 	_alert.show();
+}
+function doConfirm(message, handleYes, handleNo)
+{
+	if (!handleNo)
+		handleNo = function () { }
+
+	var buttons = [
+		{text: "Yes", handler: function () { this.hide(); handleYes(); }},
+		{text: "No", handler: function () { this.hide(); handleNo(); }}
+	];
+	
+	_confirm.setBody(message);
+	_confirm.cfg.setProperty("icon", YAHOO.widget.SimpleDialog.ICON_HELP);
+	_confirm.cfg.setProperty("buttons", buttons); 
+	_confirm.render();
+	_confirm.show();
 }
 
 // Auth
