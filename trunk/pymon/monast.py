@@ -357,6 +357,7 @@ class MonAst:
 		self.AMI.registerEventHandler('UnParkedCall', self.handlerUnParkedCall)
 		self.AMI.registerEventHandler('ParkedCallTimeOut', self.handlerParkedCallTimeOut)
 		self.AMI.registerEventHandler('ParkedCallGiveUp', self.handlerParkedCallGiveUp)
+		self.AMI.registerEventHandler('ParkedCallsComplete', self.handlerParkedCallsComplete)
 		self.AMI.registerEventHandler('Status', self.handlerStatus)
 		self.AMI.registerEventHandler('StatusComplete', self.handlerStatusComplete)
 		self.AMI.registerEventHandler('QueueMemberAdded', self.handlerQueueMemberAdded)
