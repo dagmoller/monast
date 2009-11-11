@@ -70,6 +70,67 @@
   <span id="_reqStatus" style="margin-left: 25px; padding-left: 5px; border-left: 2px solid #000000"></span>
 </div>
 
+<!-- START BLOCK : login -->
+<script language="javascript">
+$('_reqStatus').innerHTML = 'Authentication Required';
+</script>
+
+<div id="TabPannel" class="yui-navset" >
+  <ul class="yui-nav">
+    <li><a href="#tab0"><em>Authentication</em></a></li>
+  </ul>
+  <div class="yui-content">
+    <div id="authentication">
+      <p>&nbsp;</p>
+      <table border="0" cellpadding="2px" cellspacing="2px" align="center">
+        <tr>
+          <td align="right">User:</td>
+          <td><input type="text" name="_username" id="_username" size="15"></td>
+        </tr>
+        <tr>
+          <td align="right">Secret:</td>
+          <td><input type="password" name="_secret" id="_secret" size="15"></td>
+        </tr>
+        <tr>
+          <td colspan="2">&nbsp;</td>
+        </tr>
+        <tr>
+          <td>&nbsp;</td>
+          <td align="center">
+            <input type="button" value="Login" onclick="doLogin()">&nbsp;&nbsp;&nbsp;
+            <input type="reset" value="Clear">
+          </td>
+        </tr>
+      </table>
+      <p>&nbsp;</p>
+    </div>
+  </div>
+</div>
+<!-- END BLOCK : login -->
+
+<!-- START BLOCK : error -->
+<script language="javascript">
+$('_reqStatus').innerHTML = '<font color="red"><b>MonAst Error</b></font>';
+</script>
+
+<div id="TabPannel" class="yui-navset" >
+  <ul class="yui-nav">
+    <li><a href="#tab0"><em>Error Message</em></a></li>
+  </ul>
+  <div class="yui-content">
+    <div id="error">
+      <p>&nbsp;</p>
+      <table border="0" align="center">
+        <tr>
+          <td>{errorMessage}</td>
+        </tr>
+      </table>
+      <p>&nbsp;</p>
+    </div>
+  </div>
+</div>
+<!-- END BLOCK : error -->
+
 <!-- INCLUDESCRIPT BLOCK : main -->
 
 <script language="javascript">

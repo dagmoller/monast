@@ -90,8 +90,8 @@ $complete = false;
 $sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 if ($sock === false)
 {
-	$error  = "<font size='3'><b>Monast Error</b></font>\n<p>Could not create socket!</p>\n";
-	$error .= "<p>reason: " . socket_strerror(socket_last_error()) . "</p>";
+	$error  = "<font size='3'><b>Monast Error</b></font>\n<p>Could not create socket!<br>\n";
+	$error .= "Reason: " . socket_strerror(socket_last_error()) . "</p>";
 	
 	echo $json->encode(array(array('Action' => 'Error', 'Message' => $error)));
 	die;
@@ -100,8 +100,8 @@ if ($sock === false)
 $conn = socket_connect($sock, HOSTNAME, HOSTPORT);
 if ($conn === false)
 {
-    $error  = "<font size='3'><b>Monast Error</b></font>\n<p>Could not connect to " . HOSTNAME . ":" . HOSTPORT . " (" . socket_strerror(socket_last_error()) . ").</p>\n";
-	$error .= "<p>Make sure monast.py is running so the panel can connect to its port properly.</p>";
+    $error  = "<font size='3'><b>Monast Error</b></font>\n<p>Could not connect to " . HOSTNAME . ":" . HOSTPORT . " (" . socket_strerror(socket_last_error()) . ").<br>\n";
+	$error .= "Make sure monast.py is running so the panel can connect to its port properly.</p>";
     
 	echo $json->encode(array(array('Action' => 'Error', 'Message' => $error)));
 	die;

@@ -36,6 +36,7 @@ header("Expires: -1");
 
 session_start();
 $login = getValor('login', 'session');
+$error = "";
 setValor('started', time());
 setValor('Actions', array());
 $sessionId = session_id();
@@ -48,54 +49,65 @@ if (!$login)
 {
 	$sock = @socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 	if ($sock === false)
+		$error = "Could not create socket!<br>" . socket_strerror(socket_last_error());
+	else 
 	{
-		echo "<title>Monast Error</title>\n";
-		echo "<h1>Monast Error</h1>\n<p>Could not create socket!</p>\n";
-		echo "<p>" . socket_strerror(socket_last_error()) . "</p>";
-		die;
-	}
-	
-	$conn = @socket_connect($sock, HOSTNAME, HOSTPORT);
-	if ($conn === false)
-	{
-		echo "<title>Monast Error</title>\n";
-		echo "<h1>Monast Error</h1>\n<p>Could not connect to " . HOSTNAME . ":" . HOSTPORT . " (" . socket_strerror(socket_last_error()) . ").</p>\n";
-		echo "<p>Make sure monast.py is running so the panel can connect to its port properly.</p>";
-		die;
-	}
-	
-	$buffer = "";
-	socket_write($sock, "SESSION: $sessionId");
-	while ($message = socket_read($sock, 1024 * 16)) 
-	{
-		$buffer .= $message;
-		
-		if ($buffer == "NEW SESSION" || $buffer == "OK")
+		$conn = @socket_connect($sock, HOSTNAME, HOSTPORT);
+		if ($conn === false)
 		{
-			$login = true;
-			session_start();
-			setValor('login', true);
-			session_write_close();
-			socket_write($sock, "BYE");
-		}
-		
-		if ($buffer == "ERROR: Authentication Required")
-		{
-			session_start();
-			setValor('login', false);
-			session_write_close();
-			socket_write($sock, "BYE");
+			$error  = "Could not connect to " . HOSTNAME . ":" . HOSTPORT . " (" . socket_strerror(socket_last_error()) . ").<br>";
+			$error .= "Make sure monast.py is running so the panel can connect to its port properly.";
 		}
 	}
-	socket_close($sock);
+	
+	if (!$error)
+	{
+		$buffer = "";
+		socket_write($sock, "SESSION: $sessionId");
+		while ($message = socket_read($sock, 1024 * 16)) 
+		{
+			$buffer .= $message;
+			
+			if ($buffer == "NEW SESSION" || $buffer == "OK")
+			{
+				$login = true;
+				session_start();
+				setValor('login', true);
+				session_write_close();
+				socket_write($sock, "BYE");
+			}
+			
+			if ($buffer == "ERROR: Authentication Required")
+			{
+				session_start();
+				setValor('login', false);
+				session_write_close();
+				socket_write($sock, "BYE");
+			}
+		}
+		socket_close($sock);
+	}
 }
 
-if (!$login)
-	$template->assignInclude('main', 'template/login.html');
-else 
-	$template->assignInclude('main', 'monast.php');
-
-$template->prepare();
+if ($error)
+{
+	$template->prepare();
+	$template->newBlock('error');
+	$template->assign('errorMessage', $error);
+}
+else
+{
+	if (!$login)
+	{
+		$template->prepare();
+		$template->newBlock('login');
+	}
+	else 
+	{
+		$template->assignInclude('main', 'monast.php');
+		$template->prepare();
+	}
+}
 
 $template->printToScreen();
 
