@@ -200,6 +200,9 @@ class MonAst:
 	monitoredUsersLock = threading.RLock()
 	queuesLock         = threading.RLock()
 	
+	isParkedStatus = False
+	parkedStatus   = []
+	
 	channelStatus = []
 	
 	queueMemberStatus = {}
@@ -573,6 +576,10 @@ class MonAst:
 			
 			self.channelStatus = []
 			self.AMI.execute(['Action: Status']) # generate Event: Status
+			
+			self.isParkedStatus = True
+			self.parkedStatus   = []
+			self.AMI.execute(['Action: ParkedCalls']) # generate Event: ParkedCall
 			
 			self.queuesLock.acquire()
 			for queue in self.queues:
@@ -1145,8 +1152,16 @@ class MonAst:
 		CallerIDName = dic['CallerIDName']
 					
 		self.parkedLock.acquire()
-		self.parked[Exten] = {'Channel': Channel, 'From': From, 'Timeout': Timeout, 'CallerID': CallerID, 'CallerIDName': CallerIDName}
-		self.enqueue(Action = 'ParkedCall', Exten = Exten, Channel = Channel, From = From, Timeout = Timeout, CallerID = CallerID, CallerIDName = CallerIDName)
+		
+		if self.isParkedStatus:
+			self.parkedStatus.append(Exten)
+			if not self.parked.has_key(Exten):
+				self.parked[Exten] = {'Channel': Channel, 'From': From, 'Timeout': Timeout, 'CallerID': CallerID, 'CallerIDName': CallerIDName}
+				self.enqueue(Action = 'ParkedCall', Exten = Exten, Channel = Channel, From = From, Timeout = Timeout, CallerID = CallerID, CallerIDName = CallerIDName)
+		else:
+			self.parked[Exten] = {'Channel': Channel, 'From': From, 'Timeout': Timeout, 'CallerID': CallerID, 'CallerIDName': CallerIDName}
+			self.enqueue(Action = 'ParkedCall', Exten = Exten, Channel = Channel, From = From, Timeout = Timeout, CallerID = CallerID, CallerIDName = CallerIDName)
+			
 		self.parkedLock.release()
 					
 					
@@ -1205,6 +1220,25 @@ class MonAst:
 			self.enqueue(Action = 'UnparkedCall', Exten = Exten)
 		except:
 			log.warn('MonAst.handlerParkedCallGiveUp :: Parked Exten not found: %s' % Exten)
+		self.parkedLock.release()
+		
+		
+	def handlerParkedCallsComplete(self, lines):
+		
+		log.info('MonAst.handlerParkedCallsComplete :: Running...')
+
+		self.isParkedStatus = False
+		
+		self.parkedLock.acquire()
+		lostParks = [i for i in self.parked.keys() if i not in self.parkedStatus]
+		for park in lostParks:
+			log.warning('MonAst.handlerParkedCallsComplete :: Removing lost parked call %s' % park)
+			try:
+				del self.parked[park]
+				self.enqueue(Action = 'UnparkedCall', Exten = park)
+			except:
+				#pass ## added to debug purposes
+				log.exception('MonAst.handlerParkedCallsComplete :: Exception removing lost parked call %s' % park)
 		self.parkedLock.release()
 		
 		
