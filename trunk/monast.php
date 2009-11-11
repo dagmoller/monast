@@ -30,18 +30,7 @@
 
 require_once 'lib/include.php';
 
-header("Cache-Control: no-cache, must-revalidate");
-header("Pragma: no-cache");
-header("Expires: -1");
-
 session_start();
-
-$login = getValor('login', 'session');
-if (!$login)
-{
-	$template = new TemplatePower('template/index.html');
-}
-
 setValor('started', time());
 setValor('Actions', array());
 $sessionId = session_id();
@@ -70,19 +59,19 @@ $buffer   = "";
 $sock = @socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 if ($sock === false)
 {
-	echo "<title>Monast Error</title>\n";
-	echo "<h1>Monast Error</h1>\n<p>Could not create socket!</p>\n";
-	echo "<p>" . socket_strerror(socket_last_error()) . "</p>";
-	die;
+	session_start();
+	setValor('login', false);
+	session_write_close();
+	header("Location: index.php");
 }
 
 $conn = @socket_connect($sock, HOSTNAME, HOSTPORT);
 if ($conn === false)
 {
-	echo "<title>Monast Error</title>\n";
-	echo "<h1>Monast Error</h1>\n<p>Could not connect to " . HOSTNAME . ":" . HOSTPORT . " (" . socket_strerror(socket_last_error()) . ").</p>\n";
-	echo "<p>Make sure monast.py is running so the panel can connect to its port properly.</p>";
-	die;
+	session_start();
+	setValor('login', false);
+	session_write_close();
+	header("Location: index.php");
 }
 
 socket_write($sock, "SESSION: $sessionId");

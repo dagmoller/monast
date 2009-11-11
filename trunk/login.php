@@ -43,16 +43,16 @@ $secret    = getValor('secret');
 $sock = @socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 if ($sock === false)
 {
-	$saida['error']  = "<font size='3'><b>Monast Error</b></font>\n<p>Could not create socket!</p>\n";
-	$saida['error'] .= "<p>" . socket_strerror(socket_last_error()) . "</p>";
+	$saida['error']  = "<font size='3'><b>Monast Error</b></font>\n<p>Could not create socket!<br>\n";
+	$saida['error'] .= socket_strerror(socket_last_error()) . "</p>";
 }
 else 
 {
 	$conn = @socket_connect($sock, HOSTNAME, HOSTPORT);
 	if ($conn === false)
 	{
-		$saida['error']  = "<font size='3'><b>Monast Error</b></font>\n<p>Could not connect to " . HOSTNAME . ":" . HOSTPORT . " (" . socket_strerror(socket_last_error()) . ").</p>\n";
-		$saida['error'] .= "<p>Make sure monast.py is running so the panel can connect to its port properly.</p>";
+		$saida['error']  = "<font size='3'><b>Monast Error</b></font>\n<p>Could not connect to " . HOSTNAME . ":" . HOSTPORT . " (" . socket_strerror(socket_last_error()) . ").<br>\n";
+		$saida['error'] .= "Make sure monast.py is running so the panel can connect to its port properly.</p>";
 	}
 	else 
 	{
