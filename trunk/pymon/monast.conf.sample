@@ -82,13 +82,13 @@ teste02 = hide
 
 ## Define users and roles to use on auth_required is set to true
 ## roles must be:
-##                calls : user can originate, transfer, park and drop calls
-##                queues: user cans add, remove, pause and unpause members on queues
-##                cli:    user can execute asterisk cli commands
+##                originate : user can originate, transfer, park and drop calls
+##                agent     : user cans add, remove, pause and unpause members on queues
+##                command   : user can execute asterisk cli commands
 
 [admin]
 secret = 12345
-roles  = calls,queues,cli
+roles  = originate,agent,command
 
 [demo]
 secret = 
