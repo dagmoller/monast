@@ -625,35 +625,6 @@ function Process(o)
 		var td = $('queueMemberStatus-' + o['Queue'] + '-' + o['Member']);
 		if (td)
 		{
-			/*
-			if (o['Paused'] == '1')
-			{
-				if (MONAST_CALL_TIME)
-				{
-					if (!pausedMembers[o['Queue'] + '-' + o['Member']])
-					{
-						pausedMembers[o['Queue'] + '-' + o['Member']] = true;
-						o['Status'] = 'Paused<br><span style="font-family: monospace;" id="chrono-' + td.id + '">00:00:00</span>';
-						chrono(td.id, o['PausedTime'], false);
-					}
-				}
-				else
-					o['Status'] = 'Paused';
-				td.innerHTML = o['Status'];
-				td.style.backgroundColor = color(o['Status']);
-			}
-			else if (pausedMembers[o['Queue'] + '-' + o['Member']])
-			{
-				pausedMembers[o['Queue'] + '-' + o['Member']] = false;
-				stopChrono(td.id);
-			}
-			else
-			{
-				td.innerHTML = o['Status'];
-				td.style.backgroundColor = color(o['Status']);
-			}
-			*/
-			
 			if (o['Paused'] == '1')
 			{
 				o['Status'] = 'Paused';

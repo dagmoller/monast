@@ -379,7 +379,7 @@ class MonAst:
 	
 	def threadSocketClient(self, name, params):
 		
-		log.info('MonAst.threadClientSocket :: Starting Thread...')
+		log.info('MonAst.threadSocketClient :: Starting Thread...')
 		while self.running:
 			try:
 				(sc, addr) = self.socketClient.accept()
@@ -390,7 +390,7 @@ class MonAst:
 				self.clientSockLock.release()
 			except:
 				if not self.reloading:
-					log.exception('MonAst.threadClientSocket :: Unhandled Exception')
+					log.exception('MonAst.threadSocketClient :: Unhandled Exception')
 				
 				
 	def threadClient(self, threadId, sock, addr):
@@ -523,8 +523,6 @@ class MonAst:
 							
 						## Send messages to client
 						if len(output) > 0:
-							#log.debug('MonAst.threadClient (%s) :: Sending: %s\r\n' % (threadId, '\r\n'.join(output)))
-							#sock.send('%s\r\n' % '\r\n'.join(output))
 							log.debug('MonAst.threadClient (%s) :: Sending: %s' % (threadId, '\r\n'.join(output)))
 							sock.send('\r\n'.join(output))
 				
@@ -2602,7 +2600,6 @@ class MonAst:
 		self.meetmeLock.acquire()
 		self.callsLock.acquire()
 		self.channelsLock.acquire()
-		self.monitoredUsersLock.acquire()
 		self.queuesLock.acquire()
 		
 		self.userDisplay       = {}
@@ -2616,17 +2613,15 @@ class MonAst:
 		self.queueMemberCalls  = {}
 		self.queueMemberPaused = {}
 		
-		self.parkedLock.release()
-		self.meetmeLock.release()
-		self.callsLock.release()
-		self.channelsLock.release()
-		self.monitoredUsersLock.release()
 		self.queuesLock.release()
+		self.channelsLock.release()
+		self.callsLock.release()
+		self.meetmeLock.release()
+		self.parkedLock.release()
 		self.monitoredUsersLock.release()
 
 		self.parseConfig()
 		self.AMI.start()
-		self._GetConfig(False)
 		self.reloading = False	
 	
 	
