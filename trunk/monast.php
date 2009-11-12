@@ -64,47 +64,51 @@ if ($sock === false)
 	session_write_close();
 	header("Location: index.php");
 }
-
-$conn = @socket_connect($sock, HOSTNAME, HOSTPORT);
-if ($conn === false)
+else 
 {
-	session_start();
-	setValor('login', false);
-	session_write_close();
-	header("Location: index.php");
-}
-
-socket_write($sock, "SESSION: $sessionId");
-while ($message = socket_read($sock, 1024 * 16)) 
-{
-	$buffer .= $message;
-	
-	if ($buffer == "NEW SESSION" || $buffer == "OK")
-	{
-		$buffer = "";
-		socket_write($sock, "GET STATUS");
-	}
-	
-	if ($buffer == "ERROR: Authentication Required")
+	$conn = @socket_connect($sock, HOSTNAME, HOSTPORT);
+	if ($conn === false)
 	{
 		session_start();
 		setValor('login', false);
 		session_write_close();
-		socket_write($sock, "BYE");
 		header("Location: index.php");
 	}
-	
-	if (strpos($buffer, "BEGIN STATUS") !== false)
-		$isStatus = true;
-		
-	if (strpos($buffer, "END STATUS") !== false)
+	else 
 	{
-		$buffer   = trim(str_replace("BEGIN STATUS", "", str_replace("END STATUS", "", $buffer)));
-		$isStatus = false;
-		socket_write($sock, "BYE");
+		socket_write($sock, "SESSION: $sessionId");
+		while ($message = socket_read($sock, 1024 * 16)) 
+		{
+			$buffer .= $message;
+			
+			if ($buffer == "NEW SESSION" || $buffer == "OK")
+			{
+				$buffer = "";
+				socket_write($sock, "GET STATUS");
+			}
+			
+			if ($buffer == "ERROR: Authentication Required")
+			{
+				session_start();
+				setValor('login', false);
+				session_write_close();
+				socket_write($sock, "BYE");
+				header("Location: index.php");
+			}
+			
+			if (strpos($buffer, "BEGIN STATUS") !== false)
+				$isStatus = true;
+				
+			if (strpos($buffer, "END STATUS") !== false)
+			{
+				$buffer   = trim(str_replace("BEGIN STATUS", "", str_replace("END STATUS", "", $buffer)));
+				$isStatus = false;
+				socket_write($sock, "BYE");
+			}
+		}
+		socket_close($sock);
 	}
 }
-socket_close($sock);
 
 $messages = explode("\r\n", $buffer);
 foreach ($messages as $idx => $message)
