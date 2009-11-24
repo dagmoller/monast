@@ -35,7 +35,8 @@ header("Pragma: no-cache");
 header("Expires: -1");
 
 session_start();
-$login = getValor('login', 'session');
+$login    = getValor('login', 'session');
+$username = getValor('username', 'session');
 $error = "";
 setValor('started', time());
 setValor('Actions', array());
@@ -81,6 +82,7 @@ if (!$login)
 			{
 				session_start();
 				setValor('login', false);
+				setValor('username', '');
 				session_write_close();
 				socket_write($sock, "BYE");
 			}
@@ -106,6 +108,9 @@ else
 	{
 		$template->assignInclude('main', 'monast.php');
 		$template->prepare();
+		
+		if ($username)
+			$template->newBlock('buttonLogout');
 	}
 }
 

@@ -57,14 +57,14 @@ else
 	else 
 	{
 		$buffer = "";
-		$action = array('Action' => 'Login', 'username' => $username, 'secret' => $secret, 'session' => $sessionId);
+		$action = array('Action' => 'Login', 'Username' => $username, 'Secret' => $secret, 'Session' => $sessionId);
 		socket_write($sock, $json->encode($action));
 		
 		while ($message = socket_read($sock, 1024 * 16)) 
 		{
 			$buffer .= $message;
 			
-			if ($buffer == "OK")
+			if ($buffer == "OK" || $buffer == "Authentication Success")
 			{
 				setValor('login', true);
 				setValor('username', $username);

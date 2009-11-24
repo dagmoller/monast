@@ -221,12 +221,35 @@ class MonAst:
 	
 	sortby = 'callerid'
 	
+	## My Actions
+	actions = {}
+		
 	##
 	## Class Initialization
 	##
 	def __init__(self, configFile):
 		
 		log.log(logging.NOTICE, 'MonAst :: Initializing...')
+		
+		## My Actions
+		self.actions = {
+			'OriginateCall'      : ('originate', self.clientOriginateCall),
+			'OriginateDial'      : ('originate', self.clientOriginateDial),
+			'HangupChannel'      : ('originate', self.clientHangupChannel),
+			'MonitorChannel'     : ('originate', self.clientMonitorChannel),
+			'MonitorStop'        : ('originate', self.clientMonitorStop),
+			'TransferCall'       : ('originate', self.clientTransferCall),
+			'ParkCall'           : ('originate', self.clientParkCall),
+			'MeetmeKick'         : ('originate', self.clientMeetmeKick),
+			'ParkedHangup'       : ('originate', self.clientParkedHangup),
+			'AddQueueMember'     : ('agent', self.clientAddQueueMember),
+			'RemoveQueueMember'  : ('agent', self.clientRemoveQueueMember),
+			'PauseQueueMember'   : ('agent', self.clientPauseQueueMember),
+			'UnpauseQueueMember' : ('agent', self.clientUnpauseQueueMember),
+			'SkypeLogin'         : ('originate', self.clientSkypeLogin),
+			'SkypeLogout'        : ('originate', self.clientSkypeLogout),
+			'CliCommand'         : ('command', self.clientCliCommand)
+		}
 		
 		self.configFile = configFile
 		self.parseConfig()
@@ -396,47 +419,49 @@ class MonAst:
 	def threadClient(self, threadId, sock, addr):
 		
 		log.info('MonAst.threadClient (%s) :: Starting Thread...' % threadId)
+		buffer       = ""
+		messages     = ""
 		session      = None
 		localRunning = True
 		count        = 0
 		
 		try:
 			while self.running and localRunning:
-				message = sock.recv(1024)
+				message = sock.recv(1024 * 16)
 				if message.strip():
 					messages = message.strip().split('\r\n')
 					for message in messages:
 						log.debug('MonAst.threadClient (%s) :: Received: %s' % (threadId, message))
 						
-						output = []
-						object = {'Action': None}
+						output  = []
+						object  = {'Action': None, 'Session': None, 'Username': None}
+						
 						try:
 							object = json.loads(message)
-							if not object.has_key('session'):
-								object['session'] = session
 						except:
 							pass
 						
 						isSession = message.upper().startswith('SESSION: ')
+						action    = object['Action']
 						
-						if self.authRequired and object['Action'] == 'Login':
-							username = object['username']
-							secret   = object['secret']
-							session  = object['session']
+						if self.authRequired and action == 'Login':
+							session  = object['Session']
+							username = object['Username']
+							secret   = object['Secret']
 							if self.clients.has_key(username):
 								if self.clients[username]['secret'] == secret:
-									output.append('OK')
+									output.append('Authentication Success')
 									self.clientQueuelock.acquire()
 									self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time(), 'roles': self.clients[username]['roles']}
 									self.clientQueuelock.release()
 									log.log(logging.NOTICE, 'MonAst.threadClient (%s) :: New Authenticated (local) client session %s for %s' % (threadId, session, username))
 								else:
 									log.error('MonAst.threadClient (%s) :: Invalid username or password for %s (local)' % (threadId, username))
-									output.append('ERROR: Invalid user or secret!')
+									output.append('ERROR: Invalid user or secret')
 							else:
 								auth = self.clientCheckAmiAuth(threadId, username, secret)
 								if auth[0]:
-									output.append('OK')
+									output.append('Authentication Success')
 									self.clientQueuelock.acquire()
 									self.clientsAMI[username] = {'roles': auth[1]}
 									self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time(), 'roles': auth[1]}
@@ -444,8 +469,18 @@ class MonAst:
 									log.log(logging.NOTICE, 'MonAst.threadClient (%s) :: New Authenticated (manager) client session %s for %s' % (threadId, session, username))
 								else:
 									log.error('MonAst.threadClient (%s) :: Invalid username or password for %s (manager)' % (threadId, username))
-									output.append('ERROR: Invalid user or secret!')
+									output.append('ERROR: Invalid user or secret')
 						
+						elif self.authRequired and action == 'Logout':
+							self.clientQueuelock.acquire()
+							try:
+								del self.clientQueues[session]
+								output.append('ERROR: Authentication Required')
+							except:
+								output.append('ERROR: Invalid session %s for user %s' % (session, username))
+								log.error('MonAst.threadClient (%s) :: Invalid session %s for user %s' % (session, username))
+							self.clientQueuelock.release()
+							
 						elif isSession:
 							session = message[9:]
 							self.clientQueuelock.acquire()
@@ -461,62 +496,18 @@ class MonAst:
 									log.log(logging.NOTICE, 'MonAst.threadClient (%s) :: New client session: %s' % (threadId, session))
 							self.clientQueuelock.release()
 						
-						elif session and message.upper() == 'GET STATUS':
+						elif message.upper() == 'GET STATUS':
 							output = self.clientGetStatus(threadId, session)
 						
-						elif session and message.upper() == 'GET CHANGES':
+						elif message.upper() == 'GET CHANGES':
 							output = self.clientGetChanges(threadId, session)
-						
-						elif session and object['Action'] == 'OriginateCall':
-							self.clientOriginateCall(threadId, object)
-							
-						elif session and object['Action'] == 'OriginateDial':
-							self.clientOriginateDial(threadId, object)
-							
-						elif session and object['Action'] == 'HangupChannel':
-							self.clientHangupChannel(threadId, object)
-							
-						elif session and object['Action'] == 'MonitorChannel':
-							self.clientMonitorChannel(threadId, object)
-							
-						elif session and object['Action'] == 'MonitorStop':
-							self.clientMonitorStop(threadId, object)
-						
-						elif session and object['Action'] == 'TransferCall':
-							self.clientTransferCall(threadId, object)
-						
-						elif session and object['Action'] == 'ParkCall':
-							self.clientParkCall(threadId, object)
-						
-						elif session and object['Action'] == 'MeetmeKick':
-							self.clientMeetmeKick(threadId, object)
-						
-						elif session and object['Action'] == 'ParkedHangup':
-							self.clientParkedHangup(threadId, object)
-							
-						elif session and object['Action'] == 'AddQueueMember':
-							self.clientAddQueueMember(threadId, object)
-							
-						elif session and object['Action'] == 'RemoveQueueMember':
-							self.clientRemoveQueueMember(threadId, object)
-							
-						elif session and object['Action'] == 'PauseQueueMember':
-							self.clientPauseQueueMember(threadId, object)
-							
-						elif session and object['Action'] == 'UnpauseQueueMember':
-							self.clientUnpauseQueueMember(threadId, object)
-						
-						elif session and object['Action'] == 'SkypeLogin':
-							self.clientSkypeLogin(threadId, object)
-							
-						elif session and object['Action'] == 'SkypeLogout':
-							self.clientSkypeLogout(threadId, object)
-						
-						elif session and object['Action'] == 'CliCommand':
-							self.clientCliCommand(threadId, object, session)
 						
 						elif message.upper() == 'BYE':
 							localRunning = False
+			
+						elif self.actions.has_key(action):
+							if self.checkPermission(object, self.actions[action][0]):
+								self.actions[action][1](threadId, object)
 							
 						else:
 							output.append('NO SESSION')
@@ -525,7 +516,9 @@ class MonAst:
 						if len(output) > 0:
 							log.debug('MonAst.threadClient (%s) :: Sending: %s' % (threadId, '\r\n'.join(output)))
 							sock.send('\r\n'.join(output))
-				
+							#if doBreak:
+							#	break
+							
 				else:
 					count += 1
 					if count == 10:
@@ -536,7 +529,7 @@ class MonAst:
 			log.error('MonAst.threadClient (%s) :: Socket Error: %s' % (threadId, e))
 		except:
 			log.exception('MonAst.threadClient (%s) :: Unhandled Exception' % threadId)
-			
+						
 		try:
 			sock.close()
 		except:
@@ -619,13 +612,13 @@ class MonAst:
 	
 	def checkPermission(self, object, role):
 		
-		username = object['username']
+		username = object['Username']
 		
 		if self.authRequired:
 			if (self.clients.has_key(username) and role in self.clients[username]['roles']) or (self.clientsAMI.has_key(username) and self.clientsAMI[username]['roles']):
 				return True
 			else:
-				self.enqueue(__session = object['session'], Action = 'doAlertError', Message = 'You do not have permission to execute this action.')
+				self.enqueue(__session = object['Session'], Action = 'doAlertError', Message = 'You do not have permission to execute this action.')
 				return False
 		else:
 			return True
@@ -2042,15 +2035,14 @@ class MonAst:
 		output = []
 		
 		self.clientQueuelock.acquire()
-		self.clientQueues[session]['t'] = time.time()
-		#output.append('BEGIN CHANGES')
-		while True:
-			try:
-				msg = self.clientQueues[session]['q'].get(False)
-				output.append(msg)
-			except Queue.Empty:
-				break
-		#output.append('END CHANGES')
+		if self.clientQueues.has_key(session):
+			self.clientQueues[session]['t'] = time.time()
+			while True:
+				try:
+					msg = self.clientQueues[session]['q'].get(False)
+					output.append(msg)
+				except Queue.Empty:
+					break
 		self.clientQueuelock.release()
 		
 		if len(output) > 0:
@@ -2063,9 +2055,6 @@ class MonAst:
 	
 	
 	def clientOriginateCall(self, threadId, object):
-		
-		if not self.checkPermission(object, 'originate'):
-			return False
 		
 		log.info('MonAst.clientOriginateCall (%s) :: Running...' % threadId)
 		src  = object['Source']
@@ -2092,9 +2081,6 @@ class MonAst:
 		
 	
 	def clientOriginateDial(self, threadId, object):
-		
-		if not self.checkPermission(object, 'originate'):
-			return False
 				
 		log.info('MonAst.clientOriginateDial (%s) :: Running...' % threadId)
 		src = object['Source']
@@ -2113,9 +2099,6 @@ class MonAst:
 		
 	def clientHangupChannel(self, threadId, object):
 		
-		if not self.checkPermission(object, 'originate'):
-			return False
-		
 		log.info('MonAst.clientHangupChannel (%s) :: Running...' % threadId)
 		Uniqueid = object['Uniqueid']
 		
@@ -2133,9 +2116,6 @@ class MonAst:
 		
 		
 	def clientMonitorChannel(self, threadId, object):
-		
-		if not self.checkPermission(object, 'originate'):
-			return False
 		
 		log.info('MonAst.clientMonitorChannel (%s) :: Running...' % threadId)
 		Uniqueid = object['Uniqueid']
@@ -2162,9 +2142,6 @@ class MonAst:
 		
 	def clientMonitorStop(self, threadId, object):
 		
-		if not self.checkPermission(object, 'originate'):
-			return False
-		
 		log.info('MonAst.clientMonitorStop (%s) :: Running...' % threadId)
 		Uniqueid = object['Uniqueid']
 		
@@ -2183,9 +2160,6 @@ class MonAst:
 	
 	
 	def clientTransferCall(self, threadId, object):
-		
-		if not self.checkPermission(object, 'originate'):
-			return False
 		
 		log.info('MonAst.clientTransferCall (%s) :: Running...' % threadId)
 		src  = object['Source']
@@ -2244,9 +2218,6 @@ class MonAst:
 	
 	def clientParkCall(self, threadId, object):
 
-		if not self.checkPermission(object, 'originate'):
-			return False
-
 		log.info('MonAst.clientParkCall (%s) :: Running...' % threadId)
 		park     = object['Park']
 		announce = object['Announce']
@@ -2266,9 +2237,6 @@ class MonAst:
 	
 	def clientMeetmeKick(self, threadId, object):
 		
-		if not self.checkPermission(object, 'originate'):
-			return False
-		
 		log.info('MonAst.clientMeetmeKick (%s) :: Running...' % threadId)
 		Meetme  = object['Meetme']
 		Usernum = object['Usernum']
@@ -2281,9 +2249,6 @@ class MonAst:
 	
 	
 	def clientParkedHangup(self, threadId, object):
-		
-		if not self.checkPermission(object, 'originate'):
-			return False
 		
 		log.info('MonAst.clientParkedHangup (%s) :: Running...' % threadId)
 		Exten = object['Exten']
@@ -2302,9 +2267,6 @@ class MonAst:
 		
 		
 	def clientAddQueueMember(self, threadId, object):
-		
-		if not self.checkPermission(object, 'agent'):
-			return False
 		
 		log.info('MonAst.clientAddQueueMember (%s) :: Running...' % threadId)
 		queue  = object['Queue']
@@ -2327,9 +2289,6 @@ class MonAst:
 		
 	def clientRemoveQueueMember(self, threadId, object):
 		
-		if not self.checkPermission(object, 'agent'):
-			return False
-		
 		log.info('MonAst.clientRemoveQueueMember (%s) :: Running...' % threadId)
 		queue  = object['Queue']
 		member = object['Member']
@@ -2344,9 +2303,6 @@ class MonAst:
 		
 	def clientPauseQueueMember(self, threadId, object):
 		
-		if not self.checkPermission(object, 'agent'):
-			return False
-		
 		log.info('MonAst.clientPauseQueueMember (%s) :: Running...' % threadId)
 		queue  = object['Queue']
 		member = object['Member']
@@ -2360,9 +2316,6 @@ class MonAst:
 		self.AMI.execute(command)
 		
 	def clientUnpauseQueueMember(self, threadId, object):
-		
-		if not self.checkPermission(object, 'agent'):
-			return False
 		
 		log.info('MonAst.clientPauseQueueMember (%s) :: Running...' % threadId)
 		queue  = object['Queue']
@@ -2379,9 +2332,6 @@ class MonAst:
 		
 	def clientSkypeLogin(self, threadId, object):
 		
-		if not self.checkPermission(object, 'originate'):
-			return False
-		
 		log.info('MonAst.clientSkypeLogin (%s) :: Running...' % threadId)
 		skypeName = object['SkypeName']
 		
@@ -2394,9 +2344,6 @@ class MonAst:
 	
 	def clientSkypeLogout(self, threadId, object):
 		
-		if not self.checkPermission(object, 'originate'):
-			return False
-		
 		log.info('MonAst.clientSkypeLogout (%s) :: Running...' % threadId)
 		skypeName = object['SkypeName']
 		
@@ -2407,10 +2354,7 @@ class MonAst:
 		self.AMI.execute(command)
 		
 	
-	def clientCliCommand(self, threadId, object, session):
-		
-		if not self.checkPermission(object, 'command'):
-			return False
+	def clientCliCommand(self, threadId, object):
 		
 		log.info('MonAst.clientCliCommand (%s) :: Running...' % threadId)
 		cliCommand = object['CliCommand']
@@ -2420,7 +2364,7 @@ class MonAst:
 		command.append('Command: %s' % cliCommand)
 		#command.append('ActionID: %s' % session)
 		log.debug('MonAst.clientCliCommand (%s) :: Executing CLI command: %s' % (threadId, cliCommand))
-		self.AMI.execute(command, self.handlerCliCommand, session)
+		self.AMI.execute(command, self.handlerCliCommand, object['Session'])
 	
 	
 	def clientCheckAmiAuth(self, threadId, username, password):

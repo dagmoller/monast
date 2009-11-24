@@ -130,6 +130,17 @@ while ($message = socket_read($sock, 1024 * 16))
 		socket_write($sock, "GET CHANGES");
 		sleep(1);
 	}
+	elseif (strpos($buffer, "ERROR: Authentication Required") !== false)
+	{
+		$buffer       = "";
+		$complete     = true;
+		$lastEvents[] = array('Action' => 'Reload', 'Time' => 1000);
+	}
+	elseif (strpos($buffer, "ERROR: ") !== false)
+	{
+		$complete     = true;
+		$lastEvents[] = array('Action' => 'Error', 'Message' => str_replace("NO CHANGES", "", substr($buffer, 7)));
+	}
 	
 	if (strpos($buffer, "BEGIN CHANGES") !== false)
 		$isStatus = true;
@@ -150,7 +161,8 @@ while ($message = socket_read($sock, 1024 * 16))
 		    foreach ($actions as $action)
 		    {
 		    	$action = $json->decode($action);
-		    	$action['username'] = $username;
+		    	$action['Session']  = $sessid;
+		    	$action['Username'] = $username;
 		    	$action = $json->encode($action);
 		        socket_write($sock, $action . "\r\n");
 		    }

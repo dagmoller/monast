@@ -67,7 +67,14 @@
 <div class="monast-logo">
   <span class="monast-name">MonAst</span>&nbsp;
   <span class="monast-text">The Asterisk Monitor Web Panel</span>
-  <span id="_reqStatus" style="margin-left: 25px; padding-left: 5px; border-left: 2px solid #000000"></span>
+  <span class="monast-status" id="_reqStatus"></span>
+  <!-- START BLOCK : buttonLogout -->
+  <span><input type="button" id="buttonLogout" value="Logout"></span>
+  <script language="javascript">
+  var _buttonLogout = new YAHOO.widget.Button("buttonLogout");
+      _buttonLogout.on("click", doLogout);
+  </script>
+  <!-- END BLOCK : buttonLogout -->
 </div>
 
 <!-- START BLOCK : login -->
@@ -82,6 +89,7 @@ $('_reqStatus').innerHTML = 'Authentication Required';
   <div class="yui-content">
     <div id="authentication">
       <p>&nbsp;</p>
+      <form>
       <table border="0" cellpadding="2px" cellspacing="2px" align="center">
         <tr>
           <td align="right">User:</td>
@@ -97,15 +105,21 @@ $('_reqStatus').innerHTML = 'Authentication Required';
         <tr>
           <td>&nbsp;</td>
           <td align="center">
-            <input type="button" value="Login" onclick="doLogin()">&nbsp;&nbsp;&nbsp;
-            <input type="reset" value="Clear">
+            <input type="button" id="buttonLogin" value="Login">&nbsp;&nbsp;
+            <input type="reset" id="buttonClear" value="Clear">
           </td>
         </tr>
       </table>
+      </form>
       <p>&nbsp;</p>
     </div>
   </div>
 </div>
+<script language="javascript">
+var _buttonLogin  = new YAHOO.widget.Button("buttonLogin");
+    _buttonLogin.on("click", doLogin);
+var _buttonClear  = new YAHOO.widget.Button("buttonClear");
+</script>
 <!-- END BLOCK : login -->
 
 <!-- START BLOCK : error -->
