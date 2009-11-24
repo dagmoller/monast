@@ -1552,3 +1552,14 @@ function doLogin()
 		});
 	}
 }
+function doLogout()
+{
+	new Ajax.Request('action.php', 
+	{
+		method: 'get',
+		parameters: {
+			reqTime: new Date().getTime(),
+			action: Object.toJSON({Action: 'Logout'})
+		}
+	});
+}
