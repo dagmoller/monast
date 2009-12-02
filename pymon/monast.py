@@ -917,12 +917,15 @@ class MonAst:
 			CallerIDName = dic['CallerIDName']
 			SrcUniqueID  = dic.get('UniqueID', dic.get('SrcUniqueID'))
 			DestUniqueID = dic['DestUniqueID']
-						
-			c = self.channels[SrcUniqueID]
-			self.calls[(SrcUniqueID, DestUniqueID)] = {
-				'Source': Source, 'Destination': Destination, 'SrcUniqueID': SrcUniqueID, 'DestUniqueID': DestUniqueID, 
-				'Status': 'Dial', 'startTime': 0
-			}
+			
+			try:
+				c = self.channels[SrcUniqueID]
+				self.calls[(SrcUniqueID, DestUniqueID)] = {
+					'Source': Source, 'Destination': Destination, 'SrcUniqueID': SrcUniqueID, 'DestUniqueID': DestUniqueID, 
+					'Status': 'Dial', 'startTime': 0
+				}
+			except KeyError, e:
+				log.warning("MonAst.handlerDial :: Channel %s not found on self.channels" % SrcUniqueID)
 			
 			self.enqueue(Action = 'Dial', Source = Source, Destination = Destination, CallerID = CallerID, CallerIDName = CallerIDName, SrcUniqueID = SrcUniqueID, DestUniqueID = DestUniqueID)
 		
