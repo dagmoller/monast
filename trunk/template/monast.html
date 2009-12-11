@@ -415,6 +415,8 @@ var _dRecord = new YAHOO.util.DDTarget("record");
 Process('{json}'.evalJSON());
 <!-- END BLOCK : process -->
 
-getStatus();
+window.onload = function () {
+	setTimeout('getStatus()', 1000);
+}
 
 </script>
