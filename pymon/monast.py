@@ -1608,7 +1608,10 @@ class MonAst:
 			return
 		
 		self.queuesLock.acquire()
-		self.queues[Queue]['clients'][Uniqueid]['Abandoned'] = True
+		try:
+			self.queues[Queue]['clients'][Uniqueid]['Abandoned'] = True
+		except KeyError:
+			log.warn("MonAst.handlerQueueCallerAbandon :: Queue or Client found in self.queues['%s']['clients']['%s']" % (Queue, Uniqueid))
 		self.queuesLock.release()
 		
 		#self.enqueue(Action = 'AbandonedQueueClient', Uniqueid = Uniqueid)
