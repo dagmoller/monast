@@ -615,7 +615,7 @@ class MonAst:
 		username = object['Username']
 		
 		if self.authRequired:
-			if (self.clients.has_key(username) and role in self.clients[username]['roles']) or (self.clientsAMI.has_key(username) and self.clientsAMI[username]['roles']):
+			if (self.clients.has_key(username) and role in self.clients[username]['roles']) or (self.clientsAMI.has_key(username) and role in self.clientsAMI[username]['roles']):
 				return True
 			else:
 				self.enqueue(__session = object['Session'], Action = 'doAlertError', Message = 'You do not have permission to execute this action.')
