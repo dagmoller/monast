@@ -2398,11 +2398,12 @@ class MonAst:
 					out += s.recv(1024 * 64)
 					
 				lines = out.strip().split('\r\n')
-				for line in [i for i in lines if 'write perm: ' in i]:
-					p = re.search('write perm: (.*)', line)
+				for line in lines:
+					p = re.search('(write|write perm): (.*)', line)
 					if p:
-						auth = (True, p.group(1).split(','))
-					break
+						auth = (True, p.group(2).split(','))
+						print auth
+						break
 			
 			s.send("Action: Logout")
 			s.close()
