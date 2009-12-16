@@ -2392,6 +2392,7 @@ class MonAst:
 			if 'Authentication accepted' in out:
 				auth = (True, [])
 				s.send("Action: Events\r\nEventMask: off\r\n\r\n")
+				out = s.recv(1024 * 64)
 				s.send("Action: Command\r\nCommand: manager show user %s\r\n\r\n" % username)
 				out = ""
 				while not out.endswith('\r\n\r\n'):
@@ -2402,7 +2403,6 @@ class MonAst:
 					p = re.search('(write|write perm): (.*)', line)
 					if p:
 						auth = (True, p.group(2).split(','))
-						print auth
 						break
 			
 			s.send("Action: Logout")
