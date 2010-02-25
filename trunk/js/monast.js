@@ -1551,6 +1551,7 @@ function doLogin()
 			}
 		});
 	}
+	return false;
 }
 function doLogout()
 {
