@@ -89,7 +89,7 @@ $('_reqStatus').innerHTML = 'Authentication Required';
   <div class="yui-content">
     <div id="authentication">
       <p>&nbsp;</p>
-      <form>
+      <form onsubmit="return doLogin()">
       <table border="0" cellpadding="2px" cellspacing="2px" align="center">
         <tr>
           <td align="right">User:</td>
