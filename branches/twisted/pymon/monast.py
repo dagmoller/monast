@@ -41,8 +41,8 @@ import random
 import Queue
 import logging
 import optparse
-#from AsteriskManager import AsteriskManager
-from AsteriskManagerTwisted import AsteriskManagerFactory
+
+from AsteriskManager import AsteriskManagerFactory
 from ConfigParser import SafeConfigParser, NoOptionError
 
 from twisted.protocols import basic
