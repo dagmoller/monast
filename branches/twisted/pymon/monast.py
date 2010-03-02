@@ -245,7 +245,6 @@ class MonAst(protocol.ServerFactory):
 	queueStatusOrder = []
 	
 	getMeetmeAndParkStatus = False
-	getChannelsCallsStatus = False
 	
 	sortby = 'callerid'
 	
@@ -520,15 +519,8 @@ class MonAst(protocol.ServerFactory):
 		
 		log.info('MonAst.taskCheckStatus :: Running...')
 		if self.running:
-			if self.getChannelsCallsStatus:
-				self.getChannelsCallsStatus = False
-				#time.sleep(10)
-			
 			log.info('MonAst.taskCheckStatus :: Requesting Status...')
-			#if not self.AMI.isConnected or not self.AMI.isAuthenticated:
-			#	log.warning('MonAst.taskCheckStatus :: AMI Not Connected...')
-			#	return
-			
+
 			self.channelStatus = []
 			self.AMI.execute(['Action: Status']) # generate Event: Status
 			
