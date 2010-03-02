@@ -1278,7 +1278,7 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerQueueMemberStatus :: Running...')
 		dic = lines
 		
-		lines.append('Name: %s' % dic['MemberName'])
+		lines['Name'] = dic['MemberName']
 		self.handlerQueueMember(lines)
 		
 		
@@ -1293,11 +1293,11 @@ class MonAst(protocol.ServerFactory):
 		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
 			return
 		
-		lines.append('Penalty: %s' % self.queues[Queue]['members'][Location]['Penalty'])
-		lines.append('CallsTaken: %s' % self.queues[Queue]['members'][Location]['CallsTaken'])
-		lines.append('LastCall: %s' % self.queues[Queue]['members'][Location]['LastCall'])
-		lines.append('Status: %s' % self.queues[Queue]['members'][Location]['Status'])
-		lines.append('Name: %s' % dic['MemberName'])
+		lines['Penalty'] = self.queues[Queue]['members'][Location]['Penalty']
+		lines['CallsTaken'] = self.queues[Queue]['members'][Location]['CallsTaken']
+		lines['LastCall'] = self.queues[Queue]['members'][Location]['LastCall']
+		lines['Status'] = self.queues[Queue]['members'][Location]['Status']
+		lines['Name'] = dic['MemberName']
 		
 		self.handlerQueueMember(lines)
 		
