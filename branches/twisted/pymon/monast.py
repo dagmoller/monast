@@ -2198,7 +2198,8 @@ class MonAst(protocol.ServerFactory):
 		self.AMI.execute(Action = {'Action': 'QueueStatus'})
 		
 		self._taskCheckStatus.stop()
-		self._taskCheckStatus.start(60, True)
+		self._taskCheckStatus.start(60, False)
+		reactor.callLater(2, self.taskCheckStatus)
 		
 		# Meetme and Parked Status will be parsed after handlerStatusComplete
 		self.getMeetmeAndParkStatus = True
