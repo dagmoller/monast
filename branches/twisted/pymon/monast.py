@@ -2277,7 +2277,10 @@ class MonAst(protocol.ServerFactory):
 		self.queueMemberPaused = {}
 		
 		self.parseConfig()
-		self.AMI.start()
+		
+		#self.AMI.start()
+		reactor.callLater(1, self.AMI.start)
+		
 		self.reloading = False	
 	
 	
