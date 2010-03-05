@@ -309,6 +309,9 @@ class MonAst(protocol.ServerFactory):
 		username = cp.get('global', 'username')
 		password = cp.get('global', 'password')
 		
+		self.host = host
+		self.port = port
+		
 		self.bindHost       = cp.get('global', 'bind_host')
 		self.bindPort       = int(cp.get('global', 'bind_port'))
 		
@@ -374,7 +377,8 @@ class MonAst(protocol.ServerFactory):
 			if (self.queuesDisplay['DEFAULT'] and display == 'hide') or (not self.queuesDisplay['DEFAULT'] and display == 'show'):
 				self.queuesDisplay[queue] = True
 		
-		self.AMI = AsteriskManagerFactory(host, port, username, password)
+		self.AMI = AsteriskManagerFactory()
+		self.AMI.addServer(host, host, port, username, password)
 		
 		self.AMI.registerEventHandler('_AUTHENTICATED', self._GetConfig)
 		
@@ -522,17 +526,17 @@ class MonAst(protocol.ServerFactory):
 			log.info('MonAst.taskCheckStatus :: Requesting Status...')
 
 			self.channelStatus = []
-			self.AMI.execute(['Action: Status']) # generate Event: Status
+			self.AMI.execute(Action = {'Action': 'Status'}) # generate Event: Status
 			
 			self.isParkedStatus = True
 			self.parkedStatus   = []
-			self.AMI.execute(['Action: ParkedCalls']) # generate Event: ParkedCall
+			self.AMI.execute(Action = {'Action': 'ParkedCalls'}) # generate Event: ParkedCall
 			
 			for queue in self.queues:
 				self.queueStatusOrder.append(queue)
 				self.queueMemberStatus[queue] = []
 				self.queueClientStatus[queue] = []
-				self.AMI.execute(['Action: QueueStatus', 'Queue: %s' % queue])
+				self.AMI.execute(Action = {'Action': 'QueueStatus', 'Queue': queue})
 	
 	
 	def enqueue(self, **args):
@@ -658,7 +662,7 @@ class MonAst(protocol.ServerFactory):
 		
 		if user:
 			type = ['peer', 'user'][Channeltype == 'Skype']
-			self.AMI.execute(['Action: Command', 'Command: %s show %s %s' % (Channeltype.lower(), type, ObjectName)], self._defaultParseConfigPeers, user)
+			self.AMI.execute(Action = {'Action': 'Command', 'Command': '%s show %s %s' % (Channeltype.lower(), type, ObjectName), 'ActionID': user}, Handler = self._defaultParseConfigPeers)
 		
 	
 	def handlerPeerStatus(self, lines):
@@ -1209,8 +1213,8 @@ class MonAst(protocol.ServerFactory):
 				log.exception('MonAst.handlerStatusComplete :: Exception removing lost Queue Member Call %s' % Uniqueid)
 
 		if self.getMeetmeAndParkStatus:
-			self.AMI.execute(['Action: Command', 'Command: meetme'], self.handlerParseMeetme)
-			self.AMI.execute(['Action: Command', 'Command: show parkedcalls'], self.handlerShowParkedCalls)
+			self.AMI.execute(Action = {'Action': 'Command', 'Command': 'meetme'}, Handler = self.handlerParseMeetme)
+			self.AMI.execute(Action = {'Action': 'Command', 'Command': 'show parkedcalls'}, Handler = self.handlerShowParkedCalls)
 			self.getMeetmeAndParkStatus = False
 			
 	
@@ -1640,7 +1644,7 @@ class MonAst(protocol.ServerFactory):
 						self.meetme[conf] = {'dynamic': dynamic, 'users': {}}
 						self.enqueue(Action = 'MeetmeCreate', Meetme = conf)
 						
-					self.AMI.execute(['Action: Command', 'Command: meetme list %s concise' % conf], self.handlerParseMeetmeConcise, 'meetmeList-%s' % conf)				
+					self.AMI.execute(Action = {'Action': 'Command', 'Command': 'meetme list %s concise' % conf, 'ActionID': 'meetmeList-%s' % conf}, Handler = self.handlerParseMeetmeConcise)				
 				except:
 					log.warn("MonAst.handlerParseMeetme :: Can't parse meetme line: %s" % meetme)
 		except:
@@ -1849,17 +1853,17 @@ class MonAst(protocol.ServerFactory):
 		if type == 'meetme':
 			Context = self.meetmeContext
 			dst     = '%s%s' % (self.meetmePrefix, dst)
-		command = []
-		command.append('Action: Originate')
-		command.append('Channel: %s' % src)
-		command.append('Exten: %s' % dst)
-		command.append('Context: %s' % Context)
-		command.append('Priority: 1')
-		command.append('CallerID: %s' % MONAST_CALLERID)
+		command = {}
+		command['Action']   = 'Originate'
+		command['Channel']  = src
+		command['Exten']    = dst
+		command['Context']  = Context
+		command['Priority'] = 1
+		command['CallerID'] = MONAST_CALLERID
 		for var in self.monitoredUsers[src]['Variables']:
-			command.append('Variable: %s' % var)
+			command['Variable'] = var
 		log.debug('MonAst.clientOriginateCall (%s) :: From %s to exten %s@%s' % (threadId, src, dst, Context))
-		self.AMI.execute(command)
+		self.AMI.execute(Action = command)
 		
 	
 	def clientOriginateDial(self, threadId, object):
@@ -1868,15 +1872,15 @@ class MonAst(protocol.ServerFactory):
 		src = object['Source']
 		dst = object['Destination']
 
-		command = []
-		command.append('Action: Originate')
-		command.append('Channel: %s' % src)
-		command.append('Application: Dial')
-		command.append('Data: %s,30,rTt' % dst)
-		command.append('CallerID: %s' % MONAST_CALLERID)
+		command = {}
+		command['Action']      = 'Originate'
+		command['Channel']     = src
+		command['Application'] = 'Dial'
+		command['Data']        = '%s,30,rTt' % dst
+		command['CallerID']    = MONAST_CALLERID
 		
 		log.debug('MonAst.clientOriginateDial (%s) :: From %s to %s' % (threadId, src, dst))
-		self.AMI.execute(command)
+		self.AMI.execute(Action = command)
 		
 		
 	def clientHangupChannel(self, threadId, object):
@@ -1886,11 +1890,11 @@ class MonAst(protocol.ServerFactory):
 		
 		try:
 			Channel = self.channels[Uniqueid]['Channel']
-			command = []
-			command.append('Action: Hangup')
-			command.append('Channel: %s' % Channel)
+			command = {}
+			command['Action']  = 'Hangup'
+			command['Channel'] = Channel
 			log.debug('MonAst.clientHangupChannel (%s) :: Hangup channel %s' % (threadId, Channel))
-			self.AMI.execute(command)
+			self.AMI.execute(Action = command)
 		except:
 			log.warn('MonAst.clientHangupChannel (%s) :: Uniqueid %s not found on self.channels' % (threadId, Uniqueid))
 		
@@ -1903,17 +1907,17 @@ class MonAst(protocol.ServerFactory):
 		
 		try:
 			Channel = self.channels[Uniqueid]['Channel']
-			command = []
-			command.append('Action: Monitor')
-			command.append('Channel: %s' % Channel)
-			command.append('File: MonAst-Monitor.%s' % Channel.replace('/', '-'))
-			command.append('Format: wav49')
+			command = {}
+			command['Action']  = 'Monitor'
+			command['Channel'] = Channel
+			command['File']    = 'MonAst-Monitor.%s' % Channel.replace('/', '-')
+			command['Format']  = 'wav49'
 			tt = 'without'
 			if int(mix) == 1:
-				command.append('Mix: 1')
+				command['Mix'] = 1
 				tt = 'with'
 			log.debug('MonAst.clientMonitorChannel (%s) :: Monitoring channel %s %s Mix' % (threadId, Channel, tt))
-			self.AMI.execute(command)
+			self.AMI.execute(Action = command)
 		except:
 			log.warn('MonAst.clientMonitorChannel (%s) :: Uniqueid %s not found on self.channels' % (threadId, Uniqueid))
 		
@@ -1926,11 +1930,11 @@ class MonAst(protocol.ServerFactory):
 		try:
 			self.channels[Uniqueid]['Monitor'] = False
 			Channel = self.channels[Uniqueid]['Channel']
-			command = []
-			command.append('Action: StopMonitor')
-			command.append('Channel: %s' % Channel)
+			command = {}
+			command['Action'] = 'StopMonitor'
+			command['Channel'] = Channel
 			log.debug('MonAst.clientMonitorStop (%s) :: Stop Monitor on channel %s' % (threadId, Channel))
-			self.AMI.execute(command)
+			self.AMI.execute(Action = command)
 		except:
 			log.warn('MonAst.clientMonitorStop (%s) :: Uniqueid %s not found on self.channels' % (threadId, Uniqueid))
 	
@@ -1973,17 +1977,17 @@ class MonAst(protocol.ServerFactory):
 			Context = self.meetmeContext
 			exten   = '%s%s' % (self.meetmePrefix, dst)
 
-		command = []
-		command.append('Action: Redirect')
-		command.append('Channel: %s' % SrcChannel)
+		command = {}
+		command['Action']  = 'Redirect'
+		command['Channel'] = SrcChannel
 		if ExtraChannel:
-			command.append('ExtraChannel: %s' % ExtraChannel)
-		command.append('Exten: %s' % exten)
-		command.append('Context: %s' % Context)
-		command.append('Priority: 1')
+			command['ExtraChannel'] = ExtraChannel
+		command['Exten']    = exten
+		command['Context']  = Context
+		command['Priority'] = 1
 		
 		log.debug('MonAst.clientTransferCall (%s) :: Transferring %s and %s to %s@%s' % (threadId, SrcChannel, ExtraChannel, exten, Context))
-		self.AMI.execute(command)
+		self.AMI.execute(Action = command)
 	
 	
 	def clientParkCall(self, threadId, object):
@@ -1994,13 +1998,13 @@ class MonAst(protocol.ServerFactory):
 
 		ParkChannel   = self.channels[park]['Channel']
 		AnouceChannel = self.channels[announce]['Channel']
-		command = []
-		command.append('Action: Park')
-		command.append('Channel: %s' % ParkChannel)
-		command.append('Channel2: %s' % AnouceChannel)
-		#ommand.append('Timeout: 45')
+		command = {}
+		command['Action']   = 'Park'
+		command['Channel']  = ParkChannel
+		command['Channel2'] = AnouceChannel
+		#ommand['Timeout'] = 45
 		log.debug('MonAst.clientParkCall (%s) :: Parking Channel %s and announcing to %s' % (threadId, ParkChannel, AnouceChannel))
-		self.AMI.execute(command)	
+		self.AMI.execute(Action = command)	
 	
 	
 	def clientMeetmeKick(self, threadId, object):
@@ -2009,11 +2013,11 @@ class MonAst(protocol.ServerFactory):
 		Meetme  = object['Meetme']
 		Usernum = object['Usernum']
 		
-		command = []
-		command.append('Action: Command')
-		command.append('Command: meetme kick %s %s' % (Meetme, Usernum))
+		command = {}
+		command['Action']  = 'Command'
+		command['Command'] = 'meetme kick %s %s' % (Meetme, Usernum)
 		log.debug('MonAst.clientMeetmeKick (%s) :: Kiking usernum %s from meetme %s' % (threadId, Usernum, Meetme))
-		self.AMI.execute(command)
+		self.AMI.execute(Action = command)
 	
 	
 	def clientParkedHangup(self, threadId, object):
@@ -2023,11 +2027,11 @@ class MonAst(protocol.ServerFactory):
 		
 		try:
 			Channel = self.parked[Exten]['Channel']
-			command = []
-			command.append('Action: Hangup')
-			command.append('Channel: %s' % Channel)
+			command = {}
+			command['Action']  = 'Hangup'
+			command['Channel'] = Channel
 			log.debug('MonAst.clientParkedHangup (%s) :: Hangup parcked channel %s' % (threadId, Channel))
-			self.AMI.execute(command)
+			self.AMI.execute(Action = command)
 		except:
 			log.warn('MonAst.clientParkedHangup (%s) :: Exten %s not found on self.parked' % (threadId, Exten))
 		
@@ -2041,14 +2045,14 @@ class MonAst(protocol.ServerFactory):
 		MemberName = self.monitoredUsers[member]['CallerID']
 		if MemberName == '--':
 			MemberName = member
-		command = []
-		command.append('Action: QueueAdd')
-		command.append('Queue: %s' % queue)
-		command.append('Interface: %s' % member)
-		#command.append('Penalty: 10')
-		command.append('MemberName: %s' % MemberName)
+		command = {}
+		command['Action']     = 'QueueAdd'
+		command['Queue']      = queue
+		command['Interface']  = member
+		#command['Penalty']    = 10
+		command['MemberName'] = MemberName
 		log.debug('MonAst.clientAddQueueMember (%s) :: Adding member %s to queue %s' % (threadId, member, queue))
-		self.AMI.execute(command)
+		self.AMI.execute(Action = command)
 		
 		
 	def clientRemoveQueueMember(self, threadId, object):
@@ -2057,12 +2061,12 @@ class MonAst(protocol.ServerFactory):
 		queue  = object['Queue']
 		member = object['Member']
 		
-		command = []
-		command.append('Action: QueueRemove')
-		command.append('Queue: %s' % queue)
-		command.append('Interface: %s' % member)
+		command = {}
+		command['Action']    = 'QueueRemove'
+		command['Queue']     = queue
+		command['Interface'] = member
 		log.debug('MonAst.clientRemoveQueueMember (%s) :: Removing member %s from queue %s' % (threadId, member, queue))
-		self.AMI.execute(command)
+		self.AMI.execute(Action = command)
 		
 		
 	def clientPauseQueueMember(self, threadId, object):
@@ -2071,13 +2075,13 @@ class MonAst(protocol.ServerFactory):
 		queue  = object['Queue']
 		member = object['Member']
 		
-		command = []
-		command.append('Action: QueuePause')
-		command.append('Queue: %s' % queue)
-		command.append('Interface: %s' % member)
-		command.append('Paused: 1')
+		command = {}
+		command['Action']    = 'QueuePause'
+		command['Queue']     = queue
+		command['Interface'] = member
+		command['Paused']    = 1
 		log.debug('MonAst.clientAddQueueMember (%s) :: Pausing member %s on queue %s' % (threadId, member, queue))
-		self.AMI.execute(command)
+		self.AMI.execute(Action = command)
 		
 	def clientUnpauseQueueMember(self, threadId, object):
 		
@@ -2085,13 +2089,13 @@ class MonAst(protocol.ServerFactory):
 		queue  = object['Queue']
 		member = object['Member']
 		
-		command = []
-		command.append('Action: QueuePause')
-		command.append('Queue: %s' % queue)
-		command.append('Interface: %s' % member)
-		command.append('Paused: 0')
+		command = {}
+		command['Action']    = 'QueuePause'
+		command['Queue']     = queue
+		command['Interface'] = member
+		command['Paused']    = 0
 		log.debug('MonAst.clientUnpauseQueueMember (%s) :: Unpausing member %s on queue %s' % (threadId, member, queue))
-		self.AMI.execute(command)
+		self.AMI.execute(Action = command)
 		
 		
 	def clientSkypeLogin(self, threadId, object):
@@ -2099,11 +2103,11 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.clientSkypeLogin (%s) :: Running...' % threadId)
 		skypeName = object['SkypeName']
 		
-		command = []
-		command.append('Action: Command')
-		command.append('Command: skype login user %s' % skypeName)
+		command = {}
+		command['Action']  = 'Command'
+		command['Command'] = 'skype login user %s' % skypeName
 		log.debug('MonAst.clientSkypeLogin (%s) :: Login skype user %s' % (threadId, skypeName))
-		self.AMI.execute(command)
+		self.AMI.execute(Action = command)
 	
 	
 	def clientSkypeLogout(self, threadId, object):
@@ -2111,11 +2115,11 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.clientSkypeLogout (%s) :: Running...' % threadId)
 		skypeName = object['SkypeName']
 		
-		command = []
-		command.append('Action: Command')
-		command.append('Command: skype logout user %s' % skypeName)
+		command = {}
+		command['Action']  = 'Command'
+		command['Command'] = 'skype logout user %s' % skypeName
 		log.debug('MonAst.clientSkypeLogout (%s) :: Logout skype user %s' % (threadId, skypeName))
-		self.AMI.execute(command)
+		self.AMI.execute(Action = command)
 		
 	
 	def clientCliCommand(self, threadId, object):
@@ -2123,12 +2127,12 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.clientCliCommand (%s) :: Running...' % threadId)
 		cliCommand = object['CliCommand']
 		
-		command = []
-		command.append('Action: Command')
-		command.append('Command: %s' % cliCommand)
-		#command.append('ActionID: %s' % session)
+		command = {}
+		command['Action']   = 'Command'
+		command['Command']  = cliCommand
+		command['ActionID'] = object['Session']
 		log.debug('MonAst.clientCliCommand (%s) :: Executing CLI command: %s' % (threadId, cliCommand))
-		self.AMI.execute(command, self.handlerCliCommand, object['Session'])
+		self.AMI.execute(Action = command, Handler = self.handlerCliCommand)
 	
 	
 	def clientCheckAmiAuth(self, threadId, username, password):
@@ -2139,7 +2143,7 @@ class MonAst(protocol.ServerFactory):
 		
 		try:
 			s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			s.connect((self.AMI.hostname, self.AMI.port))
+			s.connect((self.host, self.port))
 			
 			s.send("Action: Login\r\nUsername: %s\r\nSecret: %s\r\n\r\n" % (username, password))
 		
@@ -2187,11 +2191,11 @@ class MonAst(protocol.ServerFactory):
 		self.calls    = {}
 		self.channels = {}
 		
-		self.AMI.execute(['Action: SIPpeers'])
-		self.AMI.execute(['Action: IAXpeers'], self.handlerParseIAXPeers)
-		self.AMI.execute(['Action: Command', 'Command: skype show users'], self.handlerParseSkypeUsers)
-		self.AMI.execute(['Action: GetConfig', 'Filename: meetme.conf'], self.handlerGetConfigMeetme)
-		self.AMI.execute(['Action: QueueStatus'])
+		self.AMI.execute(Action = {'Action': 'SIPpeers'})
+		self.AMI.execute(Action = {'Action': 'IAXpeers'}, Handler = self.handlerParseIAXPeers)
+		self.AMI.execute(Action = {'Action': 'Command', 'Command': 'skype show users'}, Handler = self.handlerParseSkypeUsers)
+		self.AMI.execute(Action = {'Action': 'GetConfig', 'Filename': 'meetme.conf'}, Handler = self.handlerGetConfigMeetme)
+		self.AMI.execute(Action = {'Action': 'QueueStatus'})
 		
 		self._taskCheckStatus.stop()
 		self._taskCheckStatus.start(60, True)
