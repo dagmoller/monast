@@ -58,19 +58,19 @@ else
 	{
 		$buffer = "";
 		$action = array('Action' => 'Login', 'Username' => $username, 'Secret' => $secret, 'Session' => $sessionId);
-		socket_write($sock, $json->encode($action));
+		socket_write($sock, $json->encode($action) . "\r\n");
 		
 		while ($message = socket_read($sock, 1024 * 16)) 
 		{
 			$buffer .= $message;
 			
-			if ($buffer == "OK" || $buffer == "Authentication Success")
+			if ($buffer == "OK\r\n" || $buffer == "Authentication Success\r\n")
 			{
 				setValor('login', true);
 				setValor('username', $username);
 				$saida['success'] = true;
 				
-				socket_write($sock, "BYE");
+				socket_write($sock, "BYE\r\n");
 			}
 			
 			if (strpos($buffer, "ERROR: ") !== false)
@@ -78,7 +78,7 @@ else
 				$message        = str_replace("ERROR: ", "", $buffer);
 				$saida['error'] = $message;
 				
-				socket_write($sock, "BYE");
+				socket_write($sock, "BYE\r\n");
 			}
 		}
 		socket_close($sock);

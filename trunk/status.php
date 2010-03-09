@@ -107,27 +107,27 @@ if ($conn === false)
 	die;
 }
 
-socket_write($sock, "SESSION: $sessid");
+socket_write($sock, "SESSION: $sessid\r\n");
 while ($message = socket_read($sock, 1024 * 16)) 
 {
 	$buffer .= $message;
 	
-	if ($buffer == "OK")
+	if ($buffer == "OK\r\n")
 	{
 		$buffer = "";
 		$isOk   = true;
-		socket_write($sock, "GET CHANGES");
+		socket_write($sock, "GET CHANGES\r\n");
 	}
-	elseif ($buffer == "NO SESSION")
+	elseif ($buffer == "NO SESSION\r\n")
 	{
 		$buffer       = "";
 		$complete     = true;
 		$lastEvents[] = array('Action' => 'Reload', 'Time' => 5000);
 	}
-	elseif ($buffer == "NO CHANGES")
+	elseif ($buffer == "NO CHANGES\r\n")
 	{
 		$buffer = "";
-		socket_write($sock, "GET CHANGES");
+		socket_write($sock, "GET CHANGES\r\n");
 		sleep(1);
 	}
 	elseif (strpos($buffer, "ERROR: Authentication Required") !== false)
@@ -147,7 +147,7 @@ while ($message = socket_read($sock, 1024 * 16))
 
 	if (strpos($buffer, "END CHANGES") !== false)
 	{
-		$buffer   = trim(str_replace("BEGIN CHANGES", "", str_replace("END CHANGES", "", $buffer)));
+		$buffer   = trim(str_replace("BEGIN CHANGES\r\n", "", str_replace("END CHANGES\r\n", "", $buffer)));
 		$isStatus = false;
 		$complete = true;
 	}
@@ -187,7 +187,7 @@ while ($message = socket_read($sock, 1024 * 16))
 	}
 	
 	if ($complete)
-		socket_write($sock, "BYE");
+		socket_write($sock, "BYE\r\n");
 }
 socket_close($sock);
 
