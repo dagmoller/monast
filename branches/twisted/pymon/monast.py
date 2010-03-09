@@ -380,7 +380,7 @@ class MonAst(protocol.ServerFactory):
 		self.AMI = AsteriskManagerFactory()
 		self.AMI.addServer(host, host, port, username, password)
 		
-		self.AMI.registerEventHandler('_AUTHENTICATED', self._GetConfig)
+		self.AMI.registerEventHandler('onAuthenticationAccepted', self._GetConfig)
 		
 		self.AMI.registerEventHandler('Reload', self.handlerReload)
 		self.AMI.registerEventHandler('ChannelReload', self.handlerChannelReload)
