@@ -34,8 +34,6 @@ START_PATH = os.getcwd()
 sys.path.append('%s/amapi' % sys.path[0])
 
 import time
-import thread
-import threading
 import traceback
 import socket
 import signal
@@ -43,8 +41,12 @@ import random
 import Queue
 import logging
 import optparse
-from AsteriskManager import AsteriskManager
+
+from AsteriskManager import AsteriskManagerFactory
 from ConfigParser import SafeConfigParser, NoOptionError
+
+from twisted.protocols import basic
+from twisted.internet import protocol, reactor, task
 
 import distutils.sysconfig
 PYTHON_VERSION = distutils.sysconfig.get_python_version()
@@ -150,12 +152,50 @@ class MyConfigParser(SafeConfigParser):
 	def optionxform(self, optionstr):
 		return optionstr
 	
+
+class MonAstProtocol(basic.LineOnlyReceiver):
 	
-class MonAst:
+	host    = None
+	port    = None
+	session = None
+	closed  = False
+	
+	def connectionMade(self):
+		peer = self.transport.getPeer()
+		self.host = peer.host
+		self.port = peer.port
+		log.info("MonAstProtocol.connectionMade :: New Client from %s:%s" % (self.host, self.port))
+		self.factory.pclients.append(self)
+		
+	def connectionLost(self, reason):
+		if not self.closed:
+			log.error("MonAstProtocol.connectionLost :: Connection Lost from %s:%s" % (self.host, self.port))
+		self.factory.pclients.remove(self)
+	
+	def closeClient(self):
+		log.info("MonAstProtocol.closeClient :: Closing Connection from %s:%s" % (self.host, self.port))
+		self.closed = True
+		self.transport.loseConnection()
+	
+	def lineReceived(self, line):
+		log.debug("MonAstProtocol.lineReceived (%s:%s) :: Received: %s" % (self.host, self.port, line))
+		if line.upper().startswith('SESSION: '):
+			self.session = line[9:]
+		self.factory.processClientMessage(self, line)
+		
+	def sendMessage(self, line):
+		log.debug("MonAstProtocol.sendMessage (%s:%s) :: Sending %s" % (self.host, self.port, line))
+		self.sendLine(line)
+		
+
+class MonAst(protocol.ServerFactory):
 	
 	##
 	## Internal Params
 	##
+	
+	protocol = MonAstProtocol
+	pclients = []
 	
 	running         = True
 	reloading       = False
@@ -166,7 +206,6 @@ class MonAst:
 	
 	bindHost        = None
 	bindPort        = None
-	socketClient    = None
 	
 	defaultContext  = None
 	transferContext = None
@@ -176,8 +215,6 @@ class MonAst:
 	
 	userDisplay     = {}
 	queuesDisplay   = {}
-	
-	#enqueue        = Queue.Queue()
 	
 	authRequired   = False
 	
@@ -193,15 +230,6 @@ class MonAst:
 	monitoredUsers = {}
 	queues         = {}
 
-	clientSockLock     = threading.RLock()
-	clientQueuelock    = threading.RLock()
-	parkedLock         = threading.RLock()
-	meetmeLock         = threading.RLock()
-	callsLock          = threading.RLock()
-	channelsLock       = threading.RLock()
-	monitoredUsersLock = threading.RLock()
-	queuesLock         = threading.RLock()
-	
 	isParkedStatus = False
 	parkedStatus   = []
 	
@@ -217,7 +245,6 @@ class MonAst:
 	queueStatusOrder = []
 	
 	getMeetmeAndParkStatus = False
-	getChannelsCallsStatus = False
 	
 	sortby = 'callerid'
 	
@@ -251,23 +278,24 @@ class MonAst:
 			'CliCommand'         : ('command', self.clientCliCommand)
 		}
 		
+		self._taskClientQueueRemover = task.LoopingCall(self.taskClientQueueRemover)
+		self._taskCheckStatus        = task.LoopingCall(self.taskCheckStatus)
+		
 		self.configFile = configFile
 		self.parseConfig()
 		
 	
-	def list2Dict(self, lines):
-		dic = {}
-		for line in lines:
-			tmp = line.split(':')
-			if len(tmp) == 1:
-				dic[tmp[0].strip()] = ''
-			elif len(tmp) == 2:
-				dic[tmp[0].strip()] = tmp[1].strip()
-			elif len(tmp) >= 3:
-				dic[tmp[0].strip()] = ''.join(tmp[1:])
-									
-		return dic
+	def startFactory(self):
+		
+		self._taskClientQueueRemover.start(60, False)
+		self._taskCheckStatus.start(60, False)
 	
+	
+	def stopFactory(self):
+		pass
+		#self._taskClientQueueRemover.stop()
+		#self._taskCheckStatus.stop()
+
 	
 	def parseConfig(self):
 		
@@ -280,6 +308,9 @@ class MonAst:
 		port     = int(cp.get('global', 'hostport'))
 		username = cp.get('global', 'username')
 		password = cp.get('global', 'password')
+		
+		self.host = host
+		self.port = port
 		
 		self.bindHost       = cp.get('global', 'bind_host')
 		self.bindPort       = int(cp.get('global', 'bind_port'))
@@ -346,18 +377,10 @@ class MonAst:
 			if (self.queuesDisplay['DEFAULT'] and display == 'hide') or (not self.queuesDisplay['DEFAULT'] and display == 'show'):
 				self.queuesDisplay[queue] = True
 		
-		try:
-			self.socketClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			self.socketClient.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-			self.socketClient.bind((self.bindHost, self.bindPort))
-			self.socketClient.listen(10)
-		except socket.error, e:
-			log.error("MonAst.__init__ :: Cound not open socket on port %d, cause: %s" % (self.bindPort, e))
-			sys.exit(1)
-			
-		self.AMI = AsteriskManager(host, port, username, password)
+		self.AMI = AsteriskManagerFactory()
+		self.AMI.addServer(host, host, port, username, password)
 		
-		self.AMI.registerEventHandler('_AUTHENTICATED', self._GetConfig)
+		self.AMI.registerEventHandler('onAuthenticationAccepted', self._GetConfig)
 		
 		self.AMI.registerEventHandler('Reload', self.handlerReload)
 		self.AMI.registerEventHandler('ChannelReload', self.handlerChannelReload)
@@ -399,155 +422,92 @@ class MonAst:
 		self.AMI.registerEventHandler('MonitorStart', self.handlerMonitorStart)
 		self.AMI.registerEventHandler('MonitorStop', self.handlerMonitorStop)
 		
-	
-	def threadSocketClient(self, name, params):
 		
-		log.info('MonAst.threadSocketClient :: Starting Thread...')
-		while self.running:
-			try:
-				(sc, addr) = self.socketClient.accept()
-				log.info('MonAst.threadSocketClient :: New client connection: %s' % str(addr))
-				self.clientSockLock.acquire()
-				threadId  = 'threadClient-%s' % random.random()
-				self.clientSocks[threadId] = thread.start_new_thread(self.threadClient, (threadId, sc, addr))
-				self.clientSockLock.release()
-			except:
-				if not self.reloading:
-					log.exception('MonAst.threadSocketClient :: Unhandled Exception')
-				
-				
-	def threadClient(self, threadId, sock, addr):
+	def processClientMessage(self, client, message):
 		
-		log.info('MonAst.threadClient (%s) :: Starting Thread...' % threadId)
-		buffer       = ""
-		messages     = ""
-		session      = None
-		localRunning = True
-		count        = 0
+		threadId = client.session
+		
+		output  = []
+		object  = {'Action': None, 'Session': None, 'Username': None}
 		
 		try:
-			while self.running and localRunning:
-				message = sock.recv(1024 * 16)
-				if message.strip():
-					messages = message.strip().split('\r\n')
-					for message in messages:
-						log.debug('MonAst.threadClient (%s) :: Received: %s' % (threadId, message))
-						
-						output  = []
-						object  = {'Action': None, 'Session': None, 'Username': None}
-						
-						try:
-							object = json.loads(message)
-						except:
-							pass
-						
-						isSession = message.upper().startswith('SESSION: ')
-						action    = object['Action']
-						
-						if self.authRequired and action == 'Login':
-							session  = object['Session']
-							username = object['Username']
-							secret   = object['Secret']
-							if self.clients.has_key(username):
-								if self.clients[username]['secret'] == secret:
-									output.append('Authentication Success')
-									self.clientQueuelock.acquire()
-									self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time(), 'roles': self.clients[username]['roles']}
-									self.clientQueuelock.release()
-									log.log(logging.NOTICE, 'MonAst.threadClient (%s) :: New Authenticated (local) client session %s for %s' % (threadId, session, username))
-								else:
-									log.error('MonAst.threadClient (%s) :: Invalid username or password for %s (local)' % (threadId, username))
-									output.append('ERROR: Invalid user or secret')
-							else:
-								auth = self.clientCheckAmiAuth(threadId, username, secret)
-								if auth[0]:
-									output.append('Authentication Success')
-									self.clientQueuelock.acquire()
-									self.clientsAMI[username] = {'roles': auth[1]}
-									self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time(), 'roles': auth[1]}
-									self.clientQueuelock.release()
-									log.log(logging.NOTICE, 'MonAst.threadClient (%s) :: New Authenticated (manager) client session %s for %s' % (threadId, session, username))
-								else:
-									log.error('MonAst.threadClient (%s) :: Invalid username or password for %s (manager)' % (threadId, username))
-									output.append('ERROR: Invalid user or secret')
-						
-						elif self.authRequired and action == 'Logout':
-							self.clientQueuelock.acquire()
-							try:
-								del self.clientQueues[session]
-								output.append('ERROR: Authentication Required')
-							except:
-								output.append('ERROR: Invalid session %s for user %s' % (session, username))
-								log.error('MonAst.threadClient (%s) :: Invalid session %s for user %s' % (session, username))
-							self.clientQueuelock.release()
-							
-						elif isSession:
-							session = message[9:]
-							self.clientQueuelock.acquire()
-							try:
-								self.clientQueues[session]['t'] = time.time()
-								output.append('OK')
-							except KeyError:
-								if self.authRequired:
-									output.append('ERROR: Authentication Required')
-								else:
-									output.append('NEW SESSION')
-									self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time()}
-									log.log(logging.NOTICE, 'MonAst.threadClient (%s) :: New client session: %s' % (threadId, session))
-							self.clientQueuelock.release()
-						
-						elif message.upper() == 'GET STATUS':
-							output = self.clientGetStatus(threadId, session)
-						
-						elif message.upper() == 'GET CHANGES':
-							output = self.clientGetChanges(threadId, session)
-						
-						elif message.upper() == 'BYE':
-							localRunning = False
-			
-						elif self.actions.has_key(action):
-							if self.checkPermission(object, self.actions[action][0]):
-								self.actions[action][1](threadId, object)
-							
-						else:
-							output.append('NO SESSION')
-							
-						## Send messages to client
-						if len(output) > 0:
-							log.debug('MonAst.threadClient (%s) :: Sending: %s' % (threadId, '\r\n'.join(output)))
-							sock.send('\r\n'.join(output))
-							#if doBreak:
-							#	break
-							
-				else:
-					count += 1
-					if count == 10:
-						log.error('MonAst.threadClient (%s) :: Lost connection, dropping client.' % threadId)
-						break
-					
-		except socket.error, e:
-			log.error('MonAst.threadClient (%s) :: Socket Error: %s' % (threadId, e))
-		except:
-			log.exception('MonAst.threadClient (%s) :: Unhandled Exception' % threadId)
-						
-		try:
-			sock.close()
+			object = json.loads(message)
 		except:
 			pass
 		
-		log.info('MonAst.threadClient (%s) :: Finishing Thread...' % threadId)
+		isSession = message.upper().startswith('SESSION: ')
+		action    = object['Action']
 		
-		self.clientSockLock.acquire()
-		del self.clientSocks[threadId]
-		self.clientSockLock.release()
+		if self.authRequired and action == 'Login':
+			session  = object['Session']
+			username = object['Username']
+			secret   = object['Secret']
+			if self.clients.has_key(username):
+				if self.clients[username]['secret'] == secret:
+					output.append('Authentication Success')
+					self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time(), 'roles': self.clients[username]['roles']}
+					log.log(logging.NOTICE, 'MonAst.processClientMessage (%s:%s) :: New Authenticated (local) client session %s for %s' % (client.host, client.port, session, username))
+				else:
+					log.error('MonAst.processClientMessage (%s:%s) :: Invalid username or password for %s (local)' % (client.host, client.port, username))
+					output.append('ERROR: Invalid user or secret')
+			else:
+				auth = self.clientCheckAmiAuth(threadId, username, secret)
+				if auth[0]:
+					output.append('Authentication Success')
+					self.clientsAMI[username] = {'roles': auth[1]}
+					self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time(), 'roles': auth[1]}
+					log.log(logging.NOTICE, 'MonAst.processClientMessage (%s:%s) :: New Authenticated (manager) client session %s for %s' % (client.host, client.port, session, username))
+				else:
+					log.error('MonAst.processClientMessage (%s:%s) :: Invalid username or password for %s (manager)' % (client.host, client.port, username))
+					output.append('ERROR: Invalid user or secret')
+		
+		elif self.authRequired and action == 'Logout':
+			try:
+				del self.clientQueues[client.session]
+				output.append('ERROR: Authentication Required')
+			except:
+				output.append('ERROR: Invalid session %s for user %s' % (client.session, username))
+				log.error('MonAst.processClientMessage (%s:%s) :: Invalid session %s for user %s' % (client.host, client.port, client.session, username))
+			
+		elif isSession:
+			session = message[9:]
+			try:
+				self.clientQueues[session]['t'] = time.time()
+				output.append('OK')
+			except KeyError:
+				if self.authRequired:
+					output.append('ERROR: Authentication Required')
+				else:
+					output.append('NEW SESSION')
+					self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time()}
+					log.log(logging.NOTICE, 'MonAst.processClientMessage (%s:%s) :: New client session: %s' % (client.host, client.port, session))
+		
+		elif message.upper() == 'GET STATUS':
+			output = self.clientGetStatus(threadId, client.session)
+		
+		elif message.upper() == 'GET CHANGES':
+			output = self.clientGetChanges(threadId, client.session)
+		
+		elif message.upper() == 'BYE':
+			client.closeClient()
+
+		elif self.actions.has_key(action):
+			if self.checkPermission(object, self.actions[action][0]):
+				self.actions[action][1](threadId, object)
+			
+		else:
+			output.append('NO SESSION')
+			
+		## Send messages to client
+		if len(output) > 0:
+			for line in output:
+				client.sendMessage(line)
 		
 		
-	def threadClientQueueRemover(self, name, params):
+	def taskClientQueueRemover(self):
 		
-		log.info('MonAst.threadClientQueueRemover :: Starting Thread...')
-		while self.running:
-			time.sleep(60)
-			self.clientQueuelock.acquire()
+		log.info('MonAst.taskClientQueueRemover :: Running...')
+		if self.running:
 			dels = []
 			now = time.time()
 			for session in self.clientQueues:
@@ -555,51 +515,32 @@ class MonAst:
 				if int(now - past) > 600:
 					dels.append(session)
 			for session in dels:
-				log.log(logging.NOTICE, 'MonAst.threadClientQueueRemover :: Removing dead client session: %s' % session)
+				log.log(logging.NOTICE, 'MonAst.taskClientQueueRemover :: Removing dead client session: %s' % session)
 				del self.clientQueues[session]
-			self.clientQueuelock.release()
 			
 			
-	def threadCheckStatus(self, name, params):
+	def taskCheckStatus(self):
 		
-		log.info('MonAst.threadCheckStatus :: Starting Thread...')
-		time.sleep(10)
-		count = 60
-		while self.running:
-			time.sleep(1)
-			if self.getChannelsCallsStatus:
-				self.getChannelsCallsStatus = False
-				time.sleep(10)
-			elif count < 60:
-				count += 1
-				continue
-			
-			count = 0
-			
-			log.info('MonAst.threadCheckStatus :: Requesting Status...')
-			if not self.AMI.isConnected or not self.AMI.isAuthenticated:
-				log.warning('MonAst.threadCheckStatus :: AMI Not Connected...')
-				continue
-			
+		log.info('MonAst.taskCheckStatus :: Running...')
+		if self.running:
+			log.info('MonAst.taskCheckStatus :: Requesting Status...')
+
 			self.channelStatus = []
-			self.AMI.execute(['Action: Status']) # generate Event: Status
+			self.AMI.execute(Action = {'Action': 'Status'}) # generate Event: Status
 			
 			self.isParkedStatus = True
 			self.parkedStatus   = []
-			self.AMI.execute(['Action: ParkedCalls']) # generate Event: ParkedCall
+			self.AMI.execute(Action = {'Action': 'ParkedCalls'}) # generate Event: ParkedCall
 			
-			self.queuesLock.acquire()
 			for queue in self.queues:
 				self.queueStatusOrder.append(queue)
 				self.queueMemberStatus[queue] = []
 				self.queueClientStatus[queue] = []
-				self.AMI.execute(['Action: QueueStatus', 'Queue: %s' % queue])
-			self.queuesLock.release()
+				self.AMI.execute(Action = {'Action': 'QueueStatus', 'Queue': queue})
 	
 	
 	def enqueue(self, **args):
 		
-		self.clientQueuelock.acquire()
 		if args.has_key('__session'):
 			session = args['__session']
 			del args['__session']
@@ -607,7 +548,6 @@ class MonAst:
 		else:
 			for session in self.clientQueues:
 				self.clientQueues[session]['q'].put(json.dumps(args))
-		self.clientQueuelock.release()
 	
 	
 	def checkPermission(self, object, role):
@@ -689,7 +629,7 @@ class MonAst:
 	def handlerChannelReload(self, lines):
 		
 		log.info('MonAst.handlerChannelReload :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Channel      = dic.get('ChannelType', dic.get('Channel'))
 		ReloadReason = dic['ReloadReason']
@@ -700,7 +640,7 @@ class MonAst:
 	def handlerPeerEntry(self, lines):
 		
 		log.info('MonAst.handlerPeerEntry :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Status      = dic['Status']
 		Channeltype = dic['Channeltype']
@@ -711,7 +651,6 @@ class MonAst:
 		elif Status.find('(') != -1:
 			Status = Status[0:Status.find('(')]
 		
-		self.monitoredUsersLock.acquire()
 		user = '%s/%s' % (Channeltype, ObjectName)
 		
 		if self.userDisplay['DEFAULT'] and not self.userDisplay.has_key(user):
@@ -723,51 +662,44 @@ class MonAst:
 		
 		if user:
 			type = ['peer', 'user'][Channeltype == 'Skype']
-			self.AMI.execute(['Action: Command', 'Command: %s show %s %s' % (Channeltype.lower(), type, ObjectName)], self._defaultParseConfigPeers, user)
-		
-		self.monitoredUsersLock.release()
+			self.AMI.execute(Action = {'Action': 'Command', 'Command': '%s show %s %s' % (Channeltype.lower(), type, ObjectName), 'ActionID': user}, Handler = self._defaultParseConfigPeers)
 		
 	
 	def handlerPeerStatus(self, lines):
 		
 		log.info('MonAst.handlerPeerStatus :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Peer       = dic['Peer']
 		PeerStatus = dic['PeerStatus']
 		
-		self.monitoredUsersLock.acquire()
 		if self.monitoredUsers.has_key(Peer):
 			mu = self.monitoredUsers[Peer]
 			mu['Status'] = PeerStatus
 			self.enqueue(Action = 'PeerStatus', Peer = Peer, Status = mu['Status'], Calls = mu['Calls'])
-		self.monitoredUsersLock.release()
 		
 		
 	def handlerSkypeAccountStatus(self, lines):
 		
 		log.info('MonAst.handlerSkypeAccountStatus :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Username = 'Skype/%s' % dic['Username']
 		Status   = dic['Status']
 		
-		self.monitoredUsersLock.acquire()
 		if self.monitoredUsers.has_key(Username):
 			mu = self.monitoredUsers[Username]
 			mu['Status'] = Status
 			self.enqueue(Action = 'PeerStatus', Peer = Username, Status = mu['Status'], Calls = mu['Calls'])
-		self.monitoredUsersLock.release()
 				
 					
 	def handlerBranchOnHook(self, lines): 
 
 		log.info('MonAst.handlerBranchOnHook :: Running... (On)')
-		dic = self.list2Dict(lines) 
+		dic = lines 
 
 		Channel = dic['Channel']
 
-		self.monitoredUsersLock.acquire()
 		user = Channel
 		if Channel.rfind('-') != -1:
 			user = Channel[:Channel.rfind('-')]
@@ -776,17 +708,15 @@ class MonAst:
 			mu['Calls']  = 0
 			mu['Status'] = "Not in Use"
 			self.enqueue(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
-		self.monitoredUsersLock.release()
 
 
 	def handlerBranchOffHook(self, lines):
 
 		log.info('MonAst.handlerBranchOffHook :: Running... (Off)')
-		dic = self.list2Dict(lines)
+		dic = lines
 
 		Channel = dic['Channel']
 		
-		self.monitoredUsersLock.acquire()
 		user = Channel
 		if Channel.rfind('-') != -1:
 			user = Channel[:Channel.rfind('-')]
@@ -794,13 +724,12 @@ class MonAst:
 			mu           = self.monitoredUsers[user]
 			mu['Status'] = "In Use"
 			self.enqueue(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
-		self.monitoredUsersLock.release()
 	
 	
 	def handlerNewchannel(self, lines):
 		
 		log.info('MonAst.handlerNewchannel :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Channel      = dic['Channel']
 		State        = dic.get('ChannelStateDesc', dic.get('State'))
@@ -809,9 +738,6 @@ class MonAst:
 		Uniqueid     = dic['Uniqueid']
 		Monitor      = False
 					
-		self.channelsLock.acquire()
-		self.monitoredUsersLock.acquire()
-		
 		self.channels[Uniqueid] = {'Channel': Channel, 'State': State, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName, 'Monitor': Monitor}
 		self.enqueue(Action = 'NewChannel', Channel = Channel, State = State, CallerIDNum = CallerIDNum, CallerIDName = CallerIDName, Uniqueid = Uniqueid, Monitor = Monitor)
 		
@@ -823,14 +749,11 @@ class MonAst:
 			mu['Calls'] += 1
 			self.enqueue(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
 
-		self.monitoredUsersLock.release()
-		self.channelsLock.release()
-		
 		
 	def handlerNewstate(self, lines):
 		
 		log.info('MonAst.handlerNewstate :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Channel      = dic['Channel']
 		State        = dic.get('ChannelStateDesc', dic.get('State'))
@@ -838,7 +761,6 @@ class MonAst:
 		CallerIDName = dic['CallerIDName']
 		Uniqueid     = dic['Uniqueid']
 					
-		self.channelsLock.acquire()
 		try:
 			self.channels[Uniqueid]['State']        = State
 			self.channels[Uniqueid]['CallerIDNum']  = CallerID
@@ -846,24 +768,18 @@ class MonAst:
 			self.enqueue(Action = 'NewState', Channel = Channel, State = State, CallerID = CallerID, CallerIDName = CallerIDName, Uniqueid = Uniqueid)
 		except:
 			log.warning("MonAst.handlerNewstate :: Uniqueid %s not found on self.channels" % Uniqueid)
-		self.channelsLock.release()
 		
 		
 	def handlerHangup(self, lines):
 		
 		log.info('MonAst.handlerHangup :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Channel   = dic['Channel']
 		Uniqueid  = dic['Uniqueid']
 		Cause     = dic['Cause']
 		Cause_txt = dic['Cause-txt']
 					
-		self.channelsLock.acquire()
-		self.callsLock.acquire()
-		self.monitoredUsersLock.acquire()
-		self.queuesLock.acquire()
-		
 		try:
 			del self.channels[Uniqueid]
 			self.enqueue(Action = 'Hangup', Channel = Channel, Uniqueid = Uniqueid, Cause = Cause, Cause_txt = Cause_txt)
@@ -894,20 +810,11 @@ class MonAst:
 			del self.queueMemberCalls[Uniqueid]
 			self.enqueue(Action = 'RemoveQueueMemberCall', Queue = Queue, Member = Member, Uniqueid = Uniqueid)
 
-		self.queuesLock.release()
-		self.monitoredUsersLock.release()
-		self.callsLock.release()
-		self.channelsLock.release()
-		
 		
 	def handlerDial(self, lines):
 		
 		log.info('MonAst.handlerDial :: Running...')
-		dic = self.list2Dict(lines)
-		
-		self.callsLock.acquire()
-		self.channelsLock.acquire()
-		self.queuesLock.acquire()
+		dic = lines
 		
 		SubEvent = dic.get('SubEvent', None)
 		if SubEvent == 'Begin':
@@ -948,15 +855,11 @@ class MonAst:
 		else:
 			log.info('MonAst.handlerDial :: Unhandled Dial subevent %s' % SubEvent)
 		
-		self.queuesLock.release()
-		self.channelsLock.release()
-		self.callsLock.release()
-		
 		
 	def handlerLink(self, lines):
 		
 		log.info('MonAst.handlerLink :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Channel1  = dic['Channel1']
 		Channel2  = dic['Channel2']
@@ -964,10 +867,6 @@ class MonAst:
 		Uniqueid2 = dic['Uniqueid2']
 		CallerID1 = dic['CallerID1']
 		CallerID2 = dic['CallerID2']
-		
-		self.channelsLock.acquire()
-		self.callsLock.acquire()
-		self.queuesLock.acquire()
 		
 		try:
 			CallerID1 = '%s <%s>' % (self.channels[Uniqueid1]['CallerIDName'], self.channels[Uniqueid1]['CallerIDNum'])
@@ -996,10 +895,6 @@ class MonAst:
 			qmc = self.queueMemberCalls[Uniqueid1]
 			self.enqueue(Action = 'AddQueueMemberCall', Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = Uniqueid1, Channel = qmc['Channel'], CallerID = CallerID1, Seconds = Seconds)
 		
-		self.queuesLock.release()
-		self.callsLock.release()
-		self.channelsLock.release()
-		
 		
 	def handlerBridge(self, lines):
 		
@@ -1010,7 +905,7 @@ class MonAst:
 	def handlerUnlink(self, lines):
 		
 		log.info('MonAst.handlerUnlink :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Channel1  = dic['Channel1']
 		Channel2  = dic['Channel2']
@@ -1018,9 +913,6 @@ class MonAst:
 		Uniqueid2 = dic['Uniqueid2']
 		CallerID1 = dic['CallerID1']
 		CallerID2 = dic['CallerID2']
-		
-		self.callsLock.acquire()
-		self.queuesLock.acquire()
 		
 		try:
 			#del self.calls[(Uniqueid1, Uniqueid2)]
@@ -1034,14 +926,11 @@ class MonAst:
 			qmc = self.queueMemberCalls[Uniqueid1]
 			self.enqueue(Action = 'RemoveQueueMemberCall', Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = Uniqueid1)
 
-		self.queuesLock.release()
-		self.callsLock.release()
-		
 		
 	def handlerNewcallerid(self, lines):
 		
 		log.info('MonAst.handlerNewcallerid :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Channel        = dic['Channel']
 		CallerID       = dic.get('CallerIDNum', dic.get('CallerID'))
@@ -1049,29 +938,24 @@ class MonAst:
 		Uniqueid       = dic['Uniqueid']
 		CIDCallingPres = dic['CID-CallingPres']
 		
-		self.channelsLock.acquire()
 		try:
 			self.channels[Uniqueid]['CallerIDName'] = CallerIDName
 			self.channels[Uniqueid]['CallerIDNum']  = CallerID
 			self.enqueue(Action = 'NewCallerid', Channel = Channel, CallerID = CallerID, CallerIDName = CallerIDName, Uniqueid = Uniqueid, CIDCallingPres = CIDCallingPres)
 		except KeyError:
 			log.warning("MonAst.handlerNewcallerid :: UniqueID '%s' not found on self.channels" % Uniqueid)
-		self.channelsLock.release()
 		
 		
 	def handlerRename(self, lines):
 		
 		log.info('MonAst.handlerRename :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Oldname      = dic.get('Channel', dic.get('Oldname'))
 		Newname      = dic['Newname']
 		Uniqueid     = dic['Uniqueid']
 		CallerIDName = ''
 		CallerID     = ''
-		
-		self.channelsLock.acquire()
-		self.callsLock.acquire()
 		
 		try:
 			
@@ -1094,14 +978,11 @@ class MonAst:
 		except:
 			log.warn('MonAst.handlerRename :: Channel %s not found in self.channels, ignored.' % Oldname)
 			
-		self.callsLock.release()
-		self.channelsLock.release()
-			
 			
 	def handlerMeetmeJoin(self, lines):
 		
 		log.info('MonAst.handlerMeetmeJoin :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Uniqueid     = dic['Uniqueid']
 		Meetme       = dic['Meetme']
@@ -1109,9 +990,6 @@ class MonAst:
 		CallerIDNum  = dic.get('CallerIDNum', dic.get('CallerIDnum', None))
 		CallerIDName = dic.get('CallerIDName', dic.get('CallerIDname', None))
 					
-		self.meetmeLock.acquire()
-		self.channelsLock.acquire()
-		
 		ch = self.channels[Uniqueid]
 		try:
 			self.meetme[Meetme]['users'][Usernum] = {'Uniqueid': Uniqueid, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName}
@@ -1123,21 +1001,17 @@ class MonAst:
 			self.enqueue(Action = 'MeetmeCreate', Meetme = Meetme)
 		self.enqueue(Action = 'MeetmeJoin', Meetme = Meetme, Uniqueid = Uniqueid, Usernum = Usernum, Channel = ch['Channel'], CallerIDNum = CallerIDNum, CallerIDName = CallerIDName)
 		
-		self.channelsLock.release()
-		self.meetmeLock.release()
-					
 					
 	def handlerMeetmeLeave(self, lines):
 		
 		log.info('MonAst.handlerMeetmeLeave :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Uniqueid = dic['Uniqueid']
 		Meetme   = dic['Meetme']
 		Usernum  = dic['Usernum']
 		Duration = dic['Duration']
 					
-		self.meetmeLock.acquire()
 		try:
 			del self.meetme[Meetme]['users'][Usernum]
 			self.enqueue(Action = 'MeetmeLeave', Meetme = Meetme, Uniqueid = Uniqueid, Usernum = Usernum, Duration = Duration)
@@ -1146,13 +1020,12 @@ class MonAst:
 				self.enqueue(Action = 'MeetmeDestroy', Meetme = Meetme)
 		except Exception, e:
 			log.warn('MonAst.handlerMeetmeLeave :: Meetme or Usernum not found in self.meetme[\'%s\'][\'users\'][\'%s\']' % (Meetme, Usernum))
-		self.meetmeLock.release()
 		
 		
 	def handlerParkedCall(self, lines):
 		
 		log.info('MonAst.handlerParkedCall :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Exten        = dic['Exten']
 		Channel      = dic['Channel']
@@ -1161,8 +1034,6 @@ class MonAst:
 		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
 		CallerIDName = dic['CallerIDName']
 					
-		self.parkedLock.acquire()
-		
 		if self.isParkedStatus:
 			self.parkedStatus.append(Exten)
 			if not self.parked.has_key(Exten):
@@ -1172,13 +1043,11 @@ class MonAst:
 			self.parked[Exten] = {'Channel': Channel, 'From': From, 'Timeout': Timeout, 'CallerID': CallerID, 'CallerIDName': CallerIDName}
 			self.enqueue(Action = 'ParkedCall', Exten = Exten, Channel = Channel, From = From, Timeout = Timeout, CallerID = CallerID, CallerIDName = CallerIDName)
 			
-		self.parkedLock.release()
-					
 					
 	def handlerUnParkedCall(self, lines):
 		
 		log.info('MonAst.handlerUnParkedCall :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Exten        = dic['Exten']
 		Channel      = dic['Channel']
@@ -1186,51 +1055,45 @@ class MonAst:
 		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
 		CallerIDName = dic['CallerIDName']
 					
-		self.parkedLock.acquire()
 		try:
 			del self.parked[Exten]
 			self.enqueue(Action = 'UnparkedCall', Exten = Exten)
 		except:
 			log.warn('MonAst.handlerUnParkedCall :: Parked Exten not found: %s' % Exten)
-		self.parkedLock.release()
 		
 	
 	def handlerParkedCallTimeOut(self, lines):
 		
 		log.info('MonAst.handlerParkedCallTimeOut :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Exten        = dic['Exten']
 		Channel      = dic['Channel']
 		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
 		CallerIDName = dic['CallerIDName']
 					
-		self.parkedLock.acquire()
 		try:
 			del self.parked[Exten]
 			self.enqueue(Action = 'UnparkedCall', Exten = Exten)
 		except:
 			log.warn('MonAst.handlerParkedCallTimeOut :: Parked Exten not found: %s' % Exten)
-		self.parkedLock.release()
 		
 	
 	def handlerParkedCallGiveUp(self, lines):
 		
 		log.info('MonAst.handlerParkedCallGiveUp :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Exten        = dic['Exten']
 		Channel      = dic['Channel']
 		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
 		CallerIDName = dic['CallerIDName']
 					
-		self.parkedLock.acquire()
 		try:
 			del self.parked[Exten]
 			self.enqueue(Action = 'UnparkedCall', Exten = Exten)
 		except:
 			log.warn('MonAst.handlerParkedCallGiveUp :: Parked Exten not found: %s' % Exten)
-		self.parkedLock.release()
 		
 		
 	def handlerParkedCallsComplete(self, lines):
@@ -1239,7 +1102,6 @@ class MonAst:
 
 		self.isParkedStatus = False
 		
-		self.parkedLock.acquire()
 		lostParks = [i for i in self.parked.keys() if i not in self.parkedStatus]
 		for park in lostParks:
 			log.warning('MonAst.handlerParkedCallsComplete :: Removing lost parked call %s' % park)
@@ -1249,13 +1111,12 @@ class MonAst:
 			except:
 				#pass ## added to debug purposes
 				log.exception('MonAst.handlerParkedCallsComplete :: Exception removing lost parked call %s' % park)
-		self.parkedLock.release()
 		
 		
 	def handlerStatus(self, lines):
 		
 		log.info('MonAst.handlerStatus :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Channel      = dic['Channel']
 		CallerIDNum  = dic['CallerIDNum']
@@ -1265,10 +1126,6 @@ class MonAst:
 		Link         = dic.get('BridgedChannel', dic.get('Link', ''))
 		Uniqueid     = dic['Uniqueid']
 		Monitor      = False
-		
-		self.channelsLock.acquire()
-		self.callsLock.acquire()
-		self.monitoredUsersLock.acquire()
 		
 		self.channelStatus.append(Uniqueid)
 		
@@ -1304,20 +1161,11 @@ class MonAst:
 						self.calls[call]['startTime'] = time.time() - Seconds
 						self.enqueue(Action = 'UpdateCallDuration', Uniqueid1 = Uniqueid, Uniqueid2 = UniqueidLink, Seconds = Seconds)
 		
-		self.monitoredUsersLock.release()
-		self.callsLock.release()
-		self.channelsLock.release()
-		
 		
 	def handlerStatusComplete(self, lines):
 		
 		log.info('MonAst.handlerStatusComplete :: Running...')
-		dic = self.list2Dict(lines)
-		
-		self.channelsLock.acquire()
-		self.callsLock.acquire()
-		self.queuesLock.acquire()
-		self.monitoredUsersLock.acquire()
+		dic = lines
 		
 		## Search for lost channels
 		lostChannels = [i for i in self.channels.keys() if i not in self.channelStatus]
@@ -1365,20 +1213,15 @@ class MonAst:
 				log.exception('MonAst.handlerStatusComplete :: Exception removing lost Queue Member Call %s' % Uniqueid)
 
 		if self.getMeetmeAndParkStatus:
-			self.AMI.execute(['Action: Command', 'Command: meetme'], self.handlerParseMeetme)
-			self.AMI.execute(['Action: Command', 'Command: show parkedcalls'], self.handlerShowParkedCalls)
+			self.AMI.execute(Action = {'Action': 'Command', 'Command': 'meetme'}, Handler = self.handlerParseMeetme)
+			self.AMI.execute(Action = {'Action': 'Command', 'Command': 'show parkedcalls'}, Handler = self.handlerShowParkedCalls)
 			self.getMeetmeAndParkStatus = False
 			
-		self.monitoredUsersLock.release()
-		self.queuesLock.release()	
-		self.callsLock.release()
-		self.channelsLock.release()
-	
 	
 	def handlerQueueMember(self, lines):
 		
 		log.info('MonAst.handlerQueueMember :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Queue      = dic['Queue']
 		Name       = dic['Name']
@@ -1392,10 +1235,8 @@ class MonAst:
 		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
 			return
 		
-		self.queuesLock.acquire()
 		if not self.queues.has_key(Queue):
 			log.warning("MonAst.handlerQueueMember :: Can not add location '%s' to queue '%s'. Queue not found." % (Location, Queue))
-			self.queuesLock.release()
 			return
 
 		PausedTime = 1
@@ -1426,22 +1267,21 @@ class MonAst:
 			}
 			self.enqueue(Action = 'AddQueueMember', Queue = Queue, Member = Location, MemberName = Name, Penalty = Penalty, CallsTaken = CallsTaken, LastCall = LastCall, Status = AST_DEVICE_STATES[Status], Paused = Paused, PausedTime = PausedTime)
 		self.queueMemberStatus[Queue].append(Location)
-		self.queuesLock.release()
 		
 		
 	def handlerQueueMemberStatus(self, lines):
 		
 		log.info('MonAst.handlerQueueMemberStatus :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
-		lines.append('Name: %s' % dic['MemberName'])
+		lines['Name'] = dic['MemberName']
 		self.handlerQueueMember(lines)
 		
 		
 	def handlerQueueMemberPaused(self, lines):
 		
 		log.info('MonAst.handlerQueueMemberPaused :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Queue    = dic['Queue']
 		Location = dic['Location']
@@ -1449,13 +1289,11 @@ class MonAst:
 		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
 			return
 		
-		self.queuesLock.acquire()
-		lines.append('Penalty: %s' % self.queues[Queue]['members'][Location]['Penalty'])
-		lines.append('CallsTaken: %s' % self.queues[Queue]['members'][Location]['CallsTaken'])
-		lines.append('LastCall: %s' % self.queues[Queue]['members'][Location]['LastCall'])
-		lines.append('Status: %s' % self.queues[Queue]['members'][Location]['Status'])
-		lines.append('Name: %s' % dic['MemberName'])
-		self.queuesLock.release()
+		lines['Penalty'] = self.queues[Queue]['members'][Location]['Penalty']
+		lines['CallsTaken'] = self.queues[Queue]['members'][Location]['CallsTaken']
+		lines['LastCall'] = self.queues[Queue]['members'][Location]['LastCall']
+		lines['Status'] = self.queues[Queue]['members'][Location]['Status']
+		lines['Name'] = dic['MemberName']
 		
 		self.handlerQueueMember(lines)
 		
@@ -1463,7 +1301,7 @@ class MonAst:
 	def handlerQueueEntry(self, lines):
 		
 		log.info('MonAst.handlerQueueEntry :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Queue        = dic['Queue']
 		Position     = dic['Position']
@@ -1477,9 +1315,6 @@ class MonAst:
 			return
 		
 		# I need to get Uniqueid from this entry
-		self.channelsLock.acquire()
-		self.queuesLock.acquire()
-		
 		for Uniqueid in self.channels:
 			if self.channels[Uniqueid]['Channel'] == Channel:
 				break
@@ -1493,14 +1328,11 @@ class MonAst:
 													'Position': Position, 'JoinTime': time.time() - int(Wait)}
 			self.enqueue(Action = 'AddQueueClient', Queue = Queue, Uniqueid = Uniqueid, Channel = Channel, CallerID = CallerID, CallerIDName = CallerIDName, Position = Position, Count = Count, Wait = Wait)
 
-		self.queuesLock.release()
-		self.channelsLock.release()
-		
 		
 	def handlerQueueMemberAdded(self, lines):
 		
 		log.info('MonAst.handlerQueueMemberAdded :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Queue      = dic['Queue']
 		Location   = dic['Location']
@@ -1510,16 +1342,14 @@ class MonAst:
 		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
 			return
 		
-		self.queuesLock.acquire()
 		self.queues[Queue]['members'][Location] = {'Name': MemberName, 'Penalty': Penalty, 'CallsTaken': 0, 'LastCall': 0, 'Status': '0', 'Paused': 0} 
 		self.enqueue(Action = 'AddQueueMember', Queue = Queue, Member = Location, MemberName = MemberName, Penalty = Penalty, CallsTaken = 0, LastCall = 0, Status = AST_DEVICE_STATES['0'], Paused = 0)
-		self.queuesLock.release()
 		
 		
 	def handlerQueueMemberRemoved(self, lines):
 		
 		log.info('MonAst.handlerQueueMemberRemoved :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Queue      = dic['Queue']
 		Location   = dic['Location']
@@ -1528,19 +1358,17 @@ class MonAst:
 		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
 			return
 		
-		self.queuesLock.acquire()
 		try:
 			del self.queues[Queue]['members'][Location]
 			self.enqueue(Action = 'RemoveQueueMember', Queue = Queue, Member = Location, MemberName = MemberName)
 		except KeyError:
 			log.warn("MonAst.handlerQueueMemberRemoved :: Queue or Member not found in self.queues['%s']['members']['%s']" % (Queue, Location))
-		self.queuesLock.release()
 		
 		
 	def handlerJoin(self, lines): # Queue Join
 		
 		log.info('MonAst.handlerJoin :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Channel      = dic['Channel']
 		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
@@ -1553,7 +1381,6 @@ class MonAst:
 		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
 			return
 		
-		self.queuesLock.acquire()
 		try:
 			self.queues[Queue]['clients'][Uniqueid] = {'Uniqueid': Uniqueid, 'Channel': Channel, 'CallerID': CallerID, 'CallerIDName': CallerIDName, \
 													'Position': Position, 'JoinTime': time.time()}
@@ -1561,13 +1388,12 @@ class MonAst:
 			self.enqueue(Action = 'AddQueueClient', Queue = Queue, Uniqueid = Uniqueid, Channel = Channel, CallerID = CallerID, CallerIDName = CallerIDName, Position = Position, Count = Count, Wait = 0)
 		except KeyError:
 			log.warning("MonAst.handlerJoin :: Queue '%s' not found." % Queue)
-		self.queuesLock.release()
 		
 	
 	def handlerLeave(self, lines): # Queue Leave
 		
 		log.info('MonAst.handlerLeave :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 	
 		Channel      = dic['Channel']
 		Queue        = dic['Queue']
@@ -1577,7 +1403,6 @@ class MonAst:
 		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
 			return
 		
-		self.queuesLock.acquire()
 		try:
 			cause = ''
 			if self.queues[Queue]['clients'][Uniqueid].has_key('Abandoned'):
@@ -1593,13 +1418,12 @@ class MonAst:
 			self.enqueue(Action = 'RemoveQueueClient', Queue = Queue, Uniqueid = Uniqueid, Channel = Channel, Count = Count, Cause = cause)
 		except KeyError:
 			log.warn("MonAst.handlerLeave :: Queue or Client not found in self.queues['%s']['clients']['%s']" % (Queue, Uniqueid))
-		self.queuesLock.release()
 		
 		
 	def handlerQueueCallerAbandon(self, lines):
 		
 		log.info('MonAst.handlerQueueCallerAbandon :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Queue    = dic['Queue']
 		Uniqueid = dic['Uniqueid']
@@ -1607,12 +1431,10 @@ class MonAst:
 		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
 			return
 		
-		self.queuesLock.acquire()
 		try:
 			self.queues[Queue]['clients'][Uniqueid]['Abandoned'] = True
 		except KeyError:
 			log.warn("MonAst.handlerQueueCallerAbandon :: Queue or Client found in self.queues['%s']['clients']['%s']" % (Queue, Uniqueid))
-		self.queuesLock.release()
 		
 		#self.enqueue(Action = 'AbandonedQueueClient', Uniqueid = Uniqueid)
 		
@@ -1620,7 +1442,7 @@ class MonAst:
 	def handlerQueueParams(self, lines):
 		
 		log.info('MonAst.handlerQueueParams :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Queue            = dic['Queue']
 		Max              = int(dic['Max'])
@@ -1635,7 +1457,6 @@ class MonAst:
 		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
 			return
 		
-		self.queuesLock.acquire()
 		if self.queues.has_key(Queue):
 			self.queues[Queue]['stats']['Max']              = Max
 			self.queues[Queue]['stats']['Calls']            = Calls
@@ -1661,14 +1482,10 @@ class MonAst:
 			
 		self.enqueue(Action = 'QueueParams', Queue = Queue, Max = Max, Calls = Calls, Holdtime = Holdtime, Completed = Completed, Abandoned = Abandoned, ServiceLevel = ServiceLevel, ServicelevelPerf = ServicelevelPerf, Weight = Weight)
 			
-		self.queuesLock.release()
-		
 		
 	def handlerQueueStatusComplete(self, lines):
 		
 		log.info('MonAst.handlerQueueStatusComplete :: Running...')
-		
-		self.queuesLock.acquire()
 		
 		size = 0
 		if self.queueStatusFirst:
@@ -1695,41 +1512,36 @@ class MonAst:
 					self.enqueue(Action = 'RemoveQueueClient', Queue = queue, Uniqueid = client, Channel = Channel, Count = Count, Cause = None)
 			except:
 				log.exception('MonAst.handlerQueueStatusComplete :: Unhandled Exception')
-		self.queuesLock.release()
 	
 	
 	def handlerMonitorStart(self, lines):
 		
 		log.info('MonAst.handlerMonitorStart :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Channel  = dic['Channel']
 		Uniqueid = dic['Uniqueid']
 		
-		self.channelsLock.acquire()
 		try:
 			self.channels[Uniqueid]['Monitor'] = True
 			self.enqueue(Action = 'MonitorStart', Channel = Channel, Uniqueid = Uniqueid)
 		except:
 			log.warning('MonAst.handlerMonitorStart :: Uniqueid %s not found in self.channels' % Uniqueid)
-		self.channelsLock.release()
 		
 		
 	def handlerMonitorStop(self, lines):
 		
 		log.info('MonAst.handlerMonitorStart :: Running...')
-		dic = self.list2Dict(lines)
+		dic = lines
 		
 		Channel  = dic['Channel']
 		Uniqueid = dic['Uniqueid']
 		
-		self.channelsLock.acquire()
 		try:
 			self.channels[Uniqueid]['Monitor'] = False
 			self.enqueue(Action = 'MonitorStop', Channel = Channel, Uniqueid = Uniqueid)
 		except:
 			log.warning('MonAst.handlerMonitorStop :: Uniqueid %s not found in self.channels' % Uniqueid)
-		self.channelsLock.release()
 		
 		
 	##
@@ -1738,9 +1550,9 @@ class MonAst:
 	def _defaultParseConfigPeers(self, lines):
 		
 		log.info('MonAst._defaultParseConfigPeers :: Running...')
-		result = lines[3]
+		result = '\n'.join(lines[' '])
 		
-		user = lines[2].split(': ')[1]
+		user = lines['ActionID']
 		
 		CallerID  = None
 		Context   = None
@@ -1767,19 +1579,20 @@ class MonAst:
 		except:
 			Variables = []
 		
-		self.monitoredUsersLock.acquire()
 		if self.monitoredUsers.has_key(user):
 			self.monitoredUsers[user]['CallerID']  = CallerID
 			self.monitoredUsers[user]['Context']   = Context
 			self.monitoredUsers[user]['Variables'] = Variables
-		self.monitoredUsersLock.release()
 		
 		
 	def handlerParseIAXPeers(self, lines):
 		
 		log.info('MonAst.handlerParseIAXPeers :: Running...')
 		
-		for line in lines[2:-1]:
+		if not lines.has_key(' '):
+			return
+		
+		for line in lines[' ']:
 			name = re.search('^([^\s]*).*', line).group(1)
 			if name.find('/') != -1:
 				name = name[:name.find('/')]
@@ -1791,7 +1604,7 @@ class MonAst:
 		
 		log.info('MonAst.handlerParseSkypeUsers :: Running...')
 		
-		response = lines[3]
+		response = lines[' ']
 		if 'Skype Users' in response:
 			users = response.split('\n')[1:-1]
 			for user, status in [i.split(': ') for i in users]:
@@ -1802,12 +1615,10 @@ class MonAst:
 		
 		log.info('MonAst.handlerGetConfigMeetme :: Parsing config...')
 		
-		self.meetmeLock.acquire()
-		for line in lines:
-			if line.startswith('Line-') and line.find('conf=') != -1:
-				params = line[line.find('conf=')+5:].split(',')
+		for key, value in lines.items():
+			if key.startswith('Line-') and value.find('conf=') != -1:
+				params = value.replace('conf=', '').split(',')
 				self.meetme[params[0]] = {'dynamic': False, 'users': {}}
-		self.meetmeLock.release()
 		
 		
 	def handlerParseMeetme(self, lines):
@@ -1815,10 +1626,9 @@ class MonAst:
 		log.info('MonAst.handlerParseMeetme :: Parsing meetme...')
 		
 		reMeetme = re.compile('([^\s]*)[\s]+([^\s]*)[\s]+([^\s]*)[\s]+([^\s]*)[\s]+([^\s]*)')
-		
-		self.meetmeLock.acquire()
+
 		try:
-			meetmes = lines[3].split('\n')[1:-1]
+			meetmes = lines[' '][1:-1]
 			if len(meetmes) > 0:
 				meetmes = meetmes[:-1]
 			for meetme in meetmes:
@@ -1834,22 +1644,19 @@ class MonAst:
 						self.meetme[conf] = {'dynamic': dynamic, 'users': {}}
 						self.enqueue(Action = 'MeetmeCreate', Meetme = conf)
 						
-					self.AMI.execute(['Action: Command', 'Command: meetme list %s concise' % conf], self.handlerParseMeetmeConcise, 'meetmeList-%s' % conf)				
+					self.AMI.execute(Action = {'Action': 'Command', 'Command': 'meetme list %s concise' % conf, 'ActionID': 'meetmeList-%s' % conf}, Handler = self.handlerParseMeetmeConcise)				
 				except:
 					log.warn("MonAst.handlerParseMeetme :: Can't parse meetme line: %s" % meetme)
 		except:
 			log.exception("MonAst.handlerParseMeetme :: Unhandled Exception")
-		self.meetmeLock.release()
 		
 		
 	def handlerParseMeetmeConcise(self, lines):
 
 		log.info('MonAst.handlerParseMeetmeConcise :: Parsing meetme concise...')
 
-		self.meetmeLock.acquire()
-		self.channelsLock.acquire()
-		meetme = lines[2][10:].replace('meetmeList-', '')
-		users  = lines[3].replace('--END COMMAND--', '').split('\n')[:-1]
+		meetme = lines['ActionID'].replace('meetmeList-', '')
+		users  = lines[' '][:-1]
 		for user in users:
 			user = user.split('!')
 			if self.meetme.has_key(meetme):
@@ -1859,8 +1666,6 @@ class MonAst:
 						self.meetme[meetme]['users'][user[0]] = {'Uniqueid': Uniqueid, 'CallerIDNum': user[1], 'CallerIDName': user[2]}
 						self.enqueue(Action = 'MeetmeJoin', Meetme = meetme, Uniqueid = Uniqueid, Usernum = user[0], Channel = user[3], CallerIDNum = user[1], CallerIDName = user[2])
 						break
-		self.channelsLock.release()
-		self.meetmeLock.release()
 		
 		
 	def handlerShowParkedCalls(self, lines):
@@ -1869,9 +1674,7 @@ class MonAst:
 		
 		reParked = re.compile('([0-9]+)[\s]+([^\s]*).*([^\s][0-9]+s)')
 		
-		self.parkedLock.acquire()
-		self.channelsLock.acquire()
-		parkeds = lines[3].split('\n')[1:-2]
+		parkeds = lines[' ']
 		for park in parkeds:
 			gParked = reParked.match(park)
 			if gParked:
@@ -1892,18 +1695,15 @@ class MonAst:
 				else:
 					log.warn('MonAst.handlerShowParkedCalls :: No Channel found for parked call exten %s' % Exten)
 				
-		self.channelsLock.release()
-		self.parkedLock.release()
-	
 	
 	def handlerCliCommand(self, lines):
 		
 		log.info('MonAst.handlerCliCommand :: Running...')
 
-		ActionID = lines[2][10:]
-		Response = lines[3].replace('--END COMMAND--', '')
+		ActionID = lines['ActionID']
+		Response = lines[' ']
 
-		self.enqueue(Action = 'CliResponse', Response = Response.replace('\n', '<br>'), __session = ActionID)
+		self.enqueue(Action = 'CliResponse', Response = '<br>'.join(Response), __session = ActionID)
 	
 	
 	##
@@ -1915,14 +1715,6 @@ class MonAst:
 		
 		output = []
 		theEnd = []
-		
-		self.clientQueuelock.acquire()
-		self.monitoredUsersLock.acquire()
-		self.channelsLock.acquire()
-		self.callsLock.acquire()
-		self.meetmeLock.acquire()
-		self.parkedLock.acquire()
-		self.queuesLock.acquire()
 		
 		try:
 			self.clientQueues[session]['t'] = time.time()
@@ -2023,14 +1815,6 @@ class MonAst:
 		except:
 			log.exception('MonAst.clientGetStatus (%s) :: Unhandled Exception' % threadId)
 		
-		self.queuesLock.release()
-		self.parkedLock.release()
-		self.meetmeLock.release()
-		self.callsLock.release()
-		self.channelsLock.release()
-		self.monitoredUsersLock.release()
-		self.clientQueuelock.release()
-	
 		return output
 	
 	
@@ -2040,7 +1824,6 @@ class MonAst:
 		
 		output = []
 		
-		self.clientQueuelock.acquire()
 		if self.clientQueues.has_key(session):
 			self.clientQueues[session]['t'] = time.time()
 			while True:
@@ -2049,7 +1832,6 @@ class MonAst:
 					output.append(msg)
 				except Queue.Empty:
 					break
-		self.clientQueuelock.release()
 		
 		if len(output) > 0:
 			output.insert(0, 'BEGIN CHANGES')
@@ -2067,23 +1849,21 @@ class MonAst:
 		dst  = object['Destination']
 		type = object['Type']
 		
-		self.monitoredUsersLock.acquire()
 		Context = self.monitoredUsers[src]['Context']
 		if type == 'meetme':
 			Context = self.meetmeContext
 			dst     = '%s%s' % (self.meetmePrefix, dst)
-		command = []
-		command.append('Action: Originate')
-		command.append('Channel: %s' % src)
-		command.append('Exten: %s' % dst)
-		command.append('Context: %s' % Context)
-		command.append('Priority: 1')
-		command.append('CallerID: %s' % MONAST_CALLERID)
+		command = {}
+		command['Action']   = 'Originate'
+		command['Channel']  = src
+		command['Exten']    = dst
+		command['Context']  = Context
+		command['Priority'] = 1
+		command['CallerID'] = MONAST_CALLERID
 		for var in self.monitoredUsers[src]['Variables']:
-			command.append('Variable: %s' % var)
+			command['Variable'] = var
 		log.debug('MonAst.clientOriginateCall (%s) :: From %s to exten %s@%s' % (threadId, src, dst, Context))
-		self.AMI.execute(command)
-		self.monitoredUsersLock.release()
+		self.AMI.execute(Action = command)
 		
 	
 	def clientOriginateDial(self, threadId, object):
@@ -2092,15 +1872,15 @@ class MonAst:
 		src = object['Source']
 		dst = object['Destination']
 
-		command = []
-		command.append('Action: Originate')
-		command.append('Channel: %s' % src)
-		command.append('Application: Dial')
-		command.append('Data: %s,30,rTt' % dst)
-		command.append('CallerID: %s' % MONAST_CALLERID)
+		command = {}
+		command['Action']      = 'Originate'
+		command['Channel']     = src
+		command['Application'] = 'Dial'
+		command['Data']        = '%s,30,rTt' % dst
+		command['CallerID']    = MONAST_CALLERID
 		
 		log.debug('MonAst.clientOriginateDial (%s) :: From %s to %s' % (threadId, src, dst))
-		self.AMI.execute(command)
+		self.AMI.execute(Action = command)
 		
 		
 	def clientHangupChannel(self, threadId, object):
@@ -2108,17 +1888,15 @@ class MonAst:
 		log.info('MonAst.clientHangupChannel (%s) :: Running...' % threadId)
 		Uniqueid = object['Uniqueid']
 		
-		self.channelsLock.acquire()
 		try:
 			Channel = self.channels[Uniqueid]['Channel']
-			command = []
-			command.append('Action: Hangup')
-			command.append('Channel: %s' % Channel)
+			command = {}
+			command['Action']  = 'Hangup'
+			command['Channel'] = Channel
 			log.debug('MonAst.clientHangupChannel (%s) :: Hangup channel %s' % (threadId, Channel))
-			self.AMI.execute(command)
+			self.AMI.execute(Action = command)
 		except:
 			log.warn('MonAst.clientHangupChannel (%s) :: Uniqueid %s not found on self.channels' % (threadId, Uniqueid))
-		self.channelsLock.release()
 		
 		
 	def clientMonitorChannel(self, threadId, object):
@@ -2127,23 +1905,21 @@ class MonAst:
 		Uniqueid = object['Uniqueid']
 		mix      = object['Mix']
 		
-		self.channelsLock.acquire()
 		try:
 			Channel = self.channels[Uniqueid]['Channel']
-			command = []
-			command.append('Action: Monitor')
-			command.append('Channel: %s' % Channel)
-			command.append('File: MonAst-Monitor.%s' % Channel.replace('/', '-'))
-			command.append('Format: wav49')
+			command = {}
+			command['Action']  = 'Monitor'
+			command['Channel'] = Channel
+			command['File']    = 'MonAst-Monitor.%s' % Channel.replace('/', '-')
+			command['Format']  = 'wav49'
 			tt = 'without'
 			if int(mix) == 1:
-				command.append('Mix: 1')
+				command['Mix'] = 1
 				tt = 'with'
 			log.debug('MonAst.clientMonitorChannel (%s) :: Monitoring channel %s %s Mix' % (threadId, Channel, tt))
-			self.AMI.execute(command)
+			self.AMI.execute(Action = command)
 		except:
 			log.warn('MonAst.clientMonitorChannel (%s) :: Uniqueid %s not found on self.channels' % (threadId, Uniqueid))
-		self.channelsLock.release()
 		
 		
 	def clientMonitorStop(self, threadId, object):
@@ -2151,18 +1927,16 @@ class MonAst:
 		log.info('MonAst.clientMonitorStop (%s) :: Running...' % threadId)
 		Uniqueid = object['Uniqueid']
 		
-		self.channelsLock.acquire()
 		try:
 			self.channels[Uniqueid]['Monitor'] = False
 			Channel = self.channels[Uniqueid]['Channel']
-			command = []
-			command.append('Action: StopMonitor')
-			command.append('Channel: %s' % Channel)
+			command = {}
+			command['Action'] = 'StopMonitor'
+			command['Channel'] = Channel
 			log.debug('MonAst.clientMonitorStop (%s) :: Stop Monitor on channel %s' % (threadId, Channel))
-			self.AMI.execute(command)
+			self.AMI.execute(Action = command)
 		except:
 			log.warn('MonAst.clientMonitorStop (%s) :: Uniqueid %s not found on self.channels' % (threadId, Uniqueid))
-		self.channelsLock.release()
 	
 	
 	def clientTransferCall(self, threadId, object):
@@ -2172,9 +1946,6 @@ class MonAst:
 		dst  = object['Destination']
 		type = object['Type']
 
-		self.channelsLock.acquire()
-		self.monitoredUsersLock.acquire()
-							
 		Context      = self.transferContext
 		SrcChannel   = None
 		ExtraChannel = None
@@ -2206,20 +1977,17 @@ class MonAst:
 			Context = self.meetmeContext
 			exten   = '%s%s' % (self.meetmePrefix, dst)
 
-		command = []
-		command.append('Action: Redirect')
-		command.append('Channel: %s' % SrcChannel)
+		command = {}
+		command['Action']  = 'Redirect'
+		command['Channel'] = SrcChannel
 		if ExtraChannel:
-			command.append('ExtraChannel: %s' % ExtraChannel)
-		command.append('Exten: %s' % exten)
-		command.append('Context: %s' % Context)
-		command.append('Priority: 1')
-		
-		self.monitoredUsersLock.release()
-		self.channelsLock.release()
+			command['ExtraChannel'] = ExtraChannel
+		command['Exten']    = exten
+		command['Context']  = Context
+		command['Priority'] = 1
 		
 		log.debug('MonAst.clientTransferCall (%s) :: Transferring %s and %s to %s@%s' % (threadId, SrcChannel, ExtraChannel, exten, Context))
-		self.AMI.execute(command)
+		self.AMI.execute(Action = command)
 	
 	
 	def clientParkCall(self, threadId, object):
@@ -2228,17 +1996,15 @@ class MonAst:
 		park     = object['Park']
 		announce = object['Announce']
 
-		self.channelsLock.acquire()
 		ParkChannel   = self.channels[park]['Channel']
 		AnouceChannel = self.channels[announce]['Channel']
-		self.channelsLock.release()
-		command = []
-		command.append('Action: Park')
-		command.append('Channel: %s' % ParkChannel)
-		command.append('Channel2: %s' % AnouceChannel)
-		#ommand.append('Timeout: 45')
+		command = {}
+		command['Action']   = 'Park'
+		command['Channel']  = ParkChannel
+		command['Channel2'] = AnouceChannel
+		#ommand['Timeout'] = 45
 		log.debug('MonAst.clientParkCall (%s) :: Parking Channel %s and announcing to %s' % (threadId, ParkChannel, AnouceChannel))
-		self.AMI.execute(command)	
+		self.AMI.execute(Action = command)	
 	
 	
 	def clientMeetmeKick(self, threadId, object):
@@ -2247,11 +2013,11 @@ class MonAst:
 		Meetme  = object['Meetme']
 		Usernum = object['Usernum']
 		
-		command = []
-		command.append('Action: Command')
-		command.append('Command: meetme kick %s %s' % (Meetme, Usernum))
+		command = {}
+		command['Action']  = 'Command'
+		command['Command'] = 'meetme kick %s %s' % (Meetme, Usernum)
 		log.debug('MonAst.clientMeetmeKick (%s) :: Kiking usernum %s from meetme %s' % (threadId, Usernum, Meetme))
-		self.AMI.execute(command)
+		self.AMI.execute(Action = command)
 	
 	
 	def clientParkedHangup(self, threadId, object):
@@ -2259,17 +2025,15 @@ class MonAst:
 		log.info('MonAst.clientParkedHangup (%s) :: Running...' % threadId)
 		Exten = object['Exten']
 		
-		self.parkedLock.acquire()
 		try:
 			Channel = self.parked[Exten]['Channel']
-			command = []
-			command.append('Action: Hangup')
-			command.append('Channel: %s' % Channel)
+			command = {}
+			command['Action']  = 'Hangup'
+			command['Channel'] = Channel
 			log.debug('MonAst.clientParkedHangup (%s) :: Hangup parcked channel %s' % (threadId, Channel))
-			self.AMI.execute(command)
+			self.AMI.execute(Action = command)
 		except:
 			log.warn('MonAst.clientParkedHangup (%s) :: Exten %s not found on self.parked' % (threadId, Exten))
-		self.parkedLock.release()
 		
 		
 	def clientAddQueueMember(self, threadId, object):
@@ -2278,19 +2042,17 @@ class MonAst:
 		queue  = object['Queue']
 		member = object['Member']
 		
-		self.monitoredUsersLock.acquire()
 		MemberName = self.monitoredUsers[member]['CallerID']
 		if MemberName == '--':
 			MemberName = member
-		command = []
-		command.append('Action: QueueAdd')
-		command.append('Queue: %s' % queue)
-		command.append('Interface: %s' % member)
-		#command.append('Penalty: 10')
-		command.append('MemberName: %s' % MemberName)
+		command = {}
+		command['Action']     = 'QueueAdd'
+		command['Queue']      = queue
+		command['Interface']  = member
+		#command['Penalty']    = 10
+		command['MemberName'] = MemberName
 		log.debug('MonAst.clientAddQueueMember (%s) :: Adding member %s to queue %s' % (threadId, member, queue))
-		self.AMI.execute(command)
-		self.monitoredUsersLock.release()
+		self.AMI.execute(Action = command)
 		
 		
 	def clientRemoveQueueMember(self, threadId, object):
@@ -2299,12 +2061,12 @@ class MonAst:
 		queue  = object['Queue']
 		member = object['Member']
 		
-		command = []
-		command.append('Action: QueueRemove')
-		command.append('Queue: %s' % queue)
-		command.append('Interface: %s' % member)
+		command = {}
+		command['Action']    = 'QueueRemove'
+		command['Queue']     = queue
+		command['Interface'] = member
 		log.debug('MonAst.clientRemoveQueueMember (%s) :: Removing member %s from queue %s' % (threadId, member, queue))
-		self.AMI.execute(command)
+		self.AMI.execute(Action = command)
 		
 		
 	def clientPauseQueueMember(self, threadId, object):
@@ -2313,13 +2075,13 @@ class MonAst:
 		queue  = object['Queue']
 		member = object['Member']
 		
-		command = []
-		command.append('Action: QueuePause')
-		command.append('Queue: %s' % queue)
-		command.append('Interface: %s' % member)
-		command.append('Paused: 1')
+		command = {}
+		command['Action']    = 'QueuePause'
+		command['Queue']     = queue
+		command['Interface'] = member
+		command['Paused']    = 1
 		log.debug('MonAst.clientAddQueueMember (%s) :: Pausing member %s on queue %s' % (threadId, member, queue))
-		self.AMI.execute(command)
+		self.AMI.execute(Action = command)
 		
 	def clientUnpauseQueueMember(self, threadId, object):
 		
@@ -2327,13 +2089,13 @@ class MonAst:
 		queue  = object['Queue']
 		member = object['Member']
 		
-		command = []
-		command.append('Action: QueuePause')
-		command.append('Queue: %s' % queue)
-		command.append('Interface: %s' % member)
-		command.append('Paused: 0')
+		command = {}
+		command['Action']    = 'QueuePause'
+		command['Queue']     = queue
+		command['Interface'] = member
+		command['Paused']    = 0
 		log.debug('MonAst.clientUnpauseQueueMember (%s) :: Unpausing member %s on queue %s' % (threadId, member, queue))
-		self.AMI.execute(command)
+		self.AMI.execute(Action = command)
 		
 		
 	def clientSkypeLogin(self, threadId, object):
@@ -2341,11 +2103,11 @@ class MonAst:
 		log.info('MonAst.clientSkypeLogin (%s) :: Running...' % threadId)
 		skypeName = object['SkypeName']
 		
-		command = []
-		command.append('Action: Command')
-		command.append('Command: skype login user %s' % skypeName)
+		command = {}
+		command['Action']  = 'Command'
+		command['Command'] = 'skype login user %s' % skypeName
 		log.debug('MonAst.clientSkypeLogin (%s) :: Login skype user %s' % (threadId, skypeName))
-		self.AMI.execute(command)
+		self.AMI.execute(Action = command)
 	
 	
 	def clientSkypeLogout(self, threadId, object):
@@ -2353,11 +2115,11 @@ class MonAst:
 		log.info('MonAst.clientSkypeLogout (%s) :: Running...' % threadId)
 		skypeName = object['SkypeName']
 		
-		command = []
-		command.append('Action: Command')
-		command.append('Command: skype logout user %s' % skypeName)
+		command = {}
+		command['Action']  = 'Command'
+		command['Command'] = 'skype logout user %s' % skypeName
 		log.debug('MonAst.clientSkypeLogout (%s) :: Logout skype user %s' % (threadId, skypeName))
-		self.AMI.execute(command)
+		self.AMI.execute(Action = command)
 		
 	
 	def clientCliCommand(self, threadId, object):
@@ -2365,12 +2127,12 @@ class MonAst:
 		log.info('MonAst.clientCliCommand (%s) :: Running...' % threadId)
 		cliCommand = object['CliCommand']
 		
-		command = []
-		command.append('Action: Command')
-		command.append('Command: %s' % cliCommand)
-		#command.append('ActionID: %s' % session)
+		command = {}
+		command['Action']   = 'Command'
+		command['Command']  = cliCommand
+		command['ActionID'] = object['Session']
 		log.debug('MonAst.clientCliCommand (%s) :: Executing CLI command: %s' % (threadId, cliCommand))
-		self.AMI.execute(command, self.handlerCliCommand, object['Session'])
+		self.AMI.execute(Action = command, Handler = self.handlerCliCommand)
 	
 	
 	def clientCheckAmiAuth(self, threadId, username, password):
@@ -2381,7 +2143,7 @@ class MonAst:
 		
 		try:
 			s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			s.connect((self.AMI.host, self.AMI.port))
+			s.connect((self.host, self.port))
 			
 			s.send("Action: Login\r\nUsername: %s\r\nSecret: %s\r\n\r\n" % (username, password))
 		
@@ -2418,14 +2180,6 @@ class MonAst:
 		
 		log.info('MonAst._GetConfig :: Requesting Asterisk Configuration (reload clients: %s)' % sendReload)
 		
-		self.clientQueuelock.acquire()
-		self.monitoredUsersLock.acquire()
-		self.meetmeLock.acquire()
-		self.parkedLock.acquire()
-		self.queuesLock.acquire()
-		self.callsLock.acquire()
-		self.channelsLock.acquire()
-		
 		users = self.monitoredUsers.keys()
 		for user in users:
 			if not self.monitoredUsers[user].has_key('forced'):
@@ -2437,13 +2191,15 @@ class MonAst:
 		self.calls    = {}
 		self.channels = {}
 		
-		self.AMI.execute(['Action: SIPpeers'])
-		self.AMI.execute(['Action: IAXpeers'], self.handlerParseIAXPeers)
-		self.AMI.execute(['Action: Command', 'Command: skype show users'], self.handlerParseSkypeUsers)
-		self.AMI.execute(['Action: GetConfig', 'Filename: meetme.conf'], self.handlerGetConfigMeetme)
-		self.AMI.execute(['Action: QueueStatus'])
+		self.AMI.execute(Action = {'Action': 'SIPpeers'})
+		self.AMI.execute(Action = {'Action': 'IAXpeers'}, Handler = self.handlerParseIAXPeers)
+		self.AMI.execute(Action = {'Action': 'Command', 'Command': 'skype show users'}, Handler = self.handlerParseSkypeUsers)
+		self.AMI.execute(Action = {'Action': 'GetConfig', 'Filename': 'meetme.conf'}, Handler = self.handlerGetConfigMeetme)
+		self.AMI.execute(Action = {'Action': 'QueueStatus'})
 		
-		self.getChannelsCallsStatus = True
+		self._taskCheckStatus.stop()
+		self._taskCheckStatus.start(60, False)
+		reactor.callLater(2, self.taskCheckStatus)
 		
 		# Meetme and Parked Status will be parsed after handlerStatusComplete
 		self.getMeetmeAndParkStatus = True
@@ -2452,43 +2208,22 @@ class MonAst:
 			for session in self.clientQueues:
 				self.clientQueues[session]['q'].put(self.parseJson(Action = 'Reload', Time = 10000))
 		
-		self.channelsLock.release()
-		self.callsLock.release()
-		self.queuesLock.release()
-		self.parkedLock.release()
-		self.meetmeLock.release()
-		self.monitoredUsersLock.release()
-		self.clientQueuelock.release()
-		
 	
 	def start(self):
 		
 		signal.signal(signal.SIGUSR1, self._sigUSR1)
 		signal.signal(signal.SIGTERM, self._sigTERM)
+		signal.signal(signal.SIGINT, self._sigTERM)
 		signal.signal(signal.SIGHUP, self._sigHUP)
 		
 		self.AMI.start()
 		
-		try:
-			while not self.AMI.isConnected or not self.AMI.isAuthenticated:
-				time.sleep(1)
+		reactor.listenTCP(self.bindPort, self)
+		reactor.run()
 			
-			self.tcc  = thread.start_new_thread(self.threadCheckStatus, ('threadCheckStatus', 2))
-			self.tcs  = thread.start_new_thread(self.threadSocketClient, ('threadSocketClient', 2))
-			self.tcqr = thread.start_new_thread(self.threadClientQueueRemover, ('threadClientQueueRemover', 2))
-			
-			#self._GetConfig() # Commented, this now is executted when monast is authenticated in AMI
-				
-			while self.running:
-				time.sleep(1)
-		except KeyboardInterrupt:
-			log.info('MonAst.start :: Received KeyboardInterrupt -- Shutting Down')
-			self.running = False
+		self.running = False
 			
 		self.AMI.close()
-		
-		while self.AMI.isConnected:
-			time.sleep(1)
 		
 		log.log(logging.NOTICE, 'Monast :: Finished...')
 	
@@ -2497,13 +2232,6 @@ class MonAst:
 		
 		log.log(logging.NOTICE, 'MonAst :: Received SIGUSR1 -- Dumping Vars...')
 	
-		self.monitoredUsersLock.acquire()
-		self.meetmeLock.acquire()
-		self.parkedLock.acquire()
-		self.queuesLock.acquire()
-		self.channelsLock.acquire()
-		self.callsLock.acquire()
-		
 		log.log(logging.NOTICE, 'self.monitoredUsers = %s' % repr(self.monitoredUsers))
 		log.log(logging.NOTICE, 'self.meetme = %s' % repr(self.meetme))
 		log.log(logging.NOTICE, 'self.parked = %s' % repr(self.parked))
@@ -2514,18 +2242,14 @@ class MonAst:
 		log.log(logging.NOTICE, 'self.channels = %s' % repr(self.channels))
 		log.log(logging.NOTICE, 'self.calls = %s' % repr(self.calls))
 		
-		self.callsLock.release()
-		self.channelsLock.release()
-		self.queuesLock.release()
-		self.parkedLock.release()
-		self.meetmeLock.release()
-		self.monitoredUsersLock.release()
-		
 		
 	def _sigTERM(self, *args):
 		
 		log.log(logging.NOTICE, 'MonAst :: Received SIGTERM -- Shutting Down...')
 		self.running = False
+		self.AMI.close()
+		self.stopFactory()
+		reactor.stop()
 		
 		
 	def _sigHUP(self, *args):
@@ -2540,18 +2264,6 @@ class MonAst:
 		self.enqueue(Action = 'Reload', Time = 10000)
 
 		self.AMI.close()
-		while self.AMI.isConnected:
-			time.sleep(1)
-		
-		self.socketClient.shutdown(2)
-		self.socketClient.close()
-		
-		self.monitoredUsersLock.acquire()
-		self.parkedLock.acquire()
-		self.meetmeLock.acquire()
-		self.callsLock.acquire()
-		self.channelsLock.acquire()
-		self.queuesLock.acquire()
 		
 		self.userDisplay       = {}
 		self.monitoredUsers    = {}
@@ -2564,15 +2276,11 @@ class MonAst:
 		self.queueMemberCalls  = {}
 		self.queueMemberPaused = {}
 		
-		self.queuesLock.release()
-		self.channelsLock.release()
-		self.callsLock.release()
-		self.meetmeLock.release()
-		self.parkedLock.release()
-		self.monitoredUsersLock.release()
-
 		self.parseConfig()
-		self.AMI.start()
+		
+		#self.AMI.start()
+		reactor.callLater(1, self.AMI.start)
+		
 		self.reloading = False	
 	
 	

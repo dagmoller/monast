@@ -64,27 +64,27 @@ if (!$login)
 	if (!$error)
 	{
 		$buffer = "";
-		socket_write($sock, "SESSION: $sessionId");
+		socket_write($sock, "SESSION: $sessionId\r\n");
 		while ($message = socket_read($sock, 1024 * 16)) 
 		{
 			$buffer .= $message;
 			
-			if ($buffer == "NEW SESSION" || $buffer == "OK")
+			if ($buffer == "NEW SESSION\r\n" || $buffer == "OK\r\n")
 			{
 				$login = true;
 				session_start();
 				setValor('login', true);
 				session_write_close();
-				socket_write($sock, "BYE");
+				socket_write($sock, "BYE\r\n");
 			}
 			
-			if ($buffer == "ERROR: Authentication Required")
+			if ($buffer == "ERROR: Authentication Required\r\n")
 			{
 				session_start();
 				setValor('login', false);
 				setValor('username', '');
 				session_write_close();
-				socket_write($sock, "BYE");
+				socket_write($sock, "BYE\r\n");
 			}
 		}
 		socket_close($sock);
