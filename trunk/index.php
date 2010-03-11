@@ -41,6 +41,7 @@ $error = "";
 setValor('started', time());
 setValor('Actions', array());
 $sessionId = session_id();
+setValor('Servers', array());
 session_write_close();
 
 $json     = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
@@ -108,6 +109,27 @@ else
 	{
 		$template->assignInclude('main', 'monast.php');
 		$template->prepare();
+		
+		session_start();
+		$servers = getValor('Servers', 'session');
+		$server  = getValor('Server', 'session');
+		session_write_close();
+		if (count($servers) == 1)
+		{
+			$template->newBlock('singleServer');
+			$template->assign('server', $server);
+		}
+		else
+		{
+			$template->newBlock('serverList');
+			foreach ($servers as $serv)
+			{
+				$template->newBlock('optionServer');
+				$template->assign('server', $serv);
+				if ($serv == $server)
+					$template->assign('selected', 'selected');
+			}
+		}
 		
 		if ($username)
 			$template->newBlock('buttonLogout');

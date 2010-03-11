@@ -46,9 +46,15 @@ BODY {
 	font-size: 1.0em; 
 	border-top: 2px solid #000000;
 }
+.monast-logo .monast-serverlist {
+	margin-left: 25px; 
+	padding-left: 5px;
+	border-left: 2px solid #000000;
+	display: inline-block;
+}
 .monast-logo .monast-status {
 	margin-left: 25px; 
-	padding-left: 5px; 
+	padding-left: 5px;
 	border-left: 2px solid #000000;
 	display: inline-block;
 	width: 250px; 
