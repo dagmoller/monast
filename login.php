@@ -73,6 +73,14 @@ else
 				socket_write($sock, "BYE\r\n");
 			}
 			
+			if (strpos($buffer, "WAIT") !== false)
+			{
+				sleep(1);
+				$buffer = "";
+				$action = array('Action' => 'Login', 'Username' => $username, 'Secret' => $secret, 'Session' => $sessionId);
+				socket_write($sock, $json->encode($action) . "\r\n");
+			}
+			
 			if (strpos($buffer, "ERROR: ") !== false)
 			{
 				$message        = str_replace("ERROR: ", "", $buffer);
