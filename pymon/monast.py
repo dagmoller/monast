@@ -151,7 +151,7 @@ class ColorFormatter(logging.Formatter):
 class MyConfigParser(SafeConfigParser):
 	def optionxform(self, optionstr):
 		return optionstr
-	
+
 
 class MonAstProtocol(basic.LineOnlyReceiver):
 	
@@ -676,28 +676,26 @@ class MonAst(protocol.ServerFactory):
 	##
 	## AMI Handlers for Events
 	##
-	def handlerReload(self, lines):
+	def handlerReload(self, dic):
 		
 		log.info('MonAst.handlerReload :: Running...')
-		self._GetConfig(lines['Server'])
+		self._GetConfig(dic['Server'])
 		
 		
-	def handlerChannelReload(self, lines):
+	def handlerChannelReload(self, dic):
 		
 		log.info('MonAst.handlerChannelReload :: Running...')
-		dic = lines
-		
+
 		Channel      = dic.get('ChannelType', dic.get('Channel'))
 		ReloadReason = dic['ReloadReason']
 		
 		self._GetConfig(dic['Server'])
 		
 		
-	def handlerPeerEntry(self, lines):
+	def handlerPeerEntry(self, dic):
 		
 		log.info('MonAst.handlerPeerEntry :: Running...')
-		dic = lines
-		
+				
 		Server      = dic['Server']
 		Status      = dic['Status']
 		Channeltype = dic['Channeltype']
@@ -722,11 +720,10 @@ class MonAst(protocol.ServerFactory):
 			self.AMI.execute(Action = {'Action': 'Command', 'Command': '%s show %s %s' % (Channeltype.lower(), type, ObjectName), 'ActionID': user}, Handler = self._defaultParseConfigPeers, Server = Server)
 		
 	
-	def handlerPeerStatus(self, lines):
+	def handlerPeerStatus(self, dic):
 		
 		log.info('MonAst.handlerPeerStatus :: Running...')
-		dic = lines
-		
+				
 		Server     = dic['Server']
 		Peer       = dic['Peer']
 		PeerStatus = dic['PeerStatus']
@@ -737,11 +734,10 @@ class MonAst(protocol.ServerFactory):
 			self.enqueue(Action = 'PeerStatus', Server = Server, Peer = Peer, Status = mu['Status'], Calls = mu['Calls'])
 		
 		
-	def handlerSkypeAccountStatus(self, lines):
+	def handlerSkypeAccountStatus(self, dic):
 		
 		log.info('MonAst.handlerSkypeAccountStatus :: Running...')
-		dic = lines
-		
+				
 		Server   = dic['Server']
 		Username = 'Skype/%s' % dic['Username']
 		Status   = dic['Status']
@@ -752,10 +748,9 @@ class MonAst(protocol.ServerFactory):
 			self.enqueue(Action = 'PeerStatus', Server = Server, Peer = Username, Status = mu['Status'], Calls = mu['Calls'])
 				
 					
-	def handlerBranchOnHook(self, lines): 
+	def handlerBranchOnHook(self, dic): 
 
 		log.info('MonAst.handlerBranchOnHook :: Running... (On)')
-		dic = lines 
 
 		Server  = dic['Server']
 		Channel = dic['Channel']
@@ -770,11 +765,10 @@ class MonAst(protocol.ServerFactory):
 			self.enqueue(Action = 'PeerStatus', Server = Server, Peer = user, Status = mu['Status'], Calls = mu['Calls'])
 
 
-	def handlerBranchOffHook(self, lines):
+	def handlerBranchOffHook(self, dic):
 
 		log.info('MonAst.handlerBranchOffHook :: Running... (Off)')
-		dic = lines
-
+		
 		Server  = dic['Server']
 		Channel = dic['Channel']
 		
@@ -787,11 +781,10 @@ class MonAst(protocol.ServerFactory):
 			self.enqueue(Action = 'PeerStatus', Server = Server, Peer = user, Status = mu['Status'], Calls = mu['Calls'])
 	
 	
-	def handlerNewchannel(self, lines):
+	def handlerNewchannel(self, dic):
 		
 		log.info('MonAst.handlerNewchannel :: Running...')
-		dic = lines
-		
+				
 		Server       = dic['Server']
 		Channel      = dic['Channel']
 		State        = dic.get('ChannelStateDesc', dic.get('State'))
@@ -812,11 +805,10 @@ class MonAst(protocol.ServerFactory):
 			self.enqueue(Action = 'PeerStatus', Server = Server, Peer = user, Status = mu['Status'], Calls = mu['Calls'])
 
 		
-	def handlerNewstate(self, lines):
+	def handlerNewstate(self, dic):
 		
 		log.info('MonAst.handlerNewstate :: Running...')
-		dic = lines
-		
+				
 		Server       = dic['Server']
 		Channel      = dic['Channel']
 		State        = dic.get('ChannelStateDesc', dic.get('State'))
@@ -833,11 +825,10 @@ class MonAst(protocol.ServerFactory):
 			log.warning("MonAst.handlerNewstate :: Uniqueid %s not found on self.channels['%s']" % (Uniqueid, Server))
 		
 		
-	def handlerHangup(self, lines):
+	def handlerHangup(self, dic):
 		
 		log.info('MonAst.handlerHangup :: Running...')
-		dic = lines
-		
+				
 		Server    = dic['Server']
 		Channel   = dic['Channel']
 		Uniqueid  = dic['Uniqueid']
@@ -875,11 +866,10 @@ class MonAst(protocol.ServerFactory):
 			self.enqueue(Action = 'RemoveQueueMemberCall', Server = Server, Queue = Queue, Member = Member, Uniqueid = Uniqueid)
 
 	
-	def handlerDial(self, lines):
+	def handlerDial(self, dic):
 		
 		log.info('MonAst.handlerDial :: Running...')
-		dic = lines
-		
+				
 		Server   = dic['Server']
 		SubEvent = dic.get('SubEvent', None)
 		if SubEvent == 'Begin':
@@ -921,11 +911,10 @@ class MonAst(protocol.ServerFactory):
 			log.info('MonAst.handlerDial :: Unhandled Dial subevent %s' % SubEvent)
 		
 		
-	def handlerLink(self, lines):
+	def handlerLink(self, dic):
 		
 		log.info('MonAst.handlerLink :: Running...')
-		dic = lines
-		
+				
 		Server    = dic['Server']
 		Channel1  = dic['Channel1']
 		Channel2  = dic['Channel2']
@@ -962,17 +951,16 @@ class MonAst(protocol.ServerFactory):
 			self.enqueue(Action = 'AddQueueMemberCall', Server = Server, Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = Uniqueid1, Channel = qmc['Channel'], CallerID = CallerID1, Seconds = Seconds)
 		
 		
-	def handlerBridge(self, lines):
+	def handlerBridge(self, dic):
 		
 		log.info('MonAst.handlerBridge :: Running...')
-		self.handlerLink(lines)
+		self.handlerLink(dic)
 		
 		
-	def handlerUnlink(self, lines):
+	def handlerUnlink(self, dic):
 		
 		log.info('MonAst.handlerUnlink :: Running...')
-		dic = lines
-		
+				
 		Server    = dic['Server']
 		Channel1  = dic['Channel1']
 		Channel2  = dic['Channel2']
@@ -994,11 +982,10 @@ class MonAst(protocol.ServerFactory):
 			self.enqueue(Action = 'RemoveQueueMemberCall', Server = Server, Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = Uniqueid1)
 
 		
-	def handlerNewcallerid(self, lines):
+	def handlerNewcallerid(self, dic):
 		
 		log.info('MonAst.handlerNewcallerid :: Running...')
-		dic = lines
-		
+				
 		Server         = dic['Server']
 		Channel        = dic['Channel']
 		CallerID       = dic.get('CallerIDNum', dic.get('CallerID'))
@@ -1014,11 +1001,10 @@ class MonAst(protocol.ServerFactory):
 			log.warning("MonAst.handlerNewcallerid :: UniqueID '%s' not found on self.channels['%s']" % (Uniqueid, Server))
 		
 		
-	def handlerRename(self, lines):
+	def handlerRename(self, dic):
 		
 		log.info('MonAst.handlerRename :: Running...')
-		dic = lines
-		
+				
 		Server       = dic['Server']
 		Oldname      = dic.get('Channel', dic.get('Oldname'))
 		Newname      = dic['Newname']
@@ -1048,11 +1034,10 @@ class MonAst(protocol.ServerFactory):
 			log.warn("MonAst.handlerRename :: Channel %s not found in self.channels['%s'], ignored." % (Oldname, Server))
 			
 			
-	def handlerMeetmeJoin(self, lines):
+	def handlerMeetmeJoin(self, dic):
 		
 		log.info('MonAst.handlerMeetmeJoin :: Running...')
-		dic = lines
-		
+				
 		Server       = dic['Server']
 		Uniqueid     = dic['Uniqueid']
 		Meetme       = dic['Meetme']
@@ -1072,11 +1057,10 @@ class MonAst(protocol.ServerFactory):
 		self.enqueue(Action = 'MeetmeJoin', Server = Server, Meetme = Meetme, Uniqueid = Uniqueid, Usernum = Usernum, Channel = ch['Channel'], CallerIDNum = CallerIDNum, CallerIDName = CallerIDName)
 		
 					
-	def handlerMeetmeLeave(self, lines):
+	def handlerMeetmeLeave(self, dic):
 		
 		log.info('MonAst.handlerMeetmeLeave :: Running...')
-		dic = lines
-		
+				
 		Server   = dic['Server']
 		Uniqueid = dic['Uniqueid']
 		Meetme   = dic['Meetme']
@@ -1093,11 +1077,10 @@ class MonAst(protocol.ServerFactory):
 			log.warn('MonAst.handlerMeetmeLeave :: Meetme or Usernum not found in self.meetme[\'%s\'][\'%s\'][\'users\'][\'%s\']' % (Server, Meetme, Usernum))
 		
 		
-	def handlerParkedCall(self, lines):
+	def handlerParkedCall(self, dic):
 		
 		log.info('MonAst.handlerParkedCall :: Running...')
-		dic = lines
-		
+				
 		Server       = dic['Server']
 		Exten        = dic['Exten']
 		Channel      = dic['Channel']
@@ -1116,11 +1099,10 @@ class MonAst(protocol.ServerFactory):
 			self.enqueue(Action = 'ParkedCall', Server = Server, Exten = Exten, Channel = Channel, From = From, Timeout = Timeout, CallerID = CallerID, CallerIDName = CallerIDName)
 			
 					
-	def handlerUnParkedCall(self, lines):
+	def handlerUnParkedCall(self, dic):
 		
 		log.info('MonAst.handlerUnParkedCall :: Running...')
-		dic = lines
-		
+				
 		Server       = dic['Server']
 		Exten        = dic['Exten']
 		Channel      = dic['Channel']
@@ -1135,11 +1117,10 @@ class MonAst(protocol.ServerFactory):
 			log.warn('MonAst.handlerUnParkedCall :: Parked Exten %s not found on server %s' % (Exten, Server))
 		
 	
-	def handlerParkedCallTimeOut(self, lines):
+	def handlerParkedCallTimeOut(self, dic):
 		
 		log.info('MonAst.handlerParkedCallTimeOut :: Running...')
-		dic = lines
-		
+				
 		Server       = dic['Server']
 		Exten        = dic['Exten']
 		Channel      = dic['Channel']
@@ -1153,11 +1134,10 @@ class MonAst(protocol.ServerFactory):
 			log.warn('MonAst.handlerParkedCallTimeOut :: Parked Exten %s not found on server %s' % (Exten, Server))
 		
 	
-	def handlerParkedCallGiveUp(self, lines):
+	def handlerParkedCallGiveUp(self, dic):
 		
 		log.info('MonAst.handlerParkedCallGiveUp :: Running...')
-		dic = lines
-		
+				
 		Server       = dic['Server']
 		Exten        = dic['Exten']
 		Channel      = dic['Channel']
@@ -1171,11 +1151,11 @@ class MonAst(protocol.ServerFactory):
 			log.warn('MonAst.handlerParkedCallGiveUp :: Parked Exten %s not found on server %s' % (Exten, Server))
 		
 		
-	def handlerParkedCallsComplete(self, lines):
+	def handlerParkedCallsComplete(self, dic):
 		
 		log.info('MonAst.handlerParkedCallsComplete :: Running...')
 
-		Server = lines['Server']
+		Server = dic['Server']
 
 		self.isParkedStatus[Server] = False
 		
@@ -1190,11 +1170,10 @@ class MonAst(protocol.ServerFactory):
 				log.exception('MonAst.handlerParkedCallsComplete :: Exception removing lost parked call %s on server %s' % (park, Server))
 		
 		
-	def handlerStatus(self, lines):
+	def handlerStatus(self, dic):
 		
 		log.info('MonAst.handlerStatus :: Running...')
-		dic = lines
-		
+				
 		Server       = dic['Server']
 		Channel      = dic['Channel']
 		CallerIDNum  = dic['CallerIDNum']
@@ -1240,11 +1219,10 @@ class MonAst(protocol.ServerFactory):
 						self.enqueue(Action = 'UpdateCallDuration', Server = Server, Uniqueid1 = Uniqueid, Uniqueid2 = UniqueidLink, Seconds = Seconds)
 		
 		
-	def handlerStatusComplete(self, lines):
+	def handlerStatusComplete(self, dic):
 		
 		log.info('MonAst.handlerStatusComplete :: Running...')
-		dic = lines
-		
+				
 		Server = dic['Server']
 		
 		## Search for lost channels
@@ -1298,11 +1276,10 @@ class MonAst(protocol.ServerFactory):
 			self.getMeetmeAndParkStatus[Server] = False
 			
 	
-	def handlerQueueMember(self, lines):
+	def handlerQueueMember(self, dic):
 		
 		log.info('MonAst.handlerQueueMember :: Running...')
-		dic = lines
-		
+				
 		Server     = dic['Server']
 		Queue      = dic['Queue']
 		Name       = dic['Name']
@@ -1350,20 +1327,18 @@ class MonAst(protocol.ServerFactory):
 		self.queueMemberStatus[Server][Queue].append(Location)
 		
 		
-	def handlerQueueMemberStatus(self, lines):
+	def handlerQueueMemberStatus(self, dic):
 		
 		log.info('MonAst.handlerQueueMemberStatus :: Running...')
-		dic = lines
+				
+		dic['Name'] = dic['MemberName']
+		self.handlerQueueMember(dic)
 		
-		lines['Name'] = dic['MemberName']
-		self.handlerQueueMember(lines)
 		
-		
-	def handlerQueueMemberPaused(self, lines):
+	def handlerQueueMemberPaused(self, dic):
 		
 		log.info('MonAst.handlerQueueMemberPaused :: Running...')
-		dic = lines
-		
+				
 		Server   = dic['Server']
 		Queue    = dic['Queue']
 		Location = dic['Location']
@@ -1371,19 +1346,18 @@ class MonAst(protocol.ServerFactory):
 		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay[Server].has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay[Server].has_key(Queue)):
 			return
 		
-		lines['Penalty'] = self.queues[Server][Queue]['members'][Location]['Penalty']
-		lines['CallsTaken'] = self.queues[Server][Queue]['members'][Location]['CallsTaken']
-		lines['LastCall'] = self.queues[Server][Queue]['members'][Location]['LastCall']
-		lines['Status'] = self.queues[Server][Queue]['members'][Location]['Status']
-		lines['Name'] = dic['MemberName']
+		dic['Penalty'] = self.queues[Server][Queue]['members'][Location]['Penalty']
+		dic['CallsTaken'] = self.queues[Server][Queue]['members'][Location]['CallsTaken']
+		dic['LastCall'] = self.queues[Server][Queue]['members'][Location]['LastCall']
+		dic['Status'] = self.queues[Server][Queue]['members'][Location]['Status']
+		dic['Name'] = dic['MemberName']
 		
-		self.handlerQueueMember(lines)
+		self.handlerQueueMember(dic)
 		
 		
-	def handlerQueueEntry(self, lines):
+	def handlerQueueEntry(self, dic):
 		
 		log.info('MonAst.handlerQueueEntry :: Running...')
-		dic = lines
 		
 		Server       = dic['Server']
 		Queue        = dic['Queue']
@@ -1412,11 +1386,10 @@ class MonAst(protocol.ServerFactory):
 			self.enqueue(Action = 'AddQueueClient', Server = Server, Queue = Queue, Uniqueid = Uniqueid, Channel = Channel, CallerID = CallerID, CallerIDName = CallerIDName, Position = Position, Count = Count, Wait = Wait)
 
 		
-	def handlerQueueMemberAdded(self, lines):
+	def handlerQueueMemberAdded(self, dic):
 		
 		log.info('MonAst.handlerQueueMemberAdded :: Running...')
-		dic = lines
-		
+				
 		Server     = dic['Server']
 		Queue      = dic['Queue']
 		Location   = dic['Location']
@@ -1430,11 +1403,10 @@ class MonAst(protocol.ServerFactory):
 		self.enqueue(Action = 'AddQueueMember', Server = Server, Queue = Queue, Member = Location, MemberName = MemberName, Penalty = Penalty, CallsTaken = 0, LastCall = 0, Status = AST_DEVICE_STATES['0'], Paused = 0)
 		
 		
-	def handlerQueueMemberRemoved(self, lines):
+	def handlerQueueMemberRemoved(self, dic):
 		
 		log.info('MonAst.handlerQueueMemberRemoved :: Running...')
-		dic = lines
-		
+				
 		Server     = dic['Server']
 		Queue      = dic['Queue']
 		Location   = dic['Location']
@@ -1450,11 +1422,10 @@ class MonAst(protocol.ServerFactory):
 			log.warn("MonAst.handlerQueueMemberRemoved :: Queue or Member not found in self.queues['%s']['%s']['members']['%s']" % (Server, Queue, Location))
 		
 		
-	def handlerJoin(self, lines): # Queue Join
+	def handlerJoin(self, dic): # Queue Join
 		
 		log.info('MonAst.handlerJoin :: Running...')
-		dic = lines
-		
+				
 		Server       = dic['Server']
 		Channel      = dic['Channel']
 		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
@@ -1476,11 +1447,10 @@ class MonAst(protocol.ServerFactory):
 			log.warning("MonAst.handlerJoin :: Queue '%s' not found on server %s" % (Queue, Server))
 		
 	
-	def handlerLeave(self, lines): # Queue Leave
+	def handlerLeave(self, dic): # Queue Leave
 		
 		log.info('MonAst.handlerLeave :: Running...')
-		dic = lines
-	
+			
 		Server       = dic['Server']
 		Channel      = dic['Channel']
 		Queue        = dic['Queue']
@@ -1507,11 +1477,10 @@ class MonAst(protocol.ServerFactory):
 			log.warn("MonAst.handlerLeave :: Queue or Client not found in self.queues['%s']['%s']['clients']['%s']" % (Server, Queue, Uniqueid))
 		
 		
-	def handlerQueueCallerAbandon(self, lines):
+	def handlerQueueCallerAbandon(self, dic):
 		
 		log.info('MonAst.handlerQueueCallerAbandon :: Running...')
-		dic = lines
-		
+				
 		Server   = dic['Server']
 		Queue    = dic['Queue']
 		Uniqueid = dic['Uniqueid']
@@ -1527,11 +1496,10 @@ class MonAst(protocol.ServerFactory):
 		#self.enqueue(Action = 'AbandonedQueueClient', Uniqueid = Uniqueid)
 		
 		
-	def handlerQueueParams(self, lines):
+	def handlerQueueParams(self, dic):
 		
 		log.info('MonAst.handlerQueueParams :: Running...')
-		dic = lines
-		
+				
 		Server           = dic['Server']
 		Queue            = dic['Queue']
 		Max              = int(dic['Max'])
@@ -1572,11 +1540,10 @@ class MonAst(protocol.ServerFactory):
 		self.enqueue(Action = 'QueueParams', Server = Server, Queue = Queue, Max = Max, Calls = Calls, Holdtime = Holdtime, Completed = Completed, Abandoned = Abandoned, ServiceLevel = ServiceLevel, ServicelevelPerf = ServicelevelPerf, Weight = Weight)
 			
 		
-	def handlerQueueStatusComplete(self, lines):
+	def handlerQueueStatusComplete(self, dic):
 		
 		log.info('MonAst.handlerQueueStatusComplete :: Running...')
 		
-		dic = lines
 		Server = dic['Server']
 		
 		size = 0
@@ -1606,11 +1573,10 @@ class MonAst(protocol.ServerFactory):
 				log.exception('MonAst.handlerQueueStatusComplete :: Unhandled Exception')
 	
 	
-	def handlerMonitorStart(self, lines):
+	def handlerMonitorStart(self, dic):
 		
 		log.info('MonAst.handlerMonitorStart :: Running...')
-		dic = lines
-		
+				
 		Server   = dic['Server']
 		Channel  = dic['Channel']
 		Uniqueid = dic['Uniqueid']
@@ -1622,11 +1588,10 @@ class MonAst(protocol.ServerFactory):
 			log.warning('MonAst.handlerMonitorStart :: Uniqueid %s not found in self.channels[\'%s\']' % (Uniqueid, Server))
 		
 		
-	def handlerMonitorStop(self, lines):
+	def handlerMonitorStop(self, dic):
 		
 		log.info('MonAst.handlerMonitorStart :: Running...')
-		dic = lines
-		
+				
 		Server   = dic['Server']
 		Channel  = dic['Channel']
 		Uniqueid = dic['Uniqueid']
@@ -1641,13 +1606,13 @@ class MonAst(protocol.ServerFactory):
 	##
 	## AMI handlers for Actions/Commands
 	##
-	def _defaultParseConfigPeers(self, lines):
+	def _defaultParseConfigPeers(self, dic):
 		
 		log.info('MonAst._defaultParseConfigPeers :: Running...')
-		result = '\n'.join(lines[' '])
+		result = '\n'.join(dic[' '])
 		
-		Server = lines['Server']
-		user   = lines['ActionID']
+		Server = dic['Server']
+		user   = dic['ActionID']
 		
 		CallerID  = None
 		Context   = None
@@ -1680,14 +1645,14 @@ class MonAst(protocol.ServerFactory):
 			self.monitoredUsers[Server][user]['Variables'] = Variables
 		
 		
-	def handlerParseIAXPeers(self, lines):
+	def handlerParseIAXPeers(self, dic):
 		
 		log.info('MonAst.handlerParseIAXPeers :: Running...')
 			
-		if not lines.has_key(' '):
+		if not dic.has_key(' '):
 			return
 		
-		for line in lines[' ']:
+		for line in dic[' ']:
 			name = re.search('^([^\s]*).*', line).group(1)
 			if name.find('/') != -1:
 				name = name[:name.find('/')]
@@ -1695,12 +1660,12 @@ class MonAst(protocol.ServerFactory):
 			self.handlerPeerEntry({'Channeltype': 'IAX2', 'ObjectName': name, 'Status': '--', 'Server': Server})
 			
 			
-	def handlerParseSkypeUsers(self, lines):
+	def handlerParseSkypeUsers(self, dic):
 		
 		log.info('MonAst.handlerParseSkypeUsers :: Running...')
 		
-		Server   = lines['Server']
-		response = lines[' ']
+		Server   = dic['Server']
+		response = dic[' ']
 		
 		if 'Skype Users' in response:
 			users = response.split('\n')[1:-1]
@@ -1708,27 +1673,27 @@ class MonAst(protocol.ServerFactory):
 				self.handlerPeerEntry({'Channeltype': 'Skype', 'ObjectName': user, 'Status': status, 'Server': Server})
 				
 	
-	def handlerGetConfigMeetme(self, lines):
+	def handlerGetConfigMeetme(self, dic):
 		
 		log.info('MonAst.handlerGetConfigMeetme :: Parsing config...')
 		
-		Server = lines['Server']
+		Server = dic['Server']
 		
-		for key, value in lines.items():
+		for key, value in dic.items():
 			if key.startswith('Line-') and value.find('conf=') != -1:
 				params = value.replace('conf=', '').split(',')
 				self.meetme[Server][params[0]] = {'dynamic': False, 'users': {}}
 		
 		
-	def handlerParseMeetme(self, lines):
+	def handlerParseMeetme(self, dic):
 		
 		log.info('MonAst.handlerParseMeetme :: Parsing meetme...')
 
-		Server   = lines['Server']
+		Server   = dic['Server']
 		reMeetme = re.compile('([^\s]*)[\s]+([^\s]*)[\s]+([^\s]*)[\s]+([^\s]*)[\s]+([^\s]*)')
 
 		try:
-			meetmes = lines[' '][1:-1]
+			meetmes = dic[' '][1:-1]
 			if len(meetmes) > 0:
 				meetmes = meetmes[:-1]
 			for meetme in meetmes:
@@ -1751,13 +1716,13 @@ class MonAst(protocol.ServerFactory):
 			log.exception("MonAst.handlerParseMeetme :: Unhandled Exception")
 		
 		
-	def handlerParseMeetmeConcise(self, lines):
+	def handlerParseMeetmeConcise(self, dic):
 
 		log.info('MonAst.handlerParseMeetmeConcise :: Parsing meetme concise...')
 
-		Server = lines['Server']
-		meetme = lines['ActionID'].replace('meetmeList-', '')
-		users  = lines[' '][:-1]
+		Server = dic['Server']
+		meetme = dic['ActionID'].replace('meetmeList-', '')
+		users  = dic[' '][:-1]
 		
 		for user in users:
 			user = user.split('!')
@@ -1770,14 +1735,14 @@ class MonAst(protocol.ServerFactory):
 						break
 		
 		
-	def handlerShowParkedCalls(self, lines):
+	def handlerShowParkedCalls(self, dic):
 		
 		log.info('MonAst.handlerShowParkedCalls :: Parsing parkedcalls...')
 		
 		reParked = re.compile('([0-9]+)[\s]+([^\s]*).*([^\s][0-9]+s)')
 		
-		Server  = lines['Server'] 
-		parkeds = lines[' ']
+		Server  = dic['Server'] 
+		parkeds = dic[' ']
 		
 		for park in parkeds:
 			gParked = reParked.match(park)
@@ -1800,13 +1765,13 @@ class MonAst(protocol.ServerFactory):
 					log.warn('MonAst.handlerShowParkedCalls :: No Channel found for parked call exten %s on server %s' % (Exten, Server))
 				
 	
-	def handlerCliCommand(self, lines):
+	def handlerCliCommand(self, dic):
 		
 		log.info('MonAst.handlerCliCommand :: Running...')
 
-		Server   = lines['Server']
-		ActionID = lines['ActionID']
-		Response = lines[' ']
+		Server   = dic['Server']
+		ActionID = dic['ActionID']
+		Response = dic[' ']
 
 		self.enqueue(Action = 'CliResponse', Server = Server, Response = '<br>'.join(Response), __session = ActionID)
 	
