@@ -153,6 +153,96 @@ class MyConfigParser(SafeConfigParser):
 		return optionstr
 
 
+class SimpleAmiAuthenticator(basic.LineOnlyReceiver):
+	buffer     = []
+	amiVersion = None
+	onSuccess  = None
+	onFailure  = None
+	server     = None
+	username   = None
+	password   = None
+	
+	def __init__(self, *args, **kwargs):
+		self.server    = kwargs['server']
+		self.username  = kwargs['username']
+		self.password  = kwargs['password']
+		self.onSuccess = kwargs['onSuccess']
+		self.onFailure = kwargs['onFailure']
+		log.info("SimpleAmiAuthenticator.__init__ :: Trying to authenticate user %s on server %s" % (self.username, self.server)) 
+		
+	def connectionMade(self):
+		self._sendLine('Action: Login')
+		self._sendLine('Username: %s' % self.username)
+		self._sendLine('Secret: %s' % self.password)
+		self._sendLine('')
+	
+	def _sendLine(self, line):
+		self.sendLine(line.encode('UTF-8'))
+	
+	def lineReceived(self, line):
+		self.buffer.append(line)
+		if not line.strip():
+			self.processBuffer()
+			
+	def processBuffer(self):
+		message = {}
+		while self.buffer:
+			line = self.buffer.pop(0)
+			line = line.strip()
+			if line:
+				if line.endswith('--END COMMAND--'):
+					message.setdefault( ' ', []).extend([l for l in line.split('\n') if (l and l != '--END COMMAND--')])
+				else:
+					if line.startswith('Asterisk Call Manager'):
+						self.amiVersion = line[len('Asterisk Call Manager')+1:].strip()
+					else:
+						try:
+							key, value = line.split(':', 1)
+						except:
+							log.warning("SimpleAmiAuthenticator.procesBuffer :: Improperly formatted line received and ignored: %r" % (line))
+						else:
+							message[key.strip()] = value.strip()
+							
+		Response = message.get('Response', None)
+		Message  = message.get('Message', None)
+		
+		if Response == 'Success' and Message == 'Authentication accepted':
+			log.info("SimpleAmiAuthenticator.processBuffer :: Authentication accepted for user %s on server %s" % (self.username, self.server))
+			self._sendLine('Action: Events')
+			self._sendLine('EventMask: off')
+			self._sendLine('')
+			self._sendLine('Action: Command')
+			self._sendLine('Command: manager show user %s' % self.username)
+			self._sendLine('')
+			return
+		
+		if Response == 'Error' and Message == 'Authentication failed':
+			log.info("SimpleAmiAuthenticator.processBuffer :: Authentication failed for user %s on server %s" % (self.username, self.server))
+			self.transport.loseConnection()
+			self._onFailure((self.server, False, []))
+			return
+		
+		if Response == 'Follows':
+			for line in message[' ']:
+				line = line.strip()
+				p = re.search('(write|write perm): (.*)', line)
+				if p:
+					auth = (self.server, True, p.group(2).split(','))
+					break
+			self._sendLine('Action: Logoff')
+			self._sendLine('')
+			self.transport.loseConnection()
+			self._onSuccess(auth)
+		
+	def _onSuccess(self, auth):
+		if self.onSuccess:
+			self.onSuccess(auth)
+			
+	def _onFailure(self, auth):
+		if self.onFailure:
+			self.onFailure(auth)
+
+
 class MonAstProtocol(basic.LineOnlyReceiver):
 	
 	host    = None
@@ -468,15 +558,37 @@ class MonAst(protocol.ServerFactory):
 					log.error('MonAst.processClientMessage (%s:%s) :: Invalid username or password for %s (local)' % (client.host, client.port, username))
 					output.append('ERROR: Invalid user or secret')
 			else:
-				auth = self.clientCheckAmiAuth(client.session, username, secret)
-				if auth[0]:
-					output.append('Authentication Success')
-					self.clientsAMI[username] = {'roles': auth[1]}
-					self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time(), 'roles': auth[1]}
-					log.log(logging.NOTICE, 'MonAst.processClientMessage (%s:%s) :: New Authenticated (manager) client session %s for %s' % (client.host, client.port, session, username))
+				if not self.amiAuthCheck.has_key(session):
+					self.clientCheckAmiAuth(session, username, secret)
+					output.append('WAIT')
 				else:
-					log.error('MonAst.processClientMessage (%s:%s) :: Invalid username or password for %s (manager)' % (client.host, client.port, username))
-					output.append('ERROR: Invalid user or secret')
+					ok = False
+					responses = self.amiAuthCheck[session].items()
+					for Server, Auth in responses:
+						if Auth:
+							ok = True
+						else:
+							ok = False
+							break
+						
+					if ok:
+						auth = (False, [])
+						for Server, Auth in responses:
+							if Auth[0]:
+								auth = Auth
+								break
+					
+						if auth[0]:
+							output.append('Authentication Success')
+							self.clientsAMI[username] = {'roles': auth[1]}
+							self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time(), 'roles': auth[1]}
+							log.log(logging.NOTICE, 'MonAst.processClientMessage (%s:%s) :: New Authenticated (manager) client session %s for %s' % (client.host, client.port, session, username))
+						else:
+							log.error('MonAst.processClientMessage (%s:%s) :: Invalid username or password for %s (manager)' % (client.host, client.port, username))
+							output.append('ERROR: Invalid user or secret')
+						del self.amiAuthCheck[session]
+					else:
+						output.append('WAIT')
 		
 		elif self.authRequired and action == 'Logout':
 			try:
@@ -1372,7 +1484,7 @@ class MonAst(protocol.ServerFactory):
 			return
 		
 		# I need to get Uniqueid from this entry
-		for Uniqueid in self.channels:
+		for Uniqueid in self.channels[Server]:
 			if self.channels[Server][Uniqueid]['Channel'] == Channel:
 				break
 		
@@ -2227,47 +2339,25 @@ class MonAst(protocol.ServerFactory):
 		log.debug('MonAst.clientCliCommand (%s) :: Executing CLI command: %s on server %s' % (session, cliCommand, Server))
 		self.AMI.execute(Action = command, Handler = self.handlerCliCommand, Server = Server)
 	
-	
+	amiAuthCheck = {}
 	def clientCheckAmiAuth(self, session, username, password):
 		
 		log.info('MonAst.clientCheckAmiAuth (%s) :: Running...' % session)
 		
-		auth = (False, [])
+		def onSuccess(auth):
+			Server, auth, roles = auth
+			self.amiAuthCheck[session][Server] = (auth, roles)
+			
+		def onFailure(auth):
+			Server, auth, roles = auth
+			self.amiAuthCheck[session][Server] = (auth, roles)
 		
-		try:
-			s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			s.connect((self.host, self.port))
+		self.amiAuthCheck[session] = {}
+		for Server in self.servers:
+			self.amiAuthCheck[session][Server] = False
+			c = protocol.ClientCreator(reactor, SimpleAmiAuthenticator, server = Server, username = username, password = password, onSuccess = onSuccess, onFailure = onFailure)
+			c.connectTCP(self.servers[Server]['hostname'], self.servers[Server]['hostport'], 2)
 			
-			s.send("Action: Login\r\nUsername: %s\r\nSecret: %s\r\n\r\n" % (username, password))
-		
-			out = ""
-			while not out.endswith('\r\n\r\n'):
-				out += s.recv(1024 * 64)
-			
-			if 'Authentication accepted' in out:
-				auth = (True, [])
-				s.send("Action: Events\r\nEventMask: off\r\n\r\n")
-				out = s.recv(1024 * 64)
-				s.send("Action: Command\r\nCommand: manager show user %s\r\n\r\n" % username)
-				out = ""
-				while not out.endswith('\r\n\r\n'):
-					out += s.recv(1024 * 64)
-					
-				lines = out.strip().split('\r\n')
-				for line in lines:
-					p = re.search('(write|write perm): (.*)', line)
-					if p:
-						auth = (True, p.group(2).split(','))
-						break
-			
-			s.send("Action: Logout")
-			s.close()
-			
-		except socket.error, e:
-			log.error('MonAst.clientCheckAmiAuth :: Error trying to authenticate %s: %s' % (username, e))
-			
-		return auth
-
 
 	def onAuthenticationAccepted(self, message):
 		
