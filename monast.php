@@ -34,6 +34,7 @@ session_start();
 setValor('started', time());
 setValor('Actions', array());
 $sessionId = session_id();
+$server    = getValor('Server', 'session');
 session_write_close();
 
 $validActions = array
@@ -84,7 +85,7 @@ else
 			if ($buffer == "NEW SESSION\r\n" || $buffer == "OK\r\n")
 			{
 				$buffer = "";
-				socket_write($sock, "GET STATUS\r\n");
+				socket_write($sock, "GET STATUS: $server\r\n");
 			}
 			
 			if ($buffer == "ERROR: Authentication Required\r\n")
@@ -94,6 +95,18 @@ else
 				session_write_close();
 				socket_write($sock, "BYE\r\n");
 				header("Location: index.php");
+			}
+			
+			if (strpos($buffer, "SERVERS: ") !== false && count($servers) == 0)
+			{
+				$regs = array();
+				ereg("SERVERS: ([^\r\n]*)\r\n", $buffer, $regs);
+				$servers = explode(", ", $regs[1]);
+				session_start();
+				setValor('Servers', $servers);
+				if (!getValor('Server', 'session'))
+					setValor('Server', $servers[0]);
+				session_write_close();
 			}
 			
 			if (strpos($buffer, "BEGIN STATUS\r\n") !== false)

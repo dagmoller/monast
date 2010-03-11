@@ -85,6 +85,19 @@ function blink(id, cor)
 	}
 }
 
+function changeServer(server)
+{
+	$('_reqStatus').innerHTML = "Changing Server...";
+	new Ajax.Request('action.php', 
+	{
+		method: 'get',
+		parameters: {
+			reqTime: new Date().getTime(),
+			action: Object.toJSON({Action: 'ChangeServer', Server: server})
+		}
+	});
+}
+
 function getCallerId(peer)
 {
 	if (callerIDs[peer])
@@ -146,6 +159,7 @@ function Process(o)
 	{
 		_statusError = true;
 		doError(o['Message']);
+		return;
 	}
 	
 	if (o['Action'] == 'Reload')

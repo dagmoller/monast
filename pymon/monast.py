@@ -138,7 +138,7 @@ class ColorFormatter(logging.Formatter):
 		record.module    = self.color(record.levelno, record.module)
 		record.msg       = self.color(record.levelno, record.msg)
 		record.levelname = self.color(record.levelno, record.levelname)
-
+	
 		if float(PYTHON_VERSION) >= 2.5:
 			record.funcName = self.color(record.levelno, record.funcName)
 			
@@ -207,16 +207,12 @@ class MonAst(protocol.ServerFactory):
 	bindHost        = None
 	bindPort        = None
 	
-	defaultContext  = None
-	transferContext = None
-	
-	meetmeContext   = None
-	meetmePrefix    = None
-	
 	userDisplay     = {}
 	queuesDisplay   = {}
 	
 	authRequired   = False
+	
+	servers        = {}
 	
 	clients        = {}
 	clientsAMI     = {}
@@ -230,10 +226,10 @@ class MonAst(protocol.ServerFactory):
 	monitoredUsers = {}
 	queues         = {}
 
-	isParkedStatus = False
-	parkedStatus   = []
+	isParkedStatus = {}
+	parkedStatus   = {}
 	
-	channelStatus = []
+	channelStatus = {}
 	
 	queueMemberStatus = {}
 	queueClientStatus = {}
@@ -241,10 +237,10 @@ class MonAst(protocol.ServerFactory):
 	queueMemberCalls  = {}
 	queueMemberPaused = {}
 	
-	queueStatusFirst = False
-	queueStatusOrder = []
+	queueStatusFirst = {}
+	queueStatusOrder = {}
 	
-	getMeetmeAndParkStatus = False
+	getMeetmeAndParkStatus = {}
 	
 	sortby = 'callerid'
 	
@@ -304,52 +300,67 @@ class MonAst(protocol.ServerFactory):
 		cp = MyConfigParser()
 		cp.read(self.configFile)
 		
-		host     = cp.get('global', 'hostname')
-		port     = int(cp.get('global', 'hostport'))
-		username = cp.get('global', 'username')
-		password = cp.get('global', 'password')
+		servers = [s for s in cp.sections() if s.startswith('server:')]
+		for server in servers:
+			name = server.replace('server:', '').strip()
+			self.servers[name] = {
+				'hostname'         : cp.get(server, 'hostname'),
+				'hostport'         : int(cp.get(server, 'hostport')),
+				'username'         : cp.get(server, 'username'),
+				'password'         : cp.get(server, 'password'),
+				'default_context'  : cp.get(server, 'default_context'),
+				'transfer_context' : cp.get(server, 'transfer_context'),
+				'meetme_context'   : cp.get(server, 'meetme_context'),
+				'meetme_prefix'    : cp.get(server, 'meetme_prefix')
+			}
+			
+			self.queueMemberStatus[name]      = {}
+			self.queueClientStatus[name]      = {}
+			self.queueStatusOrder[name]       = []
+			self.queueStatusFirst[name]       = False
+			self.getMeetmeAndParkStatus[name] = False
 		
-		self.host = host
-		self.port = port
+		self.clearStatus()
 		
 		self.bindHost       = cp.get('global', 'bind_host')
 		self.bindPort       = int(cp.get('global', 'bind_port'))
 		
-		self.defaultContext  = cp.get('global', 'default_context')
-		self.transferContext = cp.get('global', 'transfer_context')
-		
-		self.meetmeContext = cp.get('global', 'meetme_context')
-		self.meetmePrefix  = cp.get('global', 'meetme_prefix')
-		
 		if cp.get('global', 'auth_required') == 'true':
 			self.authRequired = True
 		
-		users = [s for s in cp.sections() if s not in ('global', 'users', 'queues')]
+		## Authentication Users
+		users = [s for s in cp.sections() if s.startswith('user:')]
 		for user in users:
 			try:
-				self.clients[user] = {
+				username = user.replace('user:', '').strip() 
+				self.clients[username] = {
 					'secret': cp.get(user, 'secret'), 
 					'roles' : [r.strip() for r in cp.get(user, 'roles').split(',')]
 				}
 			except:
 				log.error("MonAst.__init__ :: Username %s has errors in config file!" % user)
 		
-		## Users
+		## Peers
 		try:
-			self.sortby = cp.get('users', 'sortby')
+			self.sortby = cp.get('peers', 'sortby')
 		except NoOptionError:
 			self.sortby = 'callerid'
-			log.error("No option 'sortby' in section: 'users' of config file, sorting by CallerID")
+			log.error("No option 'sortby' in section: 'peers' of config file, sorting by CallerID")
 		
-		if cp.get('users', 'default') == 'show':
+		if cp.get('peers', 'default') == 'show':
 			self.userDisplay['DEFAULT'] = True 
 		else:
 			self.userDisplay['DEFAULT'] = False
 		
-		for user, display in cp.items('users'):
+		for user, display in cp.items('peers'):
+			if user in ('default', 'sortby'):
+				continue
+			server, user = user.split('/', 1)
+			if not self.servers.has_key(server):
+				continue
 			if user.startswith('SIP') or user.startswith('IAX2'): 
 				if (self.userDisplay['DEFAULT'] and display == 'hide') or (not self.userDisplay['DEFAULT'] and display == 'show'):
-					self.userDisplay[user] = True
+					self.userDisplay[server][user] = True
 			
 			if display.startswith('force'):
 				tech, peer = user.split('/')
@@ -363,8 +374,8 @@ class MonAst(protocol.ServerFactory):
 				if len(tmp) == 2:
 					CallerID = tmp[1].strip()
 				
-				self.monitoredUsers[user] = {
-					'Channeltype': tech, 'Status': Status, 'Calls': 0, 'CallerID': CallerID, 'Context': self.defaultContext, 'Variables': [], 'forced': True
+				self.monitoredUsers[server][user] = {
+					'Channeltype': tech, 'Status': Status, 'Calls': 0, 'CallerID': CallerID, 'Context': self.servers[server]['default_context'], 'Variables': [], 'forced': True
 				}
 		
 		## Queues
@@ -374,13 +385,21 @@ class MonAst(protocol.ServerFactory):
 			self.queuesDisplay['DEFAULT'] = False
 			
 		for queue, display in cp.items('queues'):
+			if queue in ('default'):
+				continue
+			server, queue = queue.split('/', 1)
+			if not self.servers.has_key(server):
+				continue
 			if (self.queuesDisplay['DEFAULT'] and display == 'hide') or (not self.queuesDisplay['DEFAULT'] and display == 'show'):
-				self.queuesDisplay[queue] = True
+				self.queuesDisplay[server][queue] = True
 		
 		self.AMI = AsteriskManagerFactory()
-		self.AMI.addServer(host, host, port, username, password)
 		
-		self.AMI.registerEventHandler('onAuthenticationAccepted', self._GetConfig)
+		for server in self.servers:
+			s = self.servers[server]
+			self.AMI.addServer(server, s['hostname'], s['hostport'], s['username'], s['password'])
+		
+		self.AMI.registerEventHandler('onAuthenticationAccepted', self.onAuthenticationAccepted)
 		
 		self.AMI.registerEventHandler('Reload', self.handlerReload)
 		self.AMI.registerEventHandler('ChannelReload', self.handlerChannelReload)
@@ -425,8 +444,6 @@ class MonAst(protocol.ServerFactory):
 		
 	def processClientMessage(self, client, message):
 		
-		threadId = client.session
-		
 		output  = []
 		object  = {'Action': None, 'Session': None, 'Username': None}
 		
@@ -451,7 +468,7 @@ class MonAst(protocol.ServerFactory):
 					log.error('MonAst.processClientMessage (%s:%s) :: Invalid username or password for %s (local)' % (client.host, client.port, username))
 					output.append('ERROR: Invalid user or secret')
 			else:
-				auth = self.clientCheckAmiAuth(threadId, username, secret)
+				auth = self.clientCheckAmiAuth(client.session, username, secret)
 				if auth[0]:
 					output.append('Authentication Success')
 					self.clientsAMI[username] = {'roles': auth[1]}
@@ -482,18 +499,46 @@ class MonAst(protocol.ServerFactory):
 					self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time()}
 					log.log(logging.NOTICE, 'MonAst.processClientMessage (%s:%s) :: New client session: %s' % (client.host, client.port, session))
 		
-		elif message.upper() == 'GET STATUS':
-			output = self.clientGetStatus(threadId, client.session)
+		elif message.upper().startswith('GET STATUS'):
+			serverlist = self.servers.keys()
+			serverlist.sort()
+			servers = None
+			try:
+				dummy, Server = message.split(': ')
+				Server = Server.strip()
+				if Server in serverlist:
+					servers = [Server]
+				elif Server.upper() == 'ALL':
+					servers = serverlist
+				else:
+					servers = [serverlist[0]]				
+			except:
+				servers = [serverlist[0]]
+			output = ['SERVERS: %s' % ', '.join(serverlist)]
+			output += self.clientGetStatus(client.session, servers)
 		
-		elif message.upper() == 'GET CHANGES':
-			output = self.clientGetChanges(threadId, client.session)
+		elif message.upper().startswith('GET CHANGES'):
+			servers = self.servers.keys()
+			servers.sort()
+			try:
+				dummy, Server = message.split(': ')
+				Server = Server.strip()
+				if Server in servers:
+					servers = [Server]
+				elif Server.upper() == 'ALL':
+					pass
+				else:
+					servers = [servers[0]]				
+			except:
+				servers = [servers[0]]
+			output += self.clientGetChanges(client.session, servers)
 		
 		elif message.upper() == 'BYE':
 			client.closeClient()
 
 		elif self.actions.has_key(action):
 			if self.checkPermission(object, self.actions[action][0]):
-				self.actions[action][1](threadId, object)
+				self.actions[action][1](client.session, object)
 			
 		else:
 			output.append('NO SESSION')
@@ -519,24 +564,30 @@ class MonAst(protocol.ServerFactory):
 				del self.clientQueues[session]
 			
 			
-	def taskCheckStatus(self):
+	def taskCheckStatus(self, **args):
 		
 		log.info('MonAst.taskCheckStatus :: Running...')
 		if self.running:
-			log.info('MonAst.taskCheckStatus :: Requesting Status...')
-
-			self.channelStatus = []
-			self.AMI.execute(Action = {'Action': 'Status'}) # generate Event: Status
+			Server = args.get('Server', None)
+			servers = self.servers.keys()
+			if Server:
+				servers = [Server]
 			
-			self.isParkedStatus = True
-			self.parkedStatus   = []
-			self.AMI.execute(Action = {'Action': 'ParkedCalls'}) # generate Event: ParkedCall
-			
-			for queue in self.queues:
-				self.queueStatusOrder.append(queue)
-				self.queueMemberStatus[queue] = []
-				self.queueClientStatus[queue] = []
-				self.AMI.execute(Action = {'Action': 'QueueStatus', 'Queue': queue})
+			for Server in servers:
+				log.info('MonAst.taskCheckStatus :: Requesting Status for Server %s...' % Server)
+	
+				self.channelStatus[Server] = []
+				self.AMI.execute(Action = {'Action': 'Status'}, Server = Server) # generate Event: Status
+					
+				self.isParkedStatus[Server] = True
+				self.parkedStatus[Server]   = []
+				self.AMI.execute(Action = {'Action': 'ParkedCalls'}, Server = Server) # generate Event: ParkedCall
+					
+				for queue in self.queues[Server]:
+					self.queueStatusOrder[Server].append(queue)
+					self.queueMemberStatus[Server][queue] = []
+					self.queueClientStatus[Server][queue] = []
+					self.AMI.execute(Action = {'Action': 'QueueStatus', 'Queue': queue}, Server = Server)
 	
 	
 	def enqueue(self, **args):
@@ -544,10 +595,10 @@ class MonAst(protocol.ServerFactory):
 		if args.has_key('__session'):
 			session = args['__session']
 			del args['__session']
-			self.clientQueues[session]['q'].put(json.dumps(args))
+			self.clientQueues[session]['q'].put(args)
 		else:
 			for session in self.clientQueues:
-				self.clientQueues[session]['q'].put(json.dumps(args))
+				self.clientQueues[session]['q'].put(args)
 	
 	
 	def checkPermission(self, object, role):
@@ -566,6 +617,9 @@ class MonAst(protocol.ServerFactory):
 		
 	def parseJson(self, **args):
 		
+		if args.has_key('CallerID'):
+			args['CallerID'] = u'%s' % args['CallerID'].decode('iso8859')
+		
 		return json.dumps(args)
 		
 		
@@ -580,39 +634,41 @@ class MonAst(protocol.ServerFactory):
 		}
 
 		## identify technologies
-		techs           = {}
-		for user in self.monitoredUsers:
-			tech, peer   = user.split('/')
-			
-			CallerID     = self.monitoredUsers[user]['CallerID']
-			CallerIDName = peer
-			CallerIDNum  = peer
-			
-			if CallerID != '--':
-				CallerIDName = CallerID[:CallerID.find('<')].strip()
-				CallerIDNum  = CallerID[CallerID.find('<')+1:CallerID.find('>')].strip()
-			else:
-				CallerID = peer
+		techs = {}
+		for Server in self.servers:
+			techs[Server] = {}
+			for user in self.monitoredUsers[Server]:
+				tech, peer   = user.split('/')
 				
-			try:
-				techs[tech].append((user, peer, CallerID, CallerIDName, CallerIDNum))
-			except KeyError:
-				techs[tech] = [(user, peer, CallerID, CallerIDName, CallerIDNum)]
-
-		for tech in techs:
-			if self.sortby in ('callerid', 'calleridname', 'calleridnum'):
-				usersWithCid    = []
-				usersWithoutCid = []
-				for user in techs[tech]:
-					if user[1] != user[2]:
-						usersWithCid.append(user)
-					else:
-						usersWithoutCid.append(user)
-				usersWithCid.sort(lambda x, y: cmp(x[_sortKeys[self.sortby]].lower(), y[_sortKeys[self.sortby]].lower()))
-				usersWithoutCid.sort(lambda x, y: cmp(x[_sortKeys[self.sortby]].lower(), y[_sortKeys[self.sortby]].lower()))
-				techs[tech] = usersWithCid + usersWithoutCid
-			else:
-				techs[tech].sort(lambda x, y: cmp(x[_sortKeys[self.sortby]].lower(), y[_sortKeys[self.sortby]].lower()))
+				CallerID     = self.monitoredUsers[Server][user]['CallerID']
+				CallerIDName = peer
+				CallerIDNum  = peer
+				
+				if CallerID != '--':
+					CallerIDName = CallerID[:CallerID.find('<')].strip()
+					CallerIDNum  = CallerID[CallerID.find('<')+1:CallerID.find('>')].strip()
+				else:
+					CallerID = peer
+					
+				try:
+					techs[Server][tech].append((user, peer, CallerID, CallerIDName, CallerIDNum))
+				except KeyError:
+					techs[Server][tech] = [(user, peer, CallerID, CallerIDName, CallerIDNum)]
+	
+			for tech in techs[Server]:
+				if self.sortby in ('callerid', 'calleridname', 'calleridnum'):
+					usersWithCid    = []
+					usersWithoutCid = []
+					for user in techs[Server][tech]:
+						if user[1] != user[2]:
+							usersWithCid.append(user)
+						else:
+							usersWithoutCid.append(user)
+					usersWithCid.sort(lambda x, y: cmp(x[_sortKeys[self.sortby]].lower(), y[_sortKeys[self.sortby]].lower()))
+					usersWithoutCid.sort(lambda x, y: cmp(x[_sortKeys[self.sortby]].lower(), y[_sortKeys[self.sortby]].lower()))
+					techs[Server][tech] = usersWithCid + usersWithoutCid
+				else:
+					techs[Server][tech].sort(lambda x, y: cmp(x[_sortKeys[self.sortby]].lower(), y[_sortKeys[self.sortby]].lower()))
 				
 		return techs
 		
@@ -623,7 +679,7 @@ class MonAst(protocol.ServerFactory):
 	def handlerReload(self, lines):
 		
 		log.info('MonAst.handlerReload :: Running...')
-		self._GetConfig()
+		self._GetConfig(lines['Server'])
 		
 		
 	def handlerChannelReload(self, lines):
@@ -634,7 +690,7 @@ class MonAst(protocol.ServerFactory):
 		Channel      = dic.get('ChannelType', dic.get('Channel'))
 		ReloadReason = dic['ReloadReason']
 		
-		self._GetConfig()
+		self._GetConfig(dic['Server'])
 		
 		
 	def handlerPeerEntry(self, lines):
@@ -642,6 +698,7 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerPeerEntry :: Running...')
 		dic = lines
 		
+		Server      = dic['Server']
 		Status      = dic['Status']
 		Channeltype = dic['Channeltype']
 		ObjectName  = dic['ObjectName'].split('/')[0]
@@ -653,16 +710,16 @@ class MonAst(protocol.ServerFactory):
 		
 		user = '%s/%s' % (Channeltype, ObjectName)
 		
-		if self.userDisplay['DEFAULT'] and not self.userDisplay.has_key(user):
-			self.monitoredUsers[user] = {'Channeltype': Channeltype, 'Status': Status, 'Calls': 0, 'CallerID': '--', 'Context': 'default', 'Variables': []}
-		elif not self.userDisplay['DEFAULT'] and self.userDisplay.has_key(user):
-			self.monitoredUsers[user] = {'Channeltype': Channeltype, 'Status': Status, 'Calls': 0, 'CallerID': '--', 'Context': 'default', 'Variables': []}
+		if self.userDisplay['DEFAULT'] and not self.userDisplay[Server].has_key(user):
+			self.monitoredUsers[Server][user] = {'Channeltype': Channeltype, 'Status': Status, 'Calls': 0, 'CallerID': '--', 'Context': 'default', 'Variables': []}
+		elif not self.userDisplay['DEFAULT'] and self.userDisplay[Server].has_key(user):
+			self.monitoredUsers[Server][user] = {'Channeltype': Channeltype, 'Status': Status, 'Calls': 0, 'CallerID': '--', 'Context': 'default', 'Variables': []}
 		else:
 			user = None
 		
 		if user:
 			type = ['peer', 'user'][Channeltype == 'Skype']
-			self.AMI.execute(Action = {'Action': 'Command', 'Command': '%s show %s %s' % (Channeltype.lower(), type, ObjectName), 'ActionID': user}, Handler = self._defaultParseConfigPeers)
+			self.AMI.execute(Action = {'Action': 'Command', 'Command': '%s show %s %s' % (Channeltype.lower(), type, ObjectName), 'ActionID': user}, Handler = self._defaultParseConfigPeers, Server = Server)
 		
 	
 	def handlerPeerStatus(self, lines):
@@ -670,13 +727,14 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerPeerStatus :: Running...')
 		dic = lines
 		
+		Server     = dic['Server']
 		Peer       = dic['Peer']
 		PeerStatus = dic['PeerStatus']
 		
-		if self.monitoredUsers.has_key(Peer):
-			mu = self.monitoredUsers[Peer]
+		if self.monitoredUsers[Server].has_key(Peer):
+			mu = self.monitoredUsers[Server][Peer]
 			mu['Status'] = PeerStatus
-			self.enqueue(Action = 'PeerStatus', Peer = Peer, Status = mu['Status'], Calls = mu['Calls'])
+			self.enqueue(Action = 'PeerStatus', Server = Server, Peer = Peer, Status = mu['Status'], Calls = mu['Calls'])
 		
 		
 	def handlerSkypeAccountStatus(self, lines):
@@ -684,13 +742,14 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerSkypeAccountStatus :: Running...')
 		dic = lines
 		
+		Server   = dic['Server']
 		Username = 'Skype/%s' % dic['Username']
 		Status   = dic['Status']
 		
-		if self.monitoredUsers.has_key(Username):
-			mu = self.monitoredUsers[Username]
+		if self.monitoredUsers[Server].has_key(Username):
+			mu = self.monitoredUsers[Server][Username]
 			mu['Status'] = Status
-			self.enqueue(Action = 'PeerStatus', Peer = Username, Status = mu['Status'], Calls = mu['Calls'])
+			self.enqueue(Action = 'PeerStatus', Server = Server, Peer = Username, Status = mu['Status'], Calls = mu['Calls'])
 				
 					
 	def handlerBranchOnHook(self, lines): 
@@ -698,16 +757,17 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerBranchOnHook :: Running... (On)')
 		dic = lines 
 
+		Server  = dic['Server']
 		Channel = dic['Channel']
 
 		user = Channel
 		if Channel.rfind('-') != -1:
 			user = Channel[:Channel.rfind('-')]
-		if self.monitoredUsers.has_key(user):
-			mu           = self.monitoredUsers[user]
+		if self.monitoredUsers[Server].has_key(user):
+			mu           = self.monitoredUsers[Server][user]
 			mu['Calls']  = 0
 			mu['Status'] = "Not in Use"
-			self.enqueue(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
+			self.enqueue(Action = 'PeerStatus', Server = Server, Peer = user, Status = mu['Status'], Calls = mu['Calls'])
 
 
 	def handlerBranchOffHook(self, lines):
@@ -715,15 +775,16 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerBranchOffHook :: Running... (Off)')
 		dic = lines
 
+		Server  = dic['Server']
 		Channel = dic['Channel']
 		
 		user = Channel
 		if Channel.rfind('-') != -1:
 			user = Channel[:Channel.rfind('-')]
-		if self.monitoredUsers.has_key(user):
-			mu           = self.monitoredUsers[user]
+		if self.monitoredUsers[Server].has_key(user):
+			mu           = self.monitoredUsers[Server][user]
 			mu['Status'] = "In Use"
-			self.enqueue(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
+			self.enqueue(Action = 'PeerStatus', Server = Server, Peer = user, Status = mu['Status'], Calls = mu['Calls'])
 	
 	
 	def handlerNewchannel(self, lines):
@@ -731,6 +792,7 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerNewchannel :: Running...')
 		dic = lines
 		
+		Server       = dic['Server']
 		Channel      = dic['Channel']
 		State        = dic.get('ChannelStateDesc', dic.get('State'))
 		CallerIDNum  = dic['CallerIDNum']
@@ -738,16 +800,16 @@ class MonAst(protocol.ServerFactory):
 		Uniqueid     = dic['Uniqueid']
 		Monitor      = False
 					
-		self.channels[Uniqueid] = {'Channel': Channel, 'State': State, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName, 'Monitor': Monitor}
-		self.enqueue(Action = 'NewChannel', Channel = Channel, State = State, CallerIDNum = CallerIDNum, CallerIDName = CallerIDName, Uniqueid = Uniqueid, Monitor = Monitor)
+		self.channels[Server][Uniqueid] = {'Channel': Channel, 'State': State, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName, 'Monitor': Monitor}
+		self.enqueue(Action = 'NewChannel', Server = Server, Channel = Channel, State = State, CallerIDNum = CallerIDNum, CallerIDName = CallerIDName, Uniqueid = Uniqueid, Monitor = Monitor)
 		
 		user = Channel
 		if Channel.rfind('-') != -1:
 			user = Channel[:Channel.rfind('-')]
-		if self.monitoredUsers.has_key(user):
-			mu           = self.monitoredUsers[user]
+		if self.monitoredUsers[Server].has_key(user):
+			mu           = self.monitoredUsers[Server][user]
 			mu['Calls'] += 1
-			self.enqueue(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
+			self.enqueue(Action = 'PeerStatus', Server = Server, Peer = user, Status = mu['Status'], Calls = mu['Calls'])
 
 		
 	def handlerNewstate(self, lines):
@@ -755,6 +817,7 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerNewstate :: Running...')
 		dic = lines
 		
+		Server       = dic['Server']
 		Channel      = dic['Channel']
 		State        = dic.get('ChannelStateDesc', dic.get('State'))
 		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
@@ -762,12 +825,12 @@ class MonAst(protocol.ServerFactory):
 		Uniqueid     = dic['Uniqueid']
 					
 		try:
-			self.channels[Uniqueid]['State']        = State
-			self.channels[Uniqueid]['CallerIDNum']  = CallerID
-			self.channels[Uniqueid]['CallerIDName'] = CallerIDName
-			self.enqueue(Action = 'NewState', Channel = Channel, State = State, CallerID = CallerID, CallerIDName = CallerIDName, Uniqueid = Uniqueid)
+			self.channels[Server][Uniqueid]['State']        = State
+			self.channels[Server][Uniqueid]['CallerIDNum']  = CallerID
+			self.channels[Server][Uniqueid]['CallerIDName'] = CallerIDName
+			self.enqueue(Action = 'NewState', Server = Server, Channel = Channel, State = State, CallerID = CallerID, CallerIDName = CallerIDName, Uniqueid = Uniqueid)
 		except:
-			log.warning("MonAst.handlerNewstate :: Uniqueid %s not found on self.channels" % Uniqueid)
+			log.warning("MonAst.handlerNewstate :: Uniqueid %s not found on self.channels['%s']" % (Uniqueid, Server))
 		
 		
 	def handlerHangup(self, lines):
@@ -775,47 +838,49 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerHangup :: Running...')
 		dic = lines
 		
+		Server    = dic['Server']
 		Channel   = dic['Channel']
 		Uniqueid  = dic['Uniqueid']
 		Cause     = dic['Cause']
 		Cause_txt = dic['Cause-txt']
 					
 		try:
-			del self.channels[Uniqueid]
-			self.enqueue(Action = 'Hangup', Channel = Channel, Uniqueid = Uniqueid, Cause = Cause, Cause_txt = Cause_txt)
+			del self.channels[Server][Uniqueid]
+			self.enqueue(Action = 'Hangup', Server = Server, Channel = Channel, Uniqueid = Uniqueid, Cause = Cause, Cause_txt = Cause_txt)
 		except:
-			log.warning("MonAst.handlerHangup :: Channel %s not found on self.channels" % Uniqueid)
+			log.warning("MonAst.handlerHangup :: Channel %s not found on self.channels['%s']" % (Uniqueid, Server))
 		
 		toDelete = None
-		for id in self.calls:
-			if Uniqueid in id and self.calls[id]['Status'] in ('Dial', 'Unlink'):
+		for id in self.calls[Server]:
+			if Uniqueid in id and self.calls[Server][id]['Status'] in ('Dial', 'Unlink'):
 				toDelete = id
 				break
 		if toDelete:
-			del self.calls[toDelete]
+			del self.calls[Server][toDelete]
 			src, dst = toDelete
-			self.enqueue(Action = 'Unlink', Channel1 = None, Channel2 = None, Uniqueid1 = src, Uniqueid2 = dst, CallerID1 = None, CallerID2 = None)
+			self.enqueue(Action = 'Unlink', Server = Server, Channel1 = None, Channel2 = None, Uniqueid1 = src, Uniqueid2 = dst, CallerID1 = None, CallerID2 = None)
 		
 		user = Channel
 		if Channel.rfind('-') != -1:
 			user = Channel[:Channel.rfind('-')]
-		if self.monitoredUsers.has_key(user) and self.monitoredUsers[user]['Calls'] > 0:
-			mu           = self.monitoredUsers[user] 
+		if self.monitoredUsers[Server].has_key(user) and self.monitoredUsers[Server][user]['Calls'] > 0:
+			mu           = self.monitoredUsers[Server][user] 
 			mu['Calls'] -= 1
-			self.enqueue(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
+			self.enqueue(Action = 'PeerStatus', Server = Server, Peer = user, Status = mu['Status'], Calls = mu['Calls'])
 		
-		if self.queueMemberCalls.has_key(Uniqueid):
-			Queue  = self.queueMemberCalls[Uniqueid]['Queue']
-			Member = self.queueMemberCalls[Uniqueid]['Member']
-			del self.queueMemberCalls[Uniqueid]
-			self.enqueue(Action = 'RemoveQueueMemberCall', Queue = Queue, Member = Member, Uniqueid = Uniqueid)
+		if self.queueMemberCalls[Server].has_key(Uniqueid):
+			Queue  = self.queueMemberCalls[Server][Uniqueid]['Queue']
+			Member = self.queueMemberCalls[Server][Uniqueid]['Member']
+			del self.queueMemberCalls[Server][Uniqueid]
+			self.enqueue(Action = 'RemoveQueueMemberCall', Server = Server, Queue = Queue, Member = Member, Uniqueid = Uniqueid)
 
-		
+	
 	def handlerDial(self, lines):
 		
 		log.info('MonAst.handlerDial :: Running...')
 		dic = lines
 		
+		Server   = dic['Server']
 		SubEvent = dic.get('SubEvent', None)
 		if SubEvent == 'Begin':
 			Source       = dic.get('Channel', dic.get('Source'))
@@ -826,31 +891,31 @@ class MonAst(protocol.ServerFactory):
 			DestUniqueID = dic['DestUniqueID']
 			
 			try:
-				c = self.channels[SrcUniqueID]
-				self.calls[(SrcUniqueID, DestUniqueID)] = {
+				c = self.channels[Server][SrcUniqueID]
+				self.calls[Server][(SrcUniqueID, DestUniqueID)] = {
 					'Source': Source, 'Destination': Destination, 'SrcUniqueID': SrcUniqueID, 'DestUniqueID': DestUniqueID, 
 					'Status': 'Dial', 'startTime': 0
 				}
 			except KeyError, e:
-				log.warning("MonAst.handlerDial :: Channel %s not found on self.channels" % SrcUniqueID)
+				log.warning("MonAst.handlerDial :: Channel %s not found on self.channels['%s']" % (SrcUniqueID, Server))
 			
-			self.enqueue(Action = 'Dial', Source = Source, Destination = Destination, CallerID = CallerID, CallerIDName = CallerIDName, SrcUniqueID = SrcUniqueID, DestUniqueID = DestUniqueID)
+			self.enqueue(Action = 'Dial', Server = Server, Source = Source, Destination = Destination, CallerID = CallerID, CallerIDName = CallerIDName, SrcUniqueID = SrcUniqueID, DestUniqueID = DestUniqueID)
 		
 		elif SubEvent == 'End':
 			Channel  = dic['Channel']
 			Uniqueid = dic['UniqueID']
 			
-			calls = self.calls.keys()
+			calls = self.calls[Server].keys()
 			for call in calls:
 				if Uniqueid in call:
 					#del self.calls[call]
-					self.calls[call]['Status'] == 'Unlink'
-					self.enqueue(Action = 'Unlink', Channel1 = None, Channel2 = None, Uniqueid1 = call[0], Uniqueid2 = call[1], CallerID1 = None, CallerID2 = None)
+					self.calls[Server][call]['Status'] == 'Unlink'
+					self.enqueue(Action = 'Unlink', Server = Server, Channel1 = None, Channel2 = None, Uniqueid1 = call[0], Uniqueid2 = call[1], CallerID1 = None, CallerID2 = None)
 			
-			if self.queueMemberCalls.has_key(Uniqueid):
-				self.queueMemberCalls[Uniqueid]['Link'] = False
-				qmc = self.queueMemberCalls[Uniqueid]
-				self.enqueue(Action = 'RemoveQueueMemberCall', Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = Uniqueid)
+			if self.queueMemberCalls[Server].has_key(Uniqueid):
+				self.queueMemberCalls[Server][Uniqueid]['Link'] = False
+				qmc = self.queueMemberCalls[Server][Uniqueid]
+				self.enqueue(Action = 'RemoveQueueMemberCall', Server = Server, Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = Uniqueid)
 			
 		else:
 			log.info('MonAst.handlerDial :: Unhandled Dial subevent %s' % SubEvent)
@@ -861,6 +926,7 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerLink :: Running...')
 		dic = lines
 		
+		Server    = dic['Server']
 		Channel1  = dic['Channel1']
 		Channel2  = dic['Channel2']
 		Uniqueid1 = dic['Uniqueid1']
@@ -869,31 +935,31 @@ class MonAst(protocol.ServerFactory):
 		CallerID2 = dic['CallerID2']
 		
 		try:
-			CallerID1 = '%s <%s>' % (self.channels[Uniqueid1]['CallerIDName'], self.channels[Uniqueid1]['CallerIDNum'])
-			CallerID2 = '%s <%s>' % (self.channels[Uniqueid2]['CallerIDName'], self.channels[Uniqueid2]['CallerIDNum'])
+			CallerID1 = '%s <%s>' % (self.channels[Server][Uniqueid1]['CallerIDName'], self.channels[Server][Uniqueid1]['CallerIDNum'])
+			CallerID2 = '%s <%s>' % (self.channels[Server][Uniqueid2]['CallerIDName'], self.channels[Server][Uniqueid2]['CallerIDNum'])
 		except:
-			log.warning("MonAst.handlerUnlink :: Uniqueid %s or %s not found on self.channels" % (Uniqueid1, Uniqueid2))
+			log.warning("MonAst.handlerUnlink :: Uniqueid %s or %s not found on self.channels['%s']" % (Uniqueid1, Uniqueid2, Server))
 		
 		call = (Uniqueid1, Uniqueid2)
 		
 		try:
-			self.calls[call]['Status'] = 'Link'
+			self.calls[Server][call]['Status'] = 'Link'
 			 
-			if self.calls[call]['startTime'] == 0:
-				self.calls[call]['startTime'] = time.time()
+			if self.calls[Server][call]['startTime'] == 0:
+				self.calls[Server][call]['startTime'] = time.time()
 		except:
-			self.calls[call] = {
+			self.calls[Server][call] = {
 				'Source': Channel1, 'Destination': Channel2, 'SrcUniqueID': Uniqueid1, 'DestUniqueID': Uniqueid2, 
 				'Status': 'Link', 'startTime': time.time()
 			}
-		Seconds = time.time() - self.calls[call]['startTime']
-		self.enqueue(Action = 'Link', Channel1 = Channel1, Channel2 = Channel2, Uniqueid1 = Uniqueid1, Uniqueid2 = Uniqueid2, CallerID1 = CallerID1, CallerID2 = CallerID2, Seconds = Seconds)
+		Seconds = time.time() - self.calls[Server][call]['startTime']
+		self.enqueue(Action = 'Link', Server = Server, Channel1 = Channel1, Channel2 = Channel2, Uniqueid1 = Uniqueid1, Uniqueid2 = Uniqueid2, CallerID1 = CallerID1, CallerID2 = CallerID2, Seconds = Seconds)
 
-		if self.queueMemberCalls.has_key(Uniqueid1):
-			self.queueMemberCalls[Uniqueid1]['Member'] = Channel2[:Channel2.rfind('-')]
-			self.queueMemberCalls[Uniqueid1]['Link']   = True
-			qmc = self.queueMemberCalls[Uniqueid1]
-			self.enqueue(Action = 'AddQueueMemberCall', Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = Uniqueid1, Channel = qmc['Channel'], CallerID = CallerID1, Seconds = Seconds)
+		if self.queueMemberCalls[Server].has_key(Uniqueid1):
+			self.queueMemberCalls[Server][Uniqueid1]['Member'] = Channel2[:Channel2.rfind('-')]
+			self.queueMemberCalls[Server][Uniqueid1]['Link']   = True
+			qmc = self.queueMemberCalls[Server][Uniqueid1]
+			self.enqueue(Action = 'AddQueueMemberCall', Server = Server, Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = Uniqueid1, Channel = qmc['Channel'], CallerID = CallerID1, Seconds = Seconds)
 		
 		
 	def handlerBridge(self, lines):
@@ -907,6 +973,7 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerUnlink :: Running...')
 		dic = lines
 		
+		Server    = dic['Server']
 		Channel1  = dic['Channel1']
 		Channel2  = dic['Channel2']
 		Uniqueid1 = dic['Uniqueid1']
@@ -916,15 +983,15 @@ class MonAst(protocol.ServerFactory):
 		
 		try:
 			#del self.calls[(Uniqueid1, Uniqueid2)]
-			self.calls[(Uniqueid1, Uniqueid2)]['Status'] = 'Unlink'
-			self.enqueue(Action = 'Unlink', Channel1 = Channel1, Channel2 = Channel2, Uniqueid1 = Uniqueid1, Uniqueid2 = Uniqueid2, CallerID1 = CallerID1, CallerID2 = CallerID2)
+			self.calls[Server][(Uniqueid1, Uniqueid2)]['Status'] = 'Unlink'
+			self.enqueue(Action = 'Unlink', Server = Server, Channel1 = Channel1, Channel2 = Channel2, Uniqueid1 = Uniqueid1, Uniqueid2 = Uniqueid2, CallerID1 = CallerID1, CallerID2 = CallerID2)
 		except:
-			log.warning("MonAst.handlerUnlink :: Call %s-%s not found on self.calls" % (Uniqueid1, Uniqueid2))
+			log.warning("MonAst.handlerUnlink :: Call %s-%s not found on self.calls['%s']" % (Uniqueid1, Uniqueid2, Server))
 		
-		if self.queueMemberCalls.has_key(Uniqueid1):
-			self.queueMemberCalls[Uniqueid1]['Link'] = False
-			qmc = self.queueMemberCalls[Uniqueid1]
-			self.enqueue(Action = 'RemoveQueueMemberCall', Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = Uniqueid1)
+		if self.queueMemberCalls[Server].has_key(Uniqueid1):
+			self.queueMemberCalls[Server][Uniqueid1]['Link'] = False
+			qmc = self.queueMemberCalls[Server][Uniqueid1]
+			self.enqueue(Action = 'RemoveQueueMemberCall', Server = Server, Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = Uniqueid1)
 
 		
 	def handlerNewcallerid(self, lines):
@@ -932,6 +999,7 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerNewcallerid :: Running...')
 		dic = lines
 		
+		Server         = dic['Server']
 		Channel        = dic['Channel']
 		CallerID       = dic.get('CallerIDNum', dic.get('CallerID'))
 		CallerIDName   = dic['CallerIDName']
@@ -939,11 +1007,11 @@ class MonAst(protocol.ServerFactory):
 		CIDCallingPres = dic['CID-CallingPres']
 		
 		try:
-			self.channels[Uniqueid]['CallerIDName'] = CallerIDName
-			self.channels[Uniqueid]['CallerIDNum']  = CallerID
-			self.enqueue(Action = 'NewCallerid', Channel = Channel, CallerID = CallerID, CallerIDName = CallerIDName, Uniqueid = Uniqueid, CIDCallingPres = CIDCallingPres)
+			self.channels[Server][Uniqueid]['CallerIDName'] = CallerIDName
+			self.channels[Server][Uniqueid]['CallerIDNum']  = CallerID
+			self.enqueue(Action = 'NewCallerid', Server = Server, Channel = Channel, CallerID = CallerID, CallerIDName = CallerIDName, Uniqueid = Uniqueid, CIDCallingPres = CIDCallingPres)
 		except KeyError:
-			log.warning("MonAst.handlerNewcallerid :: UniqueID '%s' not found on self.channels" % Uniqueid)
+			log.warning("MonAst.handlerNewcallerid :: UniqueID '%s' not found on self.channels['%s']" % (Uniqueid, Server))
 		
 		
 	def handlerRename(self, lines):
@@ -951,6 +1019,7 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerRename :: Running...')
 		dic = lines
 		
+		Server       = dic['Server']
 		Oldname      = dic.get('Channel', dic.get('Oldname'))
 		Newname      = dic['Newname']
 		Uniqueid     = dic['Uniqueid']
@@ -959,11 +1028,11 @@ class MonAst(protocol.ServerFactory):
 		
 		try:
 			
-			self.channels[Uniqueid]['Channel'] = Newname
-			CallerIDName = self.channels[Uniqueid]['CallerIDName']
-			CallerID     = self.channels[Uniqueid]['CallerIDNum']
+			self.channels[Server][Uniqueid]['Channel'] = Newname
+			CallerIDName = self.channels[Server][Uniqueid]['CallerIDName']
+			CallerID     = self.channels[Server][Uniqueid]['CallerIDNum']
 		
-			for call in self.calls:
+			for call in self.calls[Server]:
 				SrcUniqueID, DestUniqueID = call
 				key = None
 				if (SrcUniqueID == Uniqueid):
@@ -971,12 +1040,12 @@ class MonAst(protocol.ServerFactory):
 				if (DestUniqueID == Uniqueid):
 					key = 'Destination'
 				if key:
-					self.calls[call][key] = Newname
+					self.calls[Server][call][key] = Newname
 					break							
 			
-			self.enqueue(Action = 'Rename', Oldname = Oldname, Newname = Newname, Uniqueid = Uniqueid, CallerIDName = CallerIDName, CallerID = CallerID)
+			self.enqueue(Action = 'Rename', Server = Server, Oldname = Oldname, Newname = Newname, Uniqueid = Uniqueid, CallerIDName = CallerIDName, CallerID = CallerID)
 		except:
-			log.warn('MonAst.handlerRename :: Channel %s not found in self.channels, ignored.' % Oldname)
+			log.warn("MonAst.handlerRename :: Channel %s not found in self.channels['%s'], ignored." % (Oldname, Server))
 			
 			
 	def handlerMeetmeJoin(self, lines):
@@ -984,22 +1053,23 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerMeetmeJoin :: Running...')
 		dic = lines
 		
+		Server       = dic['Server']
 		Uniqueid     = dic['Uniqueid']
 		Meetme       = dic['Meetme']
 		Usernum      = dic['Usernum']
 		CallerIDNum  = dic.get('CallerIDNum', dic.get('CallerIDnum', None))
 		CallerIDName = dic.get('CallerIDName', dic.get('CallerIDname', None))
 					
-		ch = self.channels[Uniqueid]
+		ch = self.channels[Server][Uniqueid]
 		try:
-			self.meetme[Meetme]['users'][Usernum] = {'Uniqueid': Uniqueid, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName}
+			self.meetme[Server][Meetme]['users'][Usernum] = {'Uniqueid': Uniqueid, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName}
 		except KeyError:
-			self.meetme[Meetme] = {
+			self.meetme[Server][Meetme] = {
 					'dynamic': True,
 					'users'  : {Usernum: {'Uniqueid': Uniqueid, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName}}
 			}
-			self.enqueue(Action = 'MeetmeCreate', Meetme = Meetme)
-		self.enqueue(Action = 'MeetmeJoin', Meetme = Meetme, Uniqueid = Uniqueid, Usernum = Usernum, Channel = ch['Channel'], CallerIDNum = CallerIDNum, CallerIDName = CallerIDName)
+			self.enqueue(Action = 'MeetmeCreate', Server = Server, Meetme = Meetme)
+		self.enqueue(Action = 'MeetmeJoin', Server = Server, Meetme = Meetme, Uniqueid = Uniqueid, Usernum = Usernum, Channel = ch['Channel'], CallerIDNum = CallerIDNum, CallerIDName = CallerIDName)
 		
 					
 	def handlerMeetmeLeave(self, lines):
@@ -1007,19 +1077,20 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerMeetmeLeave :: Running...')
 		dic = lines
 		
+		Server   = dic['Server']
 		Uniqueid = dic['Uniqueid']
 		Meetme   = dic['Meetme']
 		Usernum  = dic['Usernum']
 		Duration = dic['Duration']
 					
 		try:
-			del self.meetme[Meetme]['users'][Usernum]
-			self.enqueue(Action = 'MeetmeLeave', Meetme = Meetme, Uniqueid = Uniqueid, Usernum = Usernum, Duration = Duration)
-			if (self.meetme[Meetme]['dynamic'] and len(self.meetme[Meetme]['users']) == 0):
-				del self.meetme[Meetme]
-				self.enqueue(Action = 'MeetmeDestroy', Meetme = Meetme)
+			del self.meetme[Server][Meetme]['users'][Usernum]
+			self.enqueue(Action = 'MeetmeLeave', Server = Server, Meetme = Meetme, Uniqueid = Uniqueid, Usernum = Usernum, Duration = Duration)
+			if (self.meetme[Server][Meetme]['dynamic'] and len(self.meetme[Server][Meetme]['users']) == 0):
+				del self.meetme[Server][Meetme]
+				self.enqueue(Action = 'MeetmeDestroy', Server = Server, Meetme = Meetme)
 		except Exception, e:
-			log.warn('MonAst.handlerMeetmeLeave :: Meetme or Usernum not found in self.meetme[\'%s\'][\'users\'][\'%s\']' % (Meetme, Usernum))
+			log.warn('MonAst.handlerMeetmeLeave :: Meetme or Usernum not found in self.meetme[\'%s\'][\'%s\'][\'users\'][\'%s\']' % (Server, Meetme, Usernum))
 		
 		
 	def handlerParkedCall(self, lines):
@@ -1027,6 +1098,7 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerParkedCall :: Running...')
 		dic = lines
 		
+		Server       = dic['Server']
 		Exten        = dic['Exten']
 		Channel      = dic['Channel']
 		From         = dic['From']
@@ -1034,14 +1106,14 @@ class MonAst(protocol.ServerFactory):
 		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
 		CallerIDName = dic['CallerIDName']
 					
-		if self.isParkedStatus:
-			self.parkedStatus.append(Exten)
-			if not self.parked.has_key(Exten):
-				self.parked[Exten] = {'Channel': Channel, 'From': From, 'Timeout': Timeout, 'CallerID': CallerID, 'CallerIDName': CallerIDName}
-				self.enqueue(Action = 'ParkedCall', Exten = Exten, Channel = Channel, From = From, Timeout = Timeout, CallerID = CallerID, CallerIDName = CallerIDName)
+		if self.isParkedStatus[Server]:
+			self.parkedStatus[Server].append(Exten)
+			if not self.parked[Server].has_key(Exten):
+				self.parked[Server][Exten] = {'Channel': Channel, 'From': From, 'Timeout': Timeout, 'CallerID': CallerID, 'CallerIDName': CallerIDName}
+				self.enqueue(Action = 'ParkedCall', Server = Server, Exten = Exten, Channel = Channel, From = From, Timeout = Timeout, CallerID = CallerID, CallerIDName = CallerIDName)
 		else:
-			self.parked[Exten] = {'Channel': Channel, 'From': From, 'Timeout': Timeout, 'CallerID': CallerID, 'CallerIDName': CallerIDName}
-			self.enqueue(Action = 'ParkedCall', Exten = Exten, Channel = Channel, From = From, Timeout = Timeout, CallerID = CallerID, CallerIDName = CallerIDName)
+			self.parked[Server][Exten] = {'Channel': Channel, 'From': From, 'Timeout': Timeout, 'CallerID': CallerID, 'CallerIDName': CallerIDName}
+			self.enqueue(Action = 'ParkedCall', Server = Server, Exten = Exten, Channel = Channel, From = From, Timeout = Timeout, CallerID = CallerID, CallerIDName = CallerIDName)
 			
 					
 	def handlerUnParkedCall(self, lines):
@@ -1049,6 +1121,7 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerUnParkedCall :: Running...')
 		dic = lines
 		
+		Server       = dic['Server']
 		Exten        = dic['Exten']
 		Channel      = dic['Channel']
 		From         = dic['From']
@@ -1056,10 +1129,10 @@ class MonAst(protocol.ServerFactory):
 		CallerIDName = dic['CallerIDName']
 					
 		try:
-			del self.parked[Exten]
-			self.enqueue(Action = 'UnparkedCall', Exten = Exten)
+			del self.parked[Server][Exten]
+			self.enqueue(Action = 'UnparkedCall', Server = Server, Exten = Exten)
 		except:
-			log.warn('MonAst.handlerUnParkedCall :: Parked Exten not found: %s' % Exten)
+			log.warn('MonAst.handlerUnParkedCall :: Parked Exten %s not found on server %s' % (Exten, Server))
 		
 	
 	def handlerParkedCallTimeOut(self, lines):
@@ -1067,16 +1140,17 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerParkedCallTimeOut :: Running...')
 		dic = lines
 		
+		Server       = dic['Server']
 		Exten        = dic['Exten']
 		Channel      = dic['Channel']
 		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
 		CallerIDName = dic['CallerIDName']
 					
 		try:
-			del self.parked[Exten]
-			self.enqueue(Action = 'UnparkedCall', Exten = Exten)
+			del self.parked[Server][Exten]
+			self.enqueue(Action = 'UnparkedCall', Server = Server, Exten = Exten)
 		except:
-			log.warn('MonAst.handlerParkedCallTimeOut :: Parked Exten not found: %s' % Exten)
+			log.warn('MonAst.handlerParkedCallTimeOut :: Parked Exten %s not found on server %s' % (Exten, Server))
 		
 	
 	def handlerParkedCallGiveUp(self, lines):
@@ -1084,33 +1158,36 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerParkedCallGiveUp :: Running...')
 		dic = lines
 		
+		Server       = dic['Server']
 		Exten        = dic['Exten']
 		Channel      = dic['Channel']
 		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
 		CallerIDName = dic['CallerIDName']
 					
 		try:
-			del self.parked[Exten]
-			self.enqueue(Action = 'UnparkedCall', Exten = Exten)
+			del self.parked[Server][Exten]
+			self.enqueue(Action = 'UnparkedCall', Server = Server, Exten = Exten)
 		except:
-			log.warn('MonAst.handlerParkedCallGiveUp :: Parked Exten not found: %s' % Exten)
+			log.warn('MonAst.handlerParkedCallGiveUp :: Parked Exten %s not found on server %s' % (Exten, Server))
 		
 		
 	def handlerParkedCallsComplete(self, lines):
 		
 		log.info('MonAst.handlerParkedCallsComplete :: Running...')
 
-		self.isParkedStatus = False
+		Server = lines['Server']
+
+		self.isParkedStatus[Server] = False
 		
-		lostParks = [i for i in self.parked.keys() if i not in self.parkedStatus]
+		lostParks = [i for i in self.parked[Server].keys() if i not in self.parkedStatus[Server]]
 		for park in lostParks:
-			log.warning('MonAst.handlerParkedCallsComplete :: Removing lost parked call %s' % park)
+			log.warning('MonAst.handlerParkedCallsComplete :: Removing lost parked call %s on server %s' % (park, Server))
 			try:
-				del self.parked[park]
-				self.enqueue(Action = 'UnparkedCall', Exten = park)
+				del self.parked[Server][park]
+				self.enqueue(Action = 'UnparkedCall', Server = Server, Exten = park)
 			except:
 				#pass ## added to debug purposes
-				log.exception('MonAst.handlerParkedCallsComplete :: Exception removing lost parked call %s' % park)
+				log.exception('MonAst.handlerParkedCallsComplete :: Exception removing lost parked call %s on server %s' % (park, Server))
 		
 		
 	def handlerStatus(self, lines):
@@ -1118,6 +1195,7 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerStatus :: Running...')
 		dic = lines
 		
+		Server       = dic['Server']
 		Channel      = dic['Channel']
 		CallerIDNum  = dic['CallerIDNum']
 		CallerIDName = dic['CallerIDName']
@@ -1127,39 +1205,39 @@ class MonAst(protocol.ServerFactory):
 		Uniqueid     = dic['Uniqueid']
 		Monitor      = False
 		
-		self.channelStatus.append(Uniqueid)
+		self.channelStatus[Server].append(Uniqueid)
 		
-		if not self.channels.has_key(Uniqueid):
-			self.channels[Uniqueid] = {'Channel': Channel, 'State': State, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName, 'Monitor': Monitor}
+		if not self.channels[Server].has_key(Uniqueid):
+			self.channels[Server][Uniqueid] = {'Channel': Channel, 'State': State, 'CallerIDNum': CallerIDNum, 'CallerIDName': CallerIDName, 'Monitor': Monitor}
 			user = Channel
 			if Channel.rfind('-') != -1:
 				user = Channel[:Channel.rfind('-')]
-			if self.monitoredUsers.has_key(user):
-				mu           = self.monitoredUsers[user] 
+			if self.monitoredUsers[Server].has_key(user):
+				mu           = self.monitoredUsers[Server][user] 
 				mu['Calls'] += 1
-				self.enqueue(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
-			self.enqueue(Action = 'NewChannel', Channel = Channel, State = State, CallerIDNum = CallerIDNum, CallerIDName = CallerIDName, Uniqueid = Uniqueid, Monitor = Monitor)
+				self.enqueue(Action = 'PeerStatus', Server = Server, Peer = user, Status = mu['Status'], Calls = mu['Calls'])
+			self.enqueue(Action = 'NewChannel', Server = Server, Channel = Channel, State = State, CallerIDNum = CallerIDNum, CallerIDName = CallerIDName, Uniqueid = Uniqueid, Monitor = Monitor)
 			if Link:
-				for UniqueidLink in self.channels:
-					if self.channels[UniqueidLink]['Channel'] == Link:
-						self.calls[(Uniqueid, UniqueidLink)] = {
+				for UniqueidLink in self.channels[Server]:
+					if self.channels[Server][UniqueidLink]['Channel'] == Link:
+						self.calls[Server][(Uniqueid, UniqueidLink)] = {
 							'Source': Channel, 'Destination': Link, 'SrcUniqueID': Uniqueid, 'DestUniqueID': UniqueidLink, 
 							'Status': 'Link', 'startTime': time.time() - int(Seconds)
 						}
-						CallerID1 = '%s <%s>' % (self.channels[Uniqueid]['CallerIDName'], self.channels[Uniqueid]['CallerIDNum'])
-						CallerID2 = '%s <%s>' % (self.channels[UniqueidLink]['CallerIDName'], self.channels[UniqueidLink]['CallerIDNum'])
-						self.enqueue(Action = 'Link', Channel1 = Channel, Channel2 = Link, Uniqueid1 = Uniqueid, Uniqueid2 = UniqueidLink, CallerID1 = CallerID1, CallerID2 = CallerID2, Seconds = int(Seconds))
+						CallerID1 = '%s <%s>' % (self.channels[Server][Uniqueid]['CallerIDName'], self.channels[Server][Uniqueid]['CallerIDNum'])
+						CallerID2 = '%s <%s>' % (self.channels[Server][UniqueidLink]['CallerIDName'], self.channels[Server][UniqueidLink]['CallerIDNum'])
+						self.enqueue(Action = 'Link', Server = Server, Channel1 = Channel, Channel2 = Link, Uniqueid1 = Uniqueid, Uniqueid2 = UniqueidLink, CallerID1 = CallerID1, CallerID2 = CallerID2, Seconds = int(Seconds))
 		
 		## Update call duration
-		if self.channels.has_key(Uniqueid) and Seconds > 0 and Link:
-			for UniqueidLink in self.channels:
-				if self.channels[UniqueidLink]['Channel'] == Link:
+		if self.channels[Server].has_key(Uniqueid) and Seconds > 0 and Link:
+			for UniqueidLink in self.channels[Server]:
+				if self.channels[Server][UniqueidLink]['Channel'] == Link:
 					call = (Uniqueid, UniqueidLink)
-					duration = time.time() - self.calls[call]['startTime']
+					duration = time.time() - self.calls[Server][call]['startTime']
 					Seconds  = int(Seconds)
 					if duration < (Seconds - 10) or duration > (Seconds + 10):
-						self.calls[call]['startTime'] = time.time() - Seconds
-						self.enqueue(Action = 'UpdateCallDuration', Uniqueid1 = Uniqueid, Uniqueid2 = UniqueidLink, Seconds = Seconds)
+						self.calls[Server][call]['startTime'] = time.time() - Seconds
+						self.enqueue(Action = 'UpdateCallDuration', Server = Server, Uniqueid1 = Uniqueid, Uniqueid2 = UniqueidLink, Seconds = Seconds)
 		
 		
 	def handlerStatusComplete(self, lines):
@@ -1167,55 +1245,57 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerStatusComplete :: Running...')
 		dic = lines
 		
+		Server = dic['Server']
+		
 		## Search for lost channels
-		lostChannels = [i for i in self.channels.keys() if i not in self.channelStatus]
+		lostChannels = [i for i in self.channels[Server].keys() if i not in self.channelStatus[Server]]
 		for Uniqueid in lostChannels:
-			log.warning('MonAst.handlerStatusComplete :: Removing lost channel %s' % Uniqueid)
+			log.warning('MonAst.handlerStatusComplete :: Removing lost channel %s on server %s' % (Uniqueid, Server))
 			try:
-				Channel = self.channels[Uniqueid]['Channel']
-				del self.channels[Uniqueid]
-				self.enqueue(Action = 'Hangup', Channel = Channel, Uniqueid = Uniqueid, Cause = None, Cause_txt = None)
+				Channel = self.channels[Server][Uniqueid]['Channel']
+				del self.channels[Server][Uniqueid]
+				self.enqueue(Action = 'Hangup', Server = Server, Channel = Channel, Uniqueid = Uniqueid, Cause = None, Cause_txt = None)
 			except:
 				#pass ## added to debug purposes
-				log.exception('MonAst.handlerStatusComplete :: Exception removing lost channel %s' % Uniqueid)
+				log.exception('MonAst.handlerStatusComplete :: Exception removing lost channel %s on server %s' % (Uniqueid, Server))
 			
 			## Decrease number of peer calls 
 			user = Channel
 			if Channel.rfind('-') != -1:
 				user = Channel[:Channel.rfind('-')]
-			if self.monitoredUsers.has_key(user) and self.monitoredUsers[user]['Calls'] > 0:
-				mu           = self.monitoredUsers[user] 
+			if self.monitoredUsers[Server].has_key(user) and self.monitoredUsers[Server][user]['Calls'] > 0:
+				mu           = self.monitoredUsers[Server][user] 
 				mu['Calls'] -= 1
-				self.enqueue(Action = 'PeerStatus', Peer = user, Status = mu['Status'], Calls = mu['Calls'])
+				self.enqueue(Action = 'PeerStatus', Server = Server, Peer = user, Status = mu['Status'], Calls = mu['Calls'])
 			
 		## Search for lost calls
-		lostCalls = [call for call in self.calls.keys() if not self.channels.has_key(call[0]) or not self.channels.has_key(call[1])]
+		lostCalls = [call for call in self.calls[Server].keys() if not self.channels[Server].has_key(call[0]) or not self.channels[Server].has_key(call[1])]
 		for call in lostCalls:
-			log.warning('MonAst.handlerStatusComplete :: Removing lost call %s-%s' % (call[0], call[1]))
+			log.warning('MonAst.handlerStatusComplete :: Removing lost call %s-%s on server %s' % (call[0], call[1], Server))
 			try:
-				del self.calls[call]
-				self.enqueue(Action = 'Unlink', Channel1 = None, Channel2 = None, Uniqueid1 = call[0], Uniqueid2 = call[1], CallerID1 = None, CallerID2 = None)
+				del self.calls[Server][call]
+				self.enqueue(Action = 'Unlink', Server = Server, Channel1 = None, Channel2 = None, Uniqueid1 = call[0], Uniqueid2 = call[1], CallerID1 = None, CallerID2 = None)
 			except:
 				#pass ## added to debug purposes
-				log.exception('MonAst.handlerStatusComplete :: Exception removing lost call %s-%s' % (call[0], call[1]))
+				log.exception('MonAst.handlerStatusComplete :: Exception removing lost call %s-%s on server' % (call[0], call[1], Server))
 			
 		## Search for lost queue member calls
-		lostQueueMemberCalls = [Uniqueid for Uniqueid in self.queueMemberCalls if not self.channels.has_key(Uniqueid)]
+		lostQueueMemberCalls = [Uniqueid for Uniqueid in self.queueMemberCalls[Server] if not self.channels[Server].has_key(Uniqueid)]
 		for Uniqueid in lostQueueMemberCalls:
-			log.warning('MonAst.handlerStatusComplete :: Removing lost Queue Member Call %s' % Uniqueid)
+			log.warning('MonAst.handlerStatusComplete :: Removing lost Queue Member Call %s on server' % (Uniqueid, Server))
 			try:
-				Queue  = self.queueMemberCalls[Uniqueid]['Queue']
-				Member = self.queueMemberCalls[Uniqueid]['Member']
-				del self.queueMemberCalls[Uniqueid]
-				self.enqueue(Action = 'RemoveQueueMemberCall', Queue = Queue, Member = Member, Uniqueid = Uniqueid)
+				Queue  = self.queueMemberCalls[Server][Uniqueid]['Queue']
+				Member = self.queueMemberCalls[Server][Uniqueid]['Member']
+				del self.queueMemberCalls[Server][Uniqueid]
+				self.enqueue(Action = 'RemoveQueueMemberCall', Server = Server, Queue = Queue, Member = Member, Uniqueid = Uniqueid)
 			except:
 				#pass ## added to debug purposes
-				log.exception('MonAst.handlerStatusComplete :: Exception removing lost Queue Member Call %s' % Uniqueid)
+				log.exception('MonAst.handlerStatusComplete :: Exception removing lost Queue Member Call %s on server %s' % (Uniqueid, Server))
 
-		if self.getMeetmeAndParkStatus:
-			self.AMI.execute(Action = {'Action': 'Command', 'Command': 'meetme'}, Handler = self.handlerParseMeetme)
-			self.AMI.execute(Action = {'Action': 'Command', 'Command': 'show parkedcalls'}, Handler = self.handlerShowParkedCalls)
-			self.getMeetmeAndParkStatus = False
+		if self.getMeetmeAndParkStatus[Server]:
+			self.AMI.execute(Action = {'Action': 'Command', 'Command': 'meetme'}, Handler = self.handlerParseMeetme, Server = Server)
+			self.AMI.execute(Action = {'Action': 'Command', 'Command': 'show parkedcalls'}, Handler = self.handlerShowParkedCalls, Server = Server)
+			self.getMeetmeAndParkStatus[Server] = False
 			
 	
 	def handlerQueueMember(self, lines):
@@ -1223,6 +1303,7 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerQueueMember :: Running...')
 		dic = lines
 		
+		Server     = dic['Server']
 		Queue      = dic['Queue']
 		Name       = dic['Name']
 		Location   = dic['Location']
@@ -1232,41 +1313,41 @@ class MonAst(protocol.ServerFactory):
 		Status     = dic['Status']
 		Paused     = dic['Paused']
 		
-		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
+		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay[Server].has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay[Server].has_key(Queue)):
 			return
 		
-		if not self.queues.has_key(Queue):
-			log.warning("MonAst.handlerQueueMember :: Can not add location '%s' to queue '%s'. Queue not found." % (Location, Queue))
+		if not self.queues[Server].has_key(Queue):
+			log.warning("MonAst.handlerQueueMember :: Can not add location '%s' to queue '%s' on server %s. Queue not found." % (Location, Queue, Server))
 			return
 
 		PausedTime = 1
 		if Paused == '1':
-			if self.queueMemberPaused.has_key(Queue):
+			if self.queueMemberPaused[Server].has_key(Queue):
 				try:
-					PausedTime = time.time() - self.queueMemberPaused[Queue][Location]
+					PausedTime = time.time() - self.queueMemberPaused[Server][Queue][Location]
 				except:
-					self.queueMemberPaused[Queue][Location] = time.time()
+					self.queueMemberPaused[Server][Queue][Location] = time.time()
 			else:
-				self.queueMemberPaused[Queue] = {Location: time.time()}
+				self.queueMemberPaused[Server][Queue] = {Location: time.time()}
 		else:
 			try:
-				del self.queueMemberPaused[Queue][Location]
+				del self.queueMemberPaused[Server][Queue][Location]
 			except:
 				pass
 		
 		try:
-			self.queues[Queue]['members'][Location]['Penalty']    = Penalty
-			self.queues[Queue]['members'][Location]['CallsTaken'] = CallsTaken
-			self.queues[Queue]['members'][Location]['LastCall']   = LastCall
-			self.queues[Queue]['members'][Location]['Status']     = Status
-			self.queues[Queue]['members'][Location]['Paused']     = Paused
-			self.enqueue(Action = 'QueueMemberStatus', Queue = Queue, Member = Location, Penalty = Penalty, CallsTaken = CallsTaken, LastCall = LastCall, Status = AST_DEVICE_STATES[Status], Paused = Paused, PausedTime = PausedTime)
+			self.queues[Server][Queue]['members'][Location]['Penalty']    = Penalty
+			self.queues[Server][Queue]['members'][Location]['CallsTaken'] = CallsTaken
+			self.queues[Server][Queue]['members'][Location]['LastCall']   = LastCall
+			self.queues[Server][Queue]['members'][Location]['Status']     = Status
+			self.queues[Server][Queue]['members'][Location]['Paused']     = Paused
+			self.enqueue(Action = 'QueueMemberStatus', Server = Server, Queue = Queue, Member = Location, Penalty = Penalty, CallsTaken = CallsTaken, LastCall = LastCall, Status = AST_DEVICE_STATES[Status], Paused = Paused, PausedTime = PausedTime)
 		except KeyError:
-			self.queues[Queue]['members'][Location] = {
+			self.queues[Server][Queue]['members'][Location] = {
 				'Name': Name, 'Penalty': Penalty, 'CallsTaken': CallsTaken, 'LastCall': LastCall, 'Status': Status, 'Paused': Paused
 			}
-			self.enqueue(Action = 'AddQueueMember', Queue = Queue, Member = Location, MemberName = Name, Penalty = Penalty, CallsTaken = CallsTaken, LastCall = LastCall, Status = AST_DEVICE_STATES[Status], Paused = Paused, PausedTime = PausedTime)
-		self.queueMemberStatus[Queue].append(Location)
+			self.enqueue(Action = 'AddQueueMember', Server = Server, Queue = Queue, Member = Location, MemberName = Name, Penalty = Penalty, CallsTaken = CallsTaken, LastCall = LastCall, Status = AST_DEVICE_STATES[Status], Paused = Paused, PausedTime = PausedTime)
+		self.queueMemberStatus[Server][Queue].append(Location)
 		
 		
 	def handlerQueueMemberStatus(self, lines):
@@ -1283,16 +1364,17 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerQueueMemberPaused :: Running...')
 		dic = lines
 		
+		Server   = dic['Server']
 		Queue    = dic['Queue']
 		Location = dic['Location']
 		
-		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
+		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay[Server].has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay[Server].has_key(Queue)):
 			return
 		
-		lines['Penalty'] = self.queues[Queue]['members'][Location]['Penalty']
-		lines['CallsTaken'] = self.queues[Queue]['members'][Location]['CallsTaken']
-		lines['LastCall'] = self.queues[Queue]['members'][Location]['LastCall']
-		lines['Status'] = self.queues[Queue]['members'][Location]['Status']
+		lines['Penalty'] = self.queues[Server][Queue]['members'][Location]['Penalty']
+		lines['CallsTaken'] = self.queues[Server][Queue]['members'][Location]['CallsTaken']
+		lines['LastCall'] = self.queues[Server][Queue]['members'][Location]['LastCall']
+		lines['Status'] = self.queues[Server][Queue]['members'][Location]['Status']
 		lines['Name'] = dic['MemberName']
 		
 		self.handlerQueueMember(lines)
@@ -1303,6 +1385,7 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerQueueEntry :: Running...')
 		dic = lines
 		
+		Server       = dic['Server']
 		Queue        = dic['Queue']
 		Position     = dic['Position']
 		Channel      = dic['Channel']
@@ -1311,22 +1394,22 @@ class MonAst(protocol.ServerFactory):
 		Wait         = dic['Wait']
 		Uniqueid     = None
 		
-		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
+		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay[Server].has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay[Server].has_key(Queue)):
 			return
 		
 		# I need to get Uniqueid from this entry
 		for Uniqueid in self.channels:
-			if self.channels[Uniqueid]['Channel'] == Channel:
+			if self.channels[Server][Uniqueid]['Channel'] == Channel:
 				break
 		
-		self.queueClientStatus[Queue].append(Uniqueid)
-		Count = len(self.queueClientStatus[Queue])
+		self.queueClientStatus[Server][Queue].append(Uniqueid)
+		Count = len(self.queueClientStatus[Server][Queue])
 		try:
-			self.queues[Queue]['clients'][Uniqueid]['Position'] = Position			
+			self.queues[Server][Queue]['clients'][Uniqueid]['Position'] = Position			
 		except KeyError:
-			self.queues[Queue]['clients'][Uniqueid] = {'Uniqueid': Uniqueid, 'Channel': Channel, 'CallerID': CallerID, 'CallerIDName': CallerIDName, \
+			self.queues[Server][Queue]['clients'][Uniqueid] = {'Uniqueid': Uniqueid, 'Channel': Channel, 'CallerID': CallerID, 'CallerIDName': CallerIDName, \
 													'Position': Position, 'JoinTime': time.time() - int(Wait)}
-			self.enqueue(Action = 'AddQueueClient', Queue = Queue, Uniqueid = Uniqueid, Channel = Channel, CallerID = CallerID, CallerIDName = CallerIDName, Position = Position, Count = Count, Wait = Wait)
+			self.enqueue(Action = 'AddQueueClient', Server = Server, Queue = Queue, Uniqueid = Uniqueid, Channel = Channel, CallerID = CallerID, CallerIDName = CallerIDName, Position = Position, Count = Count, Wait = Wait)
 
 		
 	def handlerQueueMemberAdded(self, lines):
@@ -1334,16 +1417,17 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerQueueMemberAdded :: Running...')
 		dic = lines
 		
+		Server     = dic['Server']
 		Queue      = dic['Queue']
 		Location   = dic['Location']
 		MemberName = dic['MemberName']
 		Penalty    = dic['Penalty']
 		
-		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
+		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay[Server].has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay[Server].has_key(Queue)):
 			return
 		
-		self.queues[Queue]['members'][Location] = {'Name': MemberName, 'Penalty': Penalty, 'CallsTaken': 0, 'LastCall': 0, 'Status': '0', 'Paused': 0} 
-		self.enqueue(Action = 'AddQueueMember', Queue = Queue, Member = Location, MemberName = MemberName, Penalty = Penalty, CallsTaken = 0, LastCall = 0, Status = AST_DEVICE_STATES['0'], Paused = 0)
+		self.queues[Server][Queue]['members'][Location] = {'Name': MemberName, 'Penalty': Penalty, 'CallsTaken': 0, 'LastCall': 0, 'Status': '0', 'Paused': 0} 
+		self.enqueue(Action = 'AddQueueMember', Server = Server, Queue = Queue, Member = Location, MemberName = MemberName, Penalty = Penalty, CallsTaken = 0, LastCall = 0, Status = AST_DEVICE_STATES['0'], Paused = 0)
 		
 		
 	def handlerQueueMemberRemoved(self, lines):
@@ -1351,18 +1435,19 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerQueueMemberRemoved :: Running...')
 		dic = lines
 		
+		Server     = dic['Server']
 		Queue      = dic['Queue']
 		Location   = dic['Location']
 		MemberName = dic['MemberName']
 		
-		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
+		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay[Server].has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay[Server].has_key(Queue)):
 			return
 		
 		try:
-			del self.queues[Queue]['members'][Location]
-			self.enqueue(Action = 'RemoveQueueMember', Queue = Queue, Member = Location, MemberName = MemberName)
+			del self.queues[Server][Queue]['members'][Location]
+			self.enqueue(Action = 'RemoveQueueMember', Server = Server, Queue = Queue, Member = Location, MemberName = MemberName)
 		except KeyError:
-			log.warn("MonAst.handlerQueueMemberRemoved :: Queue or Member not found in self.queues['%s']['members']['%s']" % (Queue, Location))
+			log.warn("MonAst.handlerQueueMemberRemoved :: Queue or Member not found in self.queues['%s']['%s']['members']['%s']" % (Server, Queue, Location))
 		
 		
 	def handlerJoin(self, lines): # Queue Join
@@ -1370,6 +1455,7 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerJoin :: Running...')
 		dic = lines
 		
+		Server       = dic['Server']
 		Channel      = dic['Channel']
 		CallerID     = dic.get('CallerIDNum', dic.get('CallerID'))
 		CallerIDName = dic['CallerIDName']
@@ -1378,16 +1464,16 @@ class MonAst(protocol.ServerFactory):
 		Count        = dic['Count']
 		Uniqueid     = dic['Uniqueid']
 		
-		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
+		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay[Server].has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay[Server].has_key(Queue)):
 			return
 		
 		try:
-			self.queues[Queue]['clients'][Uniqueid] = {'Uniqueid': Uniqueid, 'Channel': Channel, 'CallerID': CallerID, 'CallerIDName': CallerIDName, \
+			self.queues[Server][Queue]['clients'][Uniqueid] = {'Uniqueid': Uniqueid, 'Channel': Channel, 'CallerID': CallerID, 'CallerIDName': CallerIDName, \
 													'Position': Position, 'JoinTime': time.time()}
-			self.queues[Queue]['stats']['Calls'] += 1
-			self.enqueue(Action = 'AddQueueClient', Queue = Queue, Uniqueid = Uniqueid, Channel = Channel, CallerID = CallerID, CallerIDName = CallerIDName, Position = Position, Count = Count, Wait = 0)
+			self.queues[Server][Queue]['stats']['Calls'] += 1
+			self.enqueue(Action = 'AddQueueClient', Server = Server, Queue = Queue, Uniqueid = Uniqueid, Channel = Channel, CallerID = CallerID, CallerIDName = CallerIDName, Position = Position, Count = Count, Wait = 0)
 		except KeyError:
-			log.warning("MonAst.handlerJoin :: Queue '%s' not found." % Queue)
+			log.warning("MonAst.handlerJoin :: Queue '%s' not found on server %s" % (Queue, Server))
 		
 	
 	def handlerLeave(self, lines): # Queue Leave
@@ -1395,29 +1481,30 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerLeave :: Running...')
 		dic = lines
 	
+		Server       = dic['Server']
 		Channel      = dic['Channel']
 		Queue        = dic['Queue']
 		Count        = dic['Count']
 		Uniqueid     = dic['Uniqueid']
 		
-		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
+		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay[Server].has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay[Server].has_key(Queue)):
 			return
 		
 		try:
 			cause = ''
-			if self.queues[Queue]['clients'][Uniqueid].has_key('Abandoned'):
+			if self.queues[Server][Queue]['clients'][Uniqueid].has_key('Abandoned'):
 				cause = 'Abandoned'
-				self.queues[Queue]['stats']['Abandoned'] += 1
+				self.queues[Server][Queue]['stats']['Abandoned'] += 1
 			else:
 				cause = 'Completed'
-				self.queues[Queue]['stats']['Completed'] += 1
-				self.queueMemberCalls[Uniqueid] = {'Queue': Queue, 'Channel': Channel, 'Member': None, 'Link': False}
-			self.queues[Queue]['stats']['Calls'] -= 1
+				self.queues[Server][Queue]['stats']['Completed'] += 1
+				self.queueMemberCalls[Server][Uniqueid] = {'Queue': Queue, 'Channel': Channel, 'Member': None, 'Link': False}
+			self.queues[Server][Queue]['stats']['Calls'] -= 1
 			
-			del self.queues[Queue]['clients'][Uniqueid]
-			self.enqueue(Action = 'RemoveQueueClient', Queue = Queue, Uniqueid = Uniqueid, Channel = Channel, Count = Count, Cause = cause)
+			del self.queues[Server][Queue]['clients'][Uniqueid]
+			self.enqueue(Action = 'RemoveQueueClient', Server = Server, Queue = Queue, Uniqueid = Uniqueid, Channel = Channel, Count = Count, Cause = cause)
 		except KeyError:
-			log.warn("MonAst.handlerLeave :: Queue or Client not found in self.queues['%s']['clients']['%s']" % (Queue, Uniqueid))
+			log.warn("MonAst.handlerLeave :: Queue or Client not found in self.queues['%s']['%s']['clients']['%s']" % (Server, Queue, Uniqueid))
 		
 		
 	def handlerQueueCallerAbandon(self, lines):
@@ -1425,16 +1512,17 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerQueueCallerAbandon :: Running...')
 		dic = lines
 		
+		Server   = dic['Server']
 		Queue    = dic['Queue']
 		Uniqueid = dic['Uniqueid']
 		
-		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
+		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay[Server].has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay[Server].has_key(Queue)):
 			return
 		
 		try:
-			self.queues[Queue]['clients'][Uniqueid]['Abandoned'] = True
+			self.queues[Server][Queue]['clients'][Uniqueid]['Abandoned'] = True
 		except KeyError:
-			log.warn("MonAst.handlerQueueCallerAbandon :: Queue or Client found in self.queues['%s']['clients']['%s']" % (Queue, Uniqueid))
+			log.warn("MonAst.handlerQueueCallerAbandon :: Queue or Client found in self.queues['%s']['%s']['clients']['%s']" % (Server, Queue, Uniqueid))
 		
 		#self.enqueue(Action = 'AbandonedQueueClient', Uniqueid = Uniqueid)
 		
@@ -1444,6 +1532,7 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerQueueParams :: Running...')
 		dic = lines
 		
+		Server           = dic['Server']
 		Queue            = dic['Queue']
 		Max              = int(dic['Max'])
 		Calls            = int(dic['Calls'])
@@ -1454,20 +1543,20 @@ class MonAst(protocol.ServerFactory):
 		ServicelevelPerf = float(dic['ServicelevelPerf'].replace(',', '.'))
 		Weight           = int(dic['Weight'])
 		
-		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay.has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay.has_key(Queue)):
+		if (self.queuesDisplay['DEFAULT'] and self.queuesDisplay[Server].has_key(Queue)) or (not self.queuesDisplay['DEFAULT'] and not self.queuesDisplay[Server].has_key(Queue)):
 			return
 		
-		if self.queues.has_key(Queue):
-			self.queues[Queue]['stats']['Max']              = Max
-			self.queues[Queue]['stats']['Calls']            = Calls
-			self.queues[Queue]['stats']['Holdtime']         = Holdtime
-			self.queues[Queue]['stats']['Completed']        = Completed
-			self.queues[Queue]['stats']['Abandoned']        = Abandoned
-			self.queues[Queue]['stats']['ServiceLevel']     = ServiceLevel
-			self.queues[Queue]['stats']['ServicelevelPerf'] = ServicelevelPerf
-			self.queues[Queue]['stats']['Weight']           = Weight
+		if self.queues[Server].has_key(Queue):
+			self.queues[Server][Queue]['stats']['Max']              = Max
+			self.queues[Server][Queue]['stats']['Calls']            = Calls
+			self.queues[Server][Queue]['stats']['Holdtime']         = Holdtime
+			self.queues[Server][Queue]['stats']['Completed']        = Completed
+			self.queues[Server][Queue]['stats']['Abandoned']        = Abandoned
+			self.queues[Server][Queue]['stats']['ServiceLevel']     = ServiceLevel
+			self.queues[Server][Queue]['stats']['ServicelevelPerf'] = ServicelevelPerf
+			self.queues[Server][Queue]['stats']['Weight']           = Weight
 		else:
-			self.queues[Queue] = {
+			self.queues[Server][Queue] = {
 				'members': {}, 
 				'clients': {}, 
 				'stats': {
@@ -1475,41 +1564,44 @@ class MonAst(protocol.ServerFactory):
 					'ServicelevelPerf': ServicelevelPerf, 'Weight': Weight
 				}
 			}
-			self.queueMemberStatus[Queue] = []
-			self.queueClientStatus[Queue] = []
-			self.queueStatusFirst         = True
-			self.queueStatusOrder.append(Queue)
+			self.queueMemberStatus[Server][Queue] = []
+			self.queueClientStatus[Server][Queue] = []
+			self.queueStatusFirst[Server]         = True
+			self.queueStatusOrder[Server].append(Queue)
 			
-		self.enqueue(Action = 'QueueParams', Queue = Queue, Max = Max, Calls = Calls, Holdtime = Holdtime, Completed = Completed, Abandoned = Abandoned, ServiceLevel = ServiceLevel, ServicelevelPerf = ServicelevelPerf, Weight = Weight)
+		self.enqueue(Action = 'QueueParams', Server = Server, Queue = Queue, Max = Max, Calls = Calls, Holdtime = Holdtime, Completed = Completed, Abandoned = Abandoned, ServiceLevel = ServiceLevel, ServicelevelPerf = ServicelevelPerf, Weight = Weight)
 			
 		
 	def handlerQueueStatusComplete(self, lines):
 		
 		log.info('MonAst.handlerQueueStatusComplete :: Running...')
 		
+		dic = lines
+		Server = dic['Server']
+		
 		size = 0
-		if self.queueStatusFirst:
-			size = len(self.queueStatusOrder)
-			self.queueStatusFirst = False
-		elif len(self.queueStatusOrder) > 0:
+		if self.queueStatusFirst[Server]:
+			size = len(self.queueStatusOrder[Server])
+			self.queueStatusFirst[Server] = False
+		elif len(self.queueStatusOrder[Server]) > 0:
 			size = 1			
 		
 		for i in xrange(size):
 			try:
-				queue       = self.queueStatusOrder.pop(0)
-				lostMembers = [i for i in self.queues[queue]['members'].keys() if i not in self.queueMemberStatus[queue]]
+				queue       = self.queueStatusOrder[Server].pop(0)
+				lostMembers = [i for i in self.queues[Server][queue]['members'].keys() if i not in self.queueMemberStatus[Server][queue]]
 				for member in lostMembers:
-					log.log(logging.NOTICE, 'MonAst.handlerQueueStatusComplete :: Removing lost member %s from queue %s' % (member, queue))
-					del self.queues[queue]['members'][member]
-					self.enqueue(Action = 'RemoveQueueMember', Queue = queue, Member = member, MemberName = None)
+					log.log(logging.NOTICE, 'MonAst.handlerQueueStatusComplete :: Removing lost member %s from queue %s on server %s' % (member, queue, Server))
+					del self.queues[Server][queue]['members'][member]
+					self.enqueue(Action = 'RemoveQueueMember', Server = Server, Queue = queue, Member = member, MemberName = None)
 				
-				lostClients = [i for i in self.queues[queue]['clients'].keys() if i not in self.queueClientStatus[queue]]
+				lostClients = [i for i in self.queues[Server][queue]['clients'].keys() if i not in self.queueClientStatus[Server][queue]]
 				for client in lostClients:
-					log.log(logging.NOTICE, 'MonAst.handlerQueueStatusComplete :: Removing lost client %s from queue %s' % (client, queue))
-					Channel = self.queues[queue]['clients'][client]['Channel']
-					del self.queues[queue]['clients'][client]
-					Count = len(self.queues[queue]['clients'])
-					self.enqueue(Action = 'RemoveQueueClient', Queue = queue, Uniqueid = client, Channel = Channel, Count = Count, Cause = None)
+					log.log(logging.NOTICE, 'MonAst.handlerQueueStatusComplete :: Removing lost client %s from queue %s on server %s' % (client, queue, Server))
+					Channel = self.queues[Server][queue]['clients'][client]['Channel']
+					del self.queues[Server][queue]['clients'][client]
+					Count = len(self.queues[Server][queue]['clients'])
+					self.enqueue(Action = 'RemoveQueueClient', Server = Server, Queue = queue, Uniqueid = client, Channel = Channel, Count = Count, Cause = None)
 			except:
 				log.exception('MonAst.handlerQueueStatusComplete :: Unhandled Exception')
 	
@@ -1519,14 +1611,15 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerMonitorStart :: Running...')
 		dic = lines
 		
+		Server   = dic['Server']
 		Channel  = dic['Channel']
 		Uniqueid = dic['Uniqueid']
 		
 		try:
-			self.channels[Uniqueid]['Monitor'] = True
-			self.enqueue(Action = 'MonitorStart', Channel = Channel, Uniqueid = Uniqueid)
+			self.channels[Server][Uniqueid]['Monitor'] = True
+			self.enqueue(Action = 'MonitorStart', Server = Server, Channel = Channel, Uniqueid = Uniqueid)
 		except:
-			log.warning('MonAst.handlerMonitorStart :: Uniqueid %s not found in self.channels' % Uniqueid)
+			log.warning('MonAst.handlerMonitorStart :: Uniqueid %s not found in self.channels[\'%s\']' % (Uniqueid, Server))
 		
 		
 	def handlerMonitorStop(self, lines):
@@ -1534,14 +1627,15 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst.handlerMonitorStart :: Running...')
 		dic = lines
 		
+		Server   = dic['Server']
 		Channel  = dic['Channel']
 		Uniqueid = dic['Uniqueid']
 		
 		try:
-			self.channels[Uniqueid]['Monitor'] = False
-			self.enqueue(Action = 'MonitorStop', Channel = Channel, Uniqueid = Uniqueid)
+			self.channels[Server][Uniqueid]['Monitor'] = False
+			self.enqueue(Action = 'MonitorStop', Server = Server, Channel = Channel, Uniqueid = Uniqueid)
 		except:
-			log.warning('MonAst.handlerMonitorStop :: Uniqueid %s not found in self.channels' % Uniqueid)
+			log.warning('MonAst.handlerMonitorStop :: Uniqueid %s not found in self.channels[\'%s\']' % (Uniqueid, Server))
 		
 		
 	##
@@ -1552,7 +1646,8 @@ class MonAst(protocol.ServerFactory):
 		log.info('MonAst._defaultParseConfigPeers :: Running...')
 		result = '\n'.join(lines[' '])
 		
-		user = lines['ActionID']
+		Server = lines['Server']
+		user   = lines['ActionID']
 		
 		CallerID  = None
 		Context   = None
@@ -1579,16 +1674,16 @@ class MonAst(protocol.ServerFactory):
 		except:
 			Variables = []
 		
-		if self.monitoredUsers.has_key(user):
-			self.monitoredUsers[user]['CallerID']  = CallerID
-			self.monitoredUsers[user]['Context']   = Context
-			self.monitoredUsers[user]['Variables'] = Variables
+		if self.monitoredUsers[Server].has_key(user):
+			self.monitoredUsers[Server][user]['CallerID']  = CallerID
+			self.monitoredUsers[Server][user]['Context']   = Context
+			self.monitoredUsers[Server][user]['Variables'] = Variables
 		
 		
 	def handlerParseIAXPeers(self, lines):
 		
 		log.info('MonAst.handlerParseIAXPeers :: Running...')
-		
+			
 		if not lines.has_key(' '):
 			return
 		
@@ -1597,34 +1692,39 @@ class MonAst(protocol.ServerFactory):
 			if name.find('/') != -1:
 				name = name[:name.find('/')]
 			
-			self.handlerPeerEntry(['Channeltype: IAX2', 'ObjectName: %s' % name, 'Status: --'])
+			self.handlerPeerEntry({'Channeltype': 'IAX2', 'ObjectName': name, 'Status': '--', 'Server': Server})
 			
 			
 	def handlerParseSkypeUsers(self, lines):
 		
 		log.info('MonAst.handlerParseSkypeUsers :: Running...')
 		
+		Server   = lines['Server']
 		response = lines[' ']
+		
 		if 'Skype Users' in response:
 			users = response.split('\n')[1:-1]
 			for user, status in [i.split(': ') for i in users]:
-				self.handlerPeerEntry(['Channeltype: Skype', 'ObjectName: %s' % user, 'Status: %s' % status])
+				self.handlerPeerEntry({'Channeltype': 'Skype', 'ObjectName': user, 'Status': status, 'Server': Server})
 				
 	
 	def handlerGetConfigMeetme(self, lines):
 		
 		log.info('MonAst.handlerGetConfigMeetme :: Parsing config...')
 		
+		Server = lines['Server']
+		
 		for key, value in lines.items():
 			if key.startswith('Line-') and value.find('conf=') != -1:
 				params = value.replace('conf=', '').split(',')
-				self.meetme[params[0]] = {'dynamic': False, 'users': {}}
+				self.meetme[Server][params[0]] = {'dynamic': False, 'users': {}}
 		
 		
 	def handlerParseMeetme(self, lines):
 		
 		log.info('MonAst.handlerParseMeetme :: Parsing meetme...')
-		
+
+		Server   = lines['Server']
 		reMeetme = re.compile('([^\s]*)[\s]+([^\s]*)[\s]+([^\s]*)[\s]+([^\s]*)[\s]+([^\s]*)')
 
 		try:
@@ -1637,16 +1737,16 @@ class MonAst(protocol.ServerFactory):
 					conf    = gMeetme.group(1)
 					type    = gMeetme.group(5)
 					
-					if not self.meetme.has_key(conf):
+					if not self.meetme[Server].has_key(conf):
 						dynamic = False
 						if type.lower() == 'dynamic':
 							dynamic = True
-						self.meetme[conf] = {'dynamic': dynamic, 'users': {}}
-						self.enqueue(Action = 'MeetmeCreate', Meetme = conf)
+						self.meetme[Server][conf] = {'dynamic': dynamic, 'users': {}}
+						self.enqueue(Action = 'MeetmeCreate', Server = Server, Meetme = conf)
 						
-					self.AMI.execute(Action = {'Action': 'Command', 'Command': 'meetme list %s concise' % conf, 'ActionID': 'meetmeList-%s' % conf}, Handler = self.handlerParseMeetmeConcise)				
+					self.AMI.execute(Action = {'Action': 'Command', 'Command': 'meetme list %s concise' % conf, 'ActionID': 'meetmeList-%s' % conf}, Handler = self.handlerParseMeetmeConcise, Server = Server)				
 				except:
-					log.warn("MonAst.handlerParseMeetme :: Can't parse meetme line: %s" % meetme)
+					log.warn("MonAst.handlerParseMeetme :: Can't parse meetme line: %s on server %s" % (meetme, Server))
 		except:
 			log.exception("MonAst.handlerParseMeetme :: Unhandled Exception")
 		
@@ -1655,16 +1755,18 @@ class MonAst(protocol.ServerFactory):
 
 		log.info('MonAst.handlerParseMeetmeConcise :: Parsing meetme concise...')
 
+		Server = lines['Server']
 		meetme = lines['ActionID'].replace('meetmeList-', '')
 		users  = lines[' '][:-1]
+		
 		for user in users:
 			user = user.split('!')
-			if self.meetme.has_key(meetme):
+			if self.meetme[Server].has_key(meetme):
 				# locate UniqueID for this channel
-				for Uniqueid in self.channels:
-					if self.channels[Uniqueid]['Channel'] == user[3]:
-						self.meetme[meetme]['users'][user[0]] = {'Uniqueid': Uniqueid, 'CallerIDNum': user[1], 'CallerIDName': user[2]}
-						self.enqueue(Action = 'MeetmeJoin', Meetme = meetme, Uniqueid = Uniqueid, Usernum = user[0], Channel = user[3], CallerIDNum = user[1], CallerIDName = user[2])
+				for Uniqueid in self.channels[Server]:
+					if self.channels[Server][Uniqueid]['Channel'] == user[3]:
+						self.meetme[Server][meetme]['users'][user[0]] = {'Uniqueid': Uniqueid, 'CallerIDNum': user[1], 'CallerIDName': user[2]}
+						self.enqueue(Action = 'MeetmeJoin', Server = Server, Meetme = meetme, Uniqueid = Uniqueid, Usernum = user[0], Channel = user[3], CallerIDNum = user[1], CallerIDName = user[2])
 						break
 		
 		
@@ -1674,7 +1776,9 @@ class MonAst(protocol.ServerFactory):
 		
 		reParked = re.compile('([0-9]+)[\s]+([^\s]*).*([^\s][0-9]+s)')
 		
+		Server  = lines['Server'] 
 		parkeds = lines[' ']
+		
 		for park in parkeds:
 			gParked = reParked.match(park)
 			if gParked:
@@ -1684,34 +1788,35 @@ class MonAst(protocol.ServerFactory):
 				
 				# search callerid for this channel
 				c = None
-				for Uniqueid in self.channels:
-					if self.channels[Uniqueid]['Channel'] == Channel:
-						c = self.channels[Uniqueid]
+				for Uniqueid in self.channels[Server]:
+					if self.channels[Server][Uniqueid]['Channel'] == Channel:
+						c = self.channels[Server][Uniqueid]
 						break
 					
 				if c:
-					self.parked[Exten] = {'Channel': c['Channel'], 'From': 'Undefined', 'Timeout': Timeout, 'CallerID': c['CallerIDNum'], 'CallerIDName': c['CallerIDName']}
-					self.enqueue(Action = 'ParkedCall', Exten = Exten, Channel = Channel, From = 'Undefined', Timeout = Timeout, CallerID = c['CallerIDNum'], CallerIDName = c['CallerIDName'])
+					self.parked[Server][Exten] = {'Channel': c['Channel'], 'From': 'Undefined', 'Timeout': Timeout, 'CallerID': c['CallerIDNum'], 'CallerIDName': c['CallerIDName']}
+					self.enqueue(Action = 'ParkedCall', Server = Server, Exten = Exten, Channel = Channel, From = 'Undefined', Timeout = Timeout, CallerID = c['CallerIDNum'], CallerIDName = c['CallerIDName'])
 				else:
-					log.warn('MonAst.handlerShowParkedCalls :: No Channel found for parked call exten %s' % Exten)
+					log.warn('MonAst.handlerShowParkedCalls :: No Channel found for parked call exten %s on server %s' % (Exten, Server))
 				
 	
 	def handlerCliCommand(self, lines):
 		
 		log.info('MonAst.handlerCliCommand :: Running...')
 
+		Server   = lines['Server']
 		ActionID = lines['ActionID']
 		Response = lines[' ']
 
-		self.enqueue(Action = 'CliResponse', Response = '<br>'.join(Response), __session = ActionID)
+		self.enqueue(Action = 'CliResponse', Server = Server, Response = '<br>'.join(Response), __session = ActionID)
 	
 	
 	##
 	## Handlers for Client Commands
 	##
-	def clientGetStatus(self, threadId, session):
+	def clientGetStatus(self, session, servers):
 		
-		log.info('MonAst.clientGetStatus (%s) :: Running...' % threadId)
+		log.info('MonAst.clientGetStatus (%s) :: Running...' % session)
 		
 		output = []
 		theEnd = []
@@ -1721,106 +1826,108 @@ class MonAst(protocol.ServerFactory):
 			output.append('BEGIN STATUS')
 			
 			users = self.__sortPeers()
-			techs = users.keys()
-			techs.sort()
-			for tech in techs:
-				for user in users[tech]:
-					mu = self.monitoredUsers[user[0]]
-					output.append(self.parseJson(Action = 'PeerStatus', Peer = user[0], Status = mu['Status'], Calls = mu['Calls'], CallerID = user[2]))
 			
-			chans = self.channels.keys()
-			chans.sort()			
-			for Uniqueid in chans:
-				ch = self.channels[Uniqueid]
-				output.append(self.parseJson(Action = 'NewChannel', Channel = ch['Channel'], State = ch['State'], CallerIDNum = ch['CallerIDNum'], CallerIDName = ch['CallerIDName'], Uniqueid = Uniqueid, Monitor = ch['Monitor']))
-			
-			orderedCalls = self.calls.keys()
-			orderedCalls.sort(lambda x, y: cmp(self.calls[x]['startTime'], self.calls[y]['startTime']))
-			for call in orderedCalls:
-				c = self.calls[call]
-				src, dst = call
-			
-				CallerID1 = ''
-				CallerID2 = ''
+			for Server in servers:
+				techs = users[Server].keys()
+				techs.sort()
+				for tech in techs:
+					for user in users[Server][tech]:
+						mu = self.monitoredUsers[Server][user[0]]
+						output.append(self.parseJson(Action = 'PeerStatus', Server = Server, Peer = user[0], Status = mu['Status'], Calls = mu['Calls'], CallerID = user[2]))
 				
-				try:
-					CallerID1 = '%s <%s>' % (self.channels[src]['CallerIDName'], self.channels[src]['CallerIDNum'])
-					CallerID2 = '%s <%s>' % (self.channels[dst]['CallerIDName'], self.channels[dst]['CallerIDNum'])
-				except KeyError:
-					log.warning('MonAst.clientGetStatus (%s) :: UniqueID %s or %s not found on self.channels' % (threadId, src, dst))
+				chans = self.channels[Server].keys()
+				chans.sort()			
+				for Uniqueid in chans:
+					ch = self.channels[Server][Uniqueid]
+					output.append(self.parseJson(Action = 'NewChannel', Server = Server, Channel = ch['Channel'], State = ch['State'], CallerIDNum = ch['CallerIDNum'], CallerIDName = ch['CallerIDName'], Uniqueid = Uniqueid, Monitor = ch['Monitor']))
 				
-				try:
-					if c['Status'] != 'Unlink':
-						output.append(self.parseJson(Action = 'Call', Source = c['Source'], Destination = c['Destination'], \
-							CallerID1 = CallerID1, CallerID2 = CallerID2, SrcUniqueID = c['SrcUniqueID'], DestUniqueID = c['DestUniqueID'], Status = c['Status'], Seconds = time.time() - c['startTime']))
-				except:
-					log.exception('MonAst.clientGetStatus (%s) :: Unhandled Exception' % threadId)
+				orderedCalls = self.calls[Server].keys()
+				orderedCalls.sort(lambda x, y: cmp(self.calls[Server][x]['startTime'], self.calls[Server][y]['startTime']))
+				for call in orderedCalls:
+					c = self.calls[Server][call]
+					src, dst = call
+				
+					CallerID1 = ''
+					CallerID2 = ''
 					
-				if self.queueMemberCalls.has_key(src) and self.queueMemberCalls[src]['Link']:
-					qmc = self.queueMemberCalls[src]
-					theEnd.append(self.parseJson(Action = 'AddQueueMemberCall', Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = src, Channel = qmc['Channel'], CallerID = CallerID1, Seconds = time.time() - c['startTime']))
-				
-			meetmeRooms = self.meetme.keys()
-			meetmeRooms.sort()
-			for meetme in meetmeRooms:
-				output.append(self.parseJson(Action = 'MeetmeCreate', Meetme = meetme))
-				for Usernum in self.meetme[meetme]['users']:
-					mm = self.meetme[meetme]['users'][Usernum]
-					ch = self.channels[mm['Uniqueid']]
-					output.append(self.parseJson(Action = 'MeetmeJoin', Meetme = meetme, Uniqueid = mm['Uniqueid'], Usernum = Usernum, Channel = ch['Channel'], CallerIDNum = mm['CallerIDNum'], CallerIDName = mm['CallerIDName']))
-			
-			parkedCalls = self.parked.keys()
-			parkedCalls.sort()
-			for Exten in parkedCalls:
-				pc = self.parked[Exten]
-				output.append(self.parseJson(Action = 'ParkedCall', Exten = Exten, Channel = pc['Channel'], From = pc['From'], Timeout = pc['Timeout'], CallerID = pc['CallerID'], CallerIDName = pc['CallerIDName']))
-				
-			queues = self.queues.keys()
-			queues.sort()
-			for queue in queues:
-				q = self.queues[queue]
-				output.append(self.parseJson(Action = 'Queue', Queue = queue))
-				members = q['members'].keys()
-				members.sort()
-				for member in members:
-					m = q['members'][member]
-					PausedTime = 1
 					try:
-						PausedTime = time.time() - self.queueMemberPaused[queue][member]
+						CallerID1 = '%s <%s>' % (self.channels[Server][src]['CallerIDName'], self.channels[Server][src]['CallerIDNum'])
+						CallerID2 = '%s <%s>' % (self.channels[Server][dst]['CallerIDName'], self.channels[Server][dst]['CallerIDNum'])
+					except KeyError:
+						log.warning('MonAst.clientGetStatus (%s) :: UniqueID %s or %s not found on self.channels[\'%s\']' % (session, src, dst, Server))
+					
+					try:
+						if c['Status'] != 'Unlink':
+							output.append(self.parseJson(Action = 'Call', Server = Server, Source = c['Source'], Destination = c['Destination'], \
+								CallerID1 = CallerID1, CallerID2 = CallerID2, SrcUniqueID = c['SrcUniqueID'], DestUniqueID = c['DestUniqueID'], Status = c['Status'], Seconds = time.time() - c['startTime']))
 					except:
-						pass
-					output.append(self.parseJson(Action = 'AddQueueMember', Queue = queue, Member = member, MemberName = m['Name'], \
-						Penalty = m['Penalty'], CallsTaken = m['CallsTaken'], LastCall = m['LastCall'], Status = AST_DEVICE_STATES[m['Status']], Paused = m['Paused'], PausedTime = PausedTime))
+						log.exception('MonAst.clientGetStatus (%s) :: Unhandled Exception' % session)
+						
+					if self.queueMemberCalls[Server].has_key(src) and self.queueMemberCalls[Server][src]['Link']:
+						qmc = self.queueMemberCalls[Server][src]
+						theEnd.append(self.parseJson(Action = 'AddQueueMemberCall', Server = Server, Queue = qmc['Queue'], Member = qmc['Member'], Uniqueid = src, Channel = qmc['Channel'], CallerID = CallerID1, Seconds = time.time() - c['startTime']))
 					
-				clients = q['clients'].values()
-				clients.sort(lambda x, y: cmp(x['Position'], y['Position']))
-				for i in xrange(len(clients)):
-					c = clients[i]
-					output.append(self.parseJson(Action = 'AddQueueClient', Queue = queue, Uniqueid = c['Uniqueid'], Channel = c['Channel'], CallerID = c['CallerID'], \
-									CallerIDName = c['CallerIDName'], Position = c['Position'], Count = i, Wait = time.time() - c['JoinTime']))
-					
-				Max              = q['stats']['Max']
-				Calls            = q['stats']['Calls']
-				Holdtime         = q['stats']['Holdtime']
-				Completed        = q['stats']['Completed']
-				Abandoned        = q['stats']['Abandoned']
-				ServiceLevel     = q['stats']['ServiceLevel']
-				ServicelevelPerf = q['stats']['ServicelevelPerf']
-				Weight           = q['stats']['Weight']
+				meetmeRooms = self.meetme[Server].keys()
+				meetmeRooms.sort()
+				for meetme in meetmeRooms:
+					output.append(self.parseJson(Action = 'MeetmeCreate', Server = Server, Meetme = meetme))
+					for Usernum in self.meetme[Server][meetme]['users']:
+						mm = self.meetme[Server][meetme]['users'][Usernum]
+						ch = self.channels[Server][mm['Uniqueid']]
+						output.append(self.parseJson(Action = 'MeetmeJoin', Server = Server, Meetme = meetme, Uniqueid = mm['Uniqueid'], Usernum = Usernum, Channel = ch['Channel'], CallerIDNum = mm['CallerIDNum'], CallerIDName = mm['CallerIDName']))
 				
-				output.append(self.parseJson(Action = 'QueueParams', Queue = queue, Max = Max, Calls = Calls, Holdtime = Holdtime, Completed = Completed, Abandoned = Abandoned, ServiceLevel = ServiceLevel, ServicelevelPerf = ServicelevelPerf, Weight = Weight))
+				parkedCalls = self.parked[Server].keys()
+				parkedCalls.sort()
+				for Exten in parkedCalls:
+					pc = self.parked[Server][Exten]
+					output.append(self.parseJson(Action = 'ParkedCall', Server = Server, Exten = Exten, Channel = pc['Channel'], From = pc['From'], Timeout = pc['Timeout'], CallerID = pc['CallerID'], CallerIDName = pc['CallerIDName']))
+					
+				queues = self.queues[Server].keys()
+				queues.sort()
+				for queue in queues:
+					q = self.queues[Server][queue]
+					output.append(self.parseJson(Action = 'Queue', Server = Server, Queue = queue))
+					members = q['members'].keys()
+					members.sort()
+					for member in members:
+						m = q['members'][member]
+						PausedTime = 1
+						try:
+							PausedTime = time.time() - self.queueMemberPaused[Server][queue][member]
+						except:
+							pass
+						output.append(self.parseJson(Action = 'AddQueueMember', Server = Server, Queue = queue, Member = member, MemberName = m['Name'], \
+							Penalty = m['Penalty'], CallsTaken = m['CallsTaken'], LastCall = m['LastCall'], Status = AST_DEVICE_STATES[m['Status']], Paused = m['Paused'], PausedTime = PausedTime))
+						
+					clients = q['clients'].values()
+					clients.sort(lambda x, y: cmp(x['Position'], y['Position']))
+					for i in xrange(len(clients)):
+						c = clients[i]
+						output.append(self.parseJson(Action = 'AddQueueClient', Server = Server, Queue = queue, Uniqueid = c['Uniqueid'], Channel = c['Channel'], CallerID = c['CallerID'], \
+										CallerIDName = c['CallerIDName'], Position = c['Position'], Count = i, Wait = time.time() - c['JoinTime']))
+						
+					Max              = q['stats']['Max']
+					Calls            = q['stats']['Calls']
+					Holdtime         = q['stats']['Holdtime']
+					Completed        = q['stats']['Completed']
+					Abandoned        = q['stats']['Abandoned']
+					ServiceLevel     = q['stats']['ServiceLevel']
+					ServicelevelPerf = q['stats']['ServicelevelPerf']
+					Weight           = q['stats']['Weight']
+					
+					output.append(self.parseJson(Action = 'QueueParams', Server = Server, Queue = queue, Max = Max, Calls = Calls, Holdtime = Holdtime, Completed = Completed, Abandoned = Abandoned, ServiceLevel = ServiceLevel, ServicelevelPerf = ServicelevelPerf, Weight = Weight))
 			
 			output += theEnd
 			output.append('END STATUS')
 		except:
-			log.exception('MonAst.clientGetStatus (%s) :: Unhandled Exception' % threadId)
+			log.exception('MonAst.clientGetStatus (%s) :: Unhandled Exception' % session)
 		
 		return output
 	
 	
-	def clientGetChanges(self, threadId, session):
+	def clientGetChanges(self, session, servers):
 		
-		log.info('MonAst.clientGetChanges (%s) :: Running...' % threadId)
+		log.info('MonAst.clientGetChanges (%s) :: Running...' % session)
 		
 		output = []
 		
@@ -1828,8 +1935,12 @@ class MonAst(protocol.ServerFactory):
 			self.clientQueues[session]['t'] = time.time()
 			while True:
 				try:
-					msg = self.clientQueues[session]['q'].get(False)
-					output.append(msg)
+					obj = self.clientQueues[session]['q'].get(False)
+					if obj.has_key('Server'):
+						if obj['Server'] in servers:
+							output.append(json.dumps(obj))
+					else:
+						output.append(json.dumps(obj))
 				except Queue.Empty:
 					break
 		
@@ -1842,17 +1953,18 @@ class MonAst(protocol.ServerFactory):
 		return output
 	
 	
-	def clientOriginateCall(self, threadId, object):
+	def clientOriginateCall(self, session, object):
 		
-		log.info('MonAst.clientOriginateCall (%s) :: Running...' % threadId)
-		src  = object['Source']
-		dst  = object['Destination']
-		type = object['Type']
+		log.info('MonAst.clientOriginateCall (%s) :: Running...' % session)
+		Server = object['Server']
+		src    = object['Source']
+		dst    = object['Destination']
+		type   = object['Type']
 		
-		Context = self.monitoredUsers[src]['Context']
+		Context = self.monitoredUsers[Server][src]['Context']
 		if type == 'meetme':
-			Context = self.meetmeContext
-			dst     = '%s%s' % (self.meetmePrefix, dst)
+			Context = self.servers[Server]['meetme_context']
+			dst     = '%s%s' % (self.servers[Server]['meetme_prefix'], dst)
 		command = {}
 		command['Action']   = 'Originate'
 		command['Channel']  = src
@@ -1860,17 +1972,18 @@ class MonAst(protocol.ServerFactory):
 		command['Context']  = Context
 		command['Priority'] = 1
 		command['CallerID'] = MONAST_CALLERID
-		for var in self.monitoredUsers[src]['Variables']:
+		for var in self.monitoredUsers[Server][src]['Variables']:
 			command['Variable'] = var
-		log.debug('MonAst.clientOriginateCall (%s) :: From %s to exten %s@%s' % (threadId, src, dst, Context))
-		self.AMI.execute(Action = command)
+		log.debug('MonAst.clientOriginateCall (%s) :: From %s to exten %s@%s on server %s' % (session, src, dst, Context, Server))
+		self.AMI.execute(Action = command, Server = Server)
 		
 	
-	def clientOriginateDial(self, threadId, object):
+	def clientOriginateDial(self, session, object):
 				
-		log.info('MonAst.clientOriginateDial (%s) :: Running...' % threadId)
-		src = object['Source']
-		dst = object['Destination']
+		log.info('MonAst.clientOriginateDial (%s) :: Running...' % session)
+		Server = object['Server']
+		src    = object['Source']
+		dst    = object['Destination']
 
 		command = {}
 		command['Action']      = 'Originate'
@@ -1879,34 +1992,36 @@ class MonAst(protocol.ServerFactory):
 		command['Data']        = '%s,30,rTt' % dst
 		command['CallerID']    = MONAST_CALLERID
 		
-		log.debug('MonAst.clientOriginateDial (%s) :: From %s to %s' % (threadId, src, dst))
-		self.AMI.execute(Action = command)
+		log.debug('MonAst.clientOriginateDial (%s) :: From %s to %s on server %s' % (session, src, dst, Server))
+		self.AMI.execute(Action = command, Server = Server)
 		
 		
-	def clientHangupChannel(self, threadId, object):
+	def clientHangupChannel(self, session, object):
 		
-		log.info('MonAst.clientHangupChannel (%s) :: Running...' % threadId)
+		log.info('MonAst.clientHangupChannel (%s) :: Running...' % session)
+		Server   = object['Server']
 		Uniqueid = object['Uniqueid']
 		
 		try:
-			Channel = self.channels[Uniqueid]['Channel']
+			Channel = self.channels[Server][Uniqueid]['Channel']
 			command = {}
 			command['Action']  = 'Hangup'
 			command['Channel'] = Channel
-			log.debug('MonAst.clientHangupChannel (%s) :: Hangup channel %s' % (threadId, Channel))
-			self.AMI.execute(Action = command)
+			log.debug('MonAst.clientHangupChannel (%s) :: Hangup channel %s on server %s' % (session, Channel, Server))
+			self.AMI.execute(Action = command, Server = Server)
 		except:
-			log.warn('MonAst.clientHangupChannel (%s) :: Uniqueid %s not found on self.channels' % (threadId, Uniqueid))
+			log.warn('MonAst.clientHangupChannel (%s) :: Uniqueid %s not found on self.channels[\'%s\']' % (session, Uniqueid, Server))
 		
 		
-	def clientMonitorChannel(self, threadId, object):
+	def clientMonitorChannel(self, session, object):
 		
-		log.info('MonAst.clientMonitorChannel (%s) :: Running...' % threadId)
+		log.info('MonAst.clientMonitorChannel (%s) :: Running...' % session)
+		Server   = object['Server']
 		Uniqueid = object['Uniqueid']
 		mix      = object['Mix']
 		
 		try:
-			Channel = self.channels[Uniqueid]['Channel']
+			Channel = self.channels[Server][Uniqueid]['Channel']
 			command = {}
 			command['Action']  = 'Monitor'
 			command['Channel'] = Channel
@@ -1916,66 +2031,68 @@ class MonAst(protocol.ServerFactory):
 			if int(mix) == 1:
 				command['Mix'] = 1
 				tt = 'with'
-			log.debug('MonAst.clientMonitorChannel (%s) :: Monitoring channel %s %s Mix' % (threadId, Channel, tt))
-			self.AMI.execute(Action = command)
+			log.debug('MonAst.clientMonitorChannel (%s) :: Monitoring channel %s %s Mix on server %s' % (session, Channel, tt, Server))
+			self.AMI.execute(Action = command, Server = Server)
 		except:
-			log.warn('MonAst.clientMonitorChannel (%s) :: Uniqueid %s not found on self.channels' % (threadId, Uniqueid))
+			log.warn('MonAst.clientMonitorChannel (%s) :: Uniqueid %s not found on self.channels[\'%s\']' % (session, Uniqueid, Server))
 		
 		
-	def clientMonitorStop(self, threadId, object):
+	def clientMonitorStop(self, session, object):
 		
-		log.info('MonAst.clientMonitorStop (%s) :: Running...' % threadId)
+		log.info('MonAst.clientMonitorStop (%s) :: Running...' % session)
+		Server   = object['Server']
 		Uniqueid = object['Uniqueid']
 		
 		try:
-			self.channels[Uniqueid]['Monitor'] = False
-			Channel = self.channels[Uniqueid]['Channel']
+			self.channels[Server][Uniqueid]['Monitor'] = False
+			Channel = self.channels[Server][Uniqueid]['Channel']
 			command = {}
 			command['Action'] = 'StopMonitor'
 			command['Channel'] = Channel
-			log.debug('MonAst.clientMonitorStop (%s) :: Stop Monitor on channel %s' % (threadId, Channel))
-			self.AMI.execute(Action = command)
+			log.debug('MonAst.clientMonitorStop (%s) :: Stop Monitor on channel %s on server %s' % (session, Channel, Server))
+			self.AMI.execute(Action = command, Server = Server)
 		except:
-			log.warn('MonAst.clientMonitorStop (%s) :: Uniqueid %s not found on self.channels' % (threadId, Uniqueid))
+			log.warn('MonAst.clientMonitorStop (%s) :: Uniqueid %s not found on self.channels[\'%s\']' % (session, Uniqueid, Server))
 	
 	
-	def clientTransferCall(self, threadId, object):
+	def clientTransferCall(self, session, object):
 		
-		log.info('MonAst.clientTransferCall (%s) :: Running...' % threadId)
-		src  = object['Source']
-		dst  = object['Destination']
-		type = object['Type']
+		log.info('MonAst.clientTransferCall (%s) :: Running...' % session)
+		Server = object['Server']
+		src    = object['Source']
+		dst    = object['Destination']
+		type   = object['Type']
 
-		Context      = self.transferContext
+		Context      = self.servers[Server]['transfer_context']
 		SrcChannel   = None
 		ExtraChannel = None
 		if type == 'peer':
 			try:
-				SrcChannel  = self.channels[src]['Channel']
+				SrcChannel  = self.channels[Server][src]['Channel']
 			except KeyError:
-				log.error('MonAst.clientTransferCall (%s) :: Channel %s not found on self.channels. Transfer failed! (peer)' % (threadId, src))
+				log.error('MonAst.clientTransferCall (%s) :: Channel %s not found on self.channels[\'%s\']. Transfer failed! (peer)' % (session, src, Server))
 				return
 			tech, exten = dst.split('/')
 			try:
 				exten = int(exten)
 			except:
-				exten = self.monitoredUsers[dst]['CallerID']
+				exten = self.monitoredUsers[Server][dst]['CallerID']
 				exten = exten[exten.find('<')+1:exten.find('>')]
 				
 		elif type == 'meetme':
 			try:
 				tmp = src.split('+++')
 				if len(tmp) == 2:
-					SrcChannel   = self.channels[tmp[0]]['Channel']
-					ExtraChannel = self.channels[tmp[1]]['Channel']
+					SrcChannel   = self.channels[Server][tmp[0]]['Channel']
+					ExtraChannel = self.channels[Server][tmp[1]]['Channel']
 				else:
-					SrcChannel   = self.channels[tmp[0]]['Channel']
+					SrcChannel   = self.channels[Server][tmp[0]]['Channel']
 			except KeyError, e:
-				log.error('MonAst.clientTransferCall (%s) :: Channel %s not found on self.channels. Transfer failed! (meetme)' % (threadId, e))
+				log.error('MonAst.clientTransferCall (%s) :: Channel %s not found on self.channels[\'%s\']. Transfer failed! (meetme)' % (session, e, Server))
 				return
 			
-			Context = self.meetmeContext
-			exten   = '%s%s' % (self.meetmePrefix, dst)
+			Context = self.servers[Server]['meetme_context']
+			exten   = '%s%s' % (self.servers[Server]['meetme_prefix'], dst)
 
 		command = {}
 		command['Action']  = 'Redirect'
@@ -1986,63 +2103,67 @@ class MonAst(protocol.ServerFactory):
 		command['Context']  = Context
 		command['Priority'] = 1
 		
-		log.debug('MonAst.clientTransferCall (%s) :: Transferring %s and %s to %s@%s' % (threadId, SrcChannel, ExtraChannel, exten, Context))
-		self.AMI.execute(Action = command)
+		log.debug('MonAst.clientTransferCall (%s) :: Transferring %s and %s to %s@%s on server %s' % (session, SrcChannel, ExtraChannel, exten, Context, Server))
+		self.AMI.execute(Action = command, Server = Server)
 	
 	
-	def clientParkCall(self, threadId, object):
+	def clientParkCall(self, session, object):
 
-		log.info('MonAst.clientParkCall (%s) :: Running...' % threadId)
+		log.info('MonAst.clientParkCall (%s) :: Running...' % session)
+		Server   = object['Server']
 		park     = object['Park']
 		announce = object['Announce']
 
-		ParkChannel   = self.channels[park]['Channel']
-		AnouceChannel = self.channels[announce]['Channel']
+		ParkChannel   = self.channels[Server][park]['Channel']
+		AnouceChannel = self.channels[Server][announce]['Channel']
 		command = {}
 		command['Action']   = 'Park'
 		command['Channel']  = ParkChannel
 		command['Channel2'] = AnouceChannel
 		#ommand['Timeout'] = 45
-		log.debug('MonAst.clientParkCall (%s) :: Parking Channel %s and announcing to %s' % (threadId, ParkChannel, AnouceChannel))
-		self.AMI.execute(Action = command)	
+		log.debug('MonAst.clientParkCall (%s) :: Parking Channel %s and announcing to %s on server %s' % (session, ParkChannel, AnouceChannel, Server))
+		self.AMI.execute(Action = command, Server = Server)	
 	
 	
-	def clientMeetmeKick(self, threadId, object):
+	def clientMeetmeKick(self, session, object):
 		
-		log.info('MonAst.clientMeetmeKick (%s) :: Running...' % threadId)
+		log.info('MonAst.clientMeetmeKick (%s) :: Running...' % session)
+		Server  = object['Server']
 		Meetme  = object['Meetme']
 		Usernum = object['Usernum']
 		
 		command = {}
 		command['Action']  = 'Command'
 		command['Command'] = 'meetme kick %s %s' % (Meetme, Usernum)
-		log.debug('MonAst.clientMeetmeKick (%s) :: Kiking usernum %s from meetme %s' % (threadId, Usernum, Meetme))
-		self.AMI.execute(Action = command)
+		log.debug('MonAst.clientMeetmeKick (%s) :: Kiking usernum %s from meetme %s on server %s' % (session, Usernum, Meetme, Server))
+		self.AMI.execute(Action = command, Server = Server)
 	
 	
-	def clientParkedHangup(self, threadId, object):
+	def clientParkedHangup(self, session, object):
 		
-		log.info('MonAst.clientParkedHangup (%s) :: Running...' % threadId)
-		Exten = object['Exten']
+		log.info('MonAst.clientParkedHangup (%s) :: Running...' % session)
+		Server = object['Server']
+		Exten  = object['Exten']
 		
 		try:
-			Channel = self.parked[Exten]['Channel']
+			Channel = self.parked[Server][Exten]['Channel']
 			command = {}
 			command['Action']  = 'Hangup'
 			command['Channel'] = Channel
-			log.debug('MonAst.clientParkedHangup (%s) :: Hangup parcked channel %s' % (threadId, Channel))
-			self.AMI.execute(Action = command)
+			log.debug('MonAst.clientParkedHangup (%s) :: Hangup parcked channel %s on server %s' % (session, Channel, Server))
+			self.AMI.execute(Action = command, Server = Server)
 		except:
-			log.warn('MonAst.clientParkedHangup (%s) :: Exten %s not found on self.parked' % (threadId, Exten))
+			log.warn('MonAst.clientParkedHangup (%s) :: Exten %s not found on self.parked[\'%s\']' % (session, Exten, Server))
 		
 		
-	def clientAddQueueMember(self, threadId, object):
+	def clientAddQueueMember(self, session, object):
 		
-		log.info('MonAst.clientAddQueueMember (%s) :: Running...' % threadId)
+		log.info('MonAst.clientAddQueueMember (%s) :: Running...' % session)
+		Server = object['Server']
 		queue  = object['Queue']
 		member = object['Member']
 		
-		MemberName = self.monitoredUsers[member]['CallerID']
+		MemberName = self.monitoredUsers[Server][member]['CallerID']
 		if MemberName == '--':
 			MemberName = member
 		command = {}
@@ -2051,13 +2172,14 @@ class MonAst(protocol.ServerFactory):
 		command['Interface']  = member
 		#command['Penalty']    = 10
 		command['MemberName'] = MemberName
-		log.debug('MonAst.clientAddQueueMember (%s) :: Adding member %s to queue %s' % (threadId, member, queue))
-		self.AMI.execute(Action = command)
+		log.debug('MonAst.clientAddQueueMember (%s) :: Adding member %s to queue %s on server %s' % (session, member, queue, Server))
+		self.AMI.execute(Action = command, Server = Server)
 		
 		
-	def clientRemoveQueueMember(self, threadId, object):
+	def clientRemoveQueueMember(self, session, object):
 		
-		log.info('MonAst.clientRemoveQueueMember (%s) :: Running...' % threadId)
+		log.info('MonAst.clientRemoveQueueMember (%s) :: Running...' % session)
+		Server = object['Server']
 		queue  = object['Queue']
 		member = object['Member']
 		
@@ -2065,13 +2187,14 @@ class MonAst(protocol.ServerFactory):
 		command['Action']    = 'QueueRemove'
 		command['Queue']     = queue
 		command['Interface'] = member
-		log.debug('MonAst.clientRemoveQueueMember (%s) :: Removing member %s from queue %s' % (threadId, member, queue))
-		self.AMI.execute(Action = command)
+		log.debug('MonAst.clientRemoveQueueMember (%s) :: Removing member %s from queue %s on server %s' % (session, member, queue, Server))
+		self.AMI.execute(Action = command, Server = Server)
 		
 		
-	def clientPauseQueueMember(self, threadId, object):
+	def clientPauseQueueMember(self, session, object):
 		
-		log.info('MonAst.clientPauseQueueMember (%s) :: Running...' % threadId)
+		log.info('MonAst.clientPauseQueueMember (%s) :: Running...' % session)
+		Server = object['Server']
 		queue  = object['Queue']
 		member = object['Member']
 		
@@ -2080,12 +2203,14 @@ class MonAst(protocol.ServerFactory):
 		command['Queue']     = queue
 		command['Interface'] = member
 		command['Paused']    = 1
-		log.debug('MonAst.clientAddQueueMember (%s) :: Pausing member %s on queue %s' % (threadId, member, queue))
-		self.AMI.execute(Action = command)
+		log.debug('MonAst.clientAddQueueMember (%s) :: Pausing member %s on queue %s on server %s' % (session, member, queue, Server))
+		self.AMI.execute(Action = command, Server = Server)
 		
-	def clientUnpauseQueueMember(self, threadId, object):
 		
-		log.info('MonAst.clientPauseQueueMember (%s) :: Running...' % threadId)
+	def clientUnpauseQueueMember(self, session, object):
+		
+		log.info('MonAst.clientPauseQueueMember (%s) :: Running...' % session)
+		Server = object['Server']
 		queue  = object['Queue']
 		member = object['Member']
 		
@@ -2094,50 +2219,53 @@ class MonAst(protocol.ServerFactory):
 		command['Queue']     = queue
 		command['Interface'] = member
 		command['Paused']    = 0
-		log.debug('MonAst.clientUnpauseQueueMember (%s) :: Unpausing member %s on queue %s' % (threadId, member, queue))
-		self.AMI.execute(Action = command)
+		log.debug('MonAst.clientUnpauseQueueMember (%s) :: Unpausing member %s on queue %s on server %s' % (session, member, queue, Server))
+		self.AMI.execute(Action = command, Server = Server)
 		
 		
-	def clientSkypeLogin(self, threadId, object):
+	def clientSkypeLogin(self, session, object):
 		
-		log.info('MonAst.clientSkypeLogin (%s) :: Running...' % threadId)
+		log.info('MonAst.clientSkypeLogin (%s) :: Running...' % session)
+		Server    = object['Server']
 		skypeName = object['SkypeName']
 		
 		command = {}
 		command['Action']  = 'Command'
 		command['Command'] = 'skype login user %s' % skypeName
-		log.debug('MonAst.clientSkypeLogin (%s) :: Login skype user %s' % (threadId, skypeName))
-		self.AMI.execute(Action = command)
+		log.debug('MonAst.clientSkypeLogin (%s) :: Login skype user %s on server %s' % (session, skypeName, Server))
+		self.AMI.execute(Action = command, Server = Server)
 	
 	
-	def clientSkypeLogout(self, threadId, object):
+	def clientSkypeLogout(self, session, object):
 		
-		log.info('MonAst.clientSkypeLogout (%s) :: Running...' % threadId)
+		log.info('MonAst.clientSkypeLogout (%s) :: Running...' % session)
+		Server    = object['Server']
 		skypeName = object['SkypeName']
 		
 		command = {}
 		command['Action']  = 'Command'
 		command['Command'] = 'skype logout user %s' % skypeName
-		log.debug('MonAst.clientSkypeLogout (%s) :: Logout skype user %s' % (threadId, skypeName))
-		self.AMI.execute(Action = command)
+		log.debug('MonAst.clientSkypeLogout (%s) :: Logout skype user %s on server %s' % (session, skypeName, Server))
+		self.AMI.execute(Action = command, Server = Server)
 		
 	
-	def clientCliCommand(self, threadId, object):
+	def clientCliCommand(self, session, object):
 		
-		log.info('MonAst.clientCliCommand (%s) :: Running...' % threadId)
+		log.info('MonAst.clientCliCommand (%s) :: Running...' % session)
+		Server     = object['Server']
 		cliCommand = object['CliCommand']
 		
 		command = {}
 		command['Action']   = 'Command'
 		command['Command']  = cliCommand
 		command['ActionID'] = object['Session']
-		log.debug('MonAst.clientCliCommand (%s) :: Executing CLI command: %s' % (threadId, cliCommand))
-		self.AMI.execute(Action = command, Handler = self.handlerCliCommand)
+		log.debug('MonAst.clientCliCommand (%s) :: Executing CLI command: %s on server %s' % (session, cliCommand, Server))
+		self.AMI.execute(Action = command, Handler = self.handlerCliCommand, Server = Server)
 	
 	
-	def clientCheckAmiAuth(self, threadId, username, password):
+	def clientCheckAmiAuth(self, session, username, password):
 		
-		log.info('MonAst.clientCheckAmiAuth (%s) :: Running...' % threadId)
+		log.info('MonAst.clientCheckAmiAuth (%s) :: Running...' % session)
 		
 		auth = (False, [])
 		
@@ -2175,39 +2303,80 @@ class MonAst(protocol.ServerFactory):
 			
 		return auth
 
+
+	def onAuthenticationAccepted(self, message):
+		
+		log.info('MonAst.onAuthenticationAccepted :: Running for Server %s' % message['Server'])
+		self._GetConfig(message['Server'])
+		
 	
-	def _GetConfig(self, sendReload = True):
+	def _GetConfig(self, Server = None, sendReload = True):
 		
 		log.info('MonAst._GetConfig :: Requesting Asterisk Configuration (reload clients: %s)' % sendReload)
 		
-		users = self.monitoredUsers.keys()
-		for user in users:
-			if not self.monitoredUsers[user].has_key('forced'):
-				del self.monitoredUsers[user]
+		servers = self.servers.keys()
+		if Server:
+			servers = [Server]
 		
-		self.meetme   = {}
-		self.parked   = {}
-		self.queues   = {}
-		self.calls    = {}
-		self.channels = {}
+		for Server in servers:
+			users = self.monitoredUsers[Server].keys()
+			for user in users:
+				if not self.monitoredUsers[Server][user].has_key('forced'):
+					del self.monitoredUsers[Server][user]
 		
-		self.AMI.execute(Action = {'Action': 'SIPpeers'})
-		self.AMI.execute(Action = {'Action': 'IAXpeers'}, Handler = self.handlerParseIAXPeers)
-		self.AMI.execute(Action = {'Action': 'Command', 'Command': 'skype show users'}, Handler = self.handlerParseSkypeUsers)
-		self.AMI.execute(Action = {'Action': 'GetConfig', 'Filename': 'meetme.conf'}, Handler = self.handlerGetConfigMeetme)
-		self.AMI.execute(Action = {'Action': 'QueueStatus'})
+		for Server in servers:
+			self.meetme[Server]   = {}
+			self.parked[Server]   = {}
+			self.queues[Server]   = {}
+			self.calls[Server]    = {}
+			self.channels[Server] = {}
 		
-		self._taskCheckStatus.stop()
-		self._taskCheckStatus.start(60, False)
-		reactor.callLater(2, self.taskCheckStatus)
+			self.AMI.execute(Action = {'Action': 'SIPpeers'}, Server = Server)
+			self.AMI.execute(Action = {'Action': 'IAXpeers'}, Handler = self.handlerParseIAXPeers, Server = Server)
+			self.AMI.execute(Action = {'Action': 'Command', 'Command': 'skype show users'}, Handler = self.handlerParseSkypeUsers, Server = Server)
+			self.AMI.execute(Action = {'Action': 'GetConfig', 'Filename': 'meetme.conf'}, Handler = self.handlerGetConfigMeetme, Server = Server)
+			self.AMI.execute(Action = {'Action': 'QueueStatus'}, Server = Server)
+		
+		#self._taskCheckStatus.stop()
+		#self._taskCheckStatus.start(60, False)
+		reactor.callLater(2, self.taskCheckStatus, Server = Server)
 		
 		# Meetme and Parked Status will be parsed after handlerStatusComplete
-		self.getMeetmeAndParkStatus = True
+		self.getMeetmeAndParkStatus[Server] = True
 
 		if sendReload:
-			for session in self.clientQueues:
-				self.clientQueues[session]['q'].put(self.parseJson(Action = 'Reload', Time = 10000))
+			#for session in self.clientQueues:
+			#	self.clientQueues[session]['q'].put(self.parseJson(Action = 'Reload', Time = 10000))
+			self.enqueue(Action = 'Reload', Time = 10000)
+	
+	
+	def clearStatus(self):
 		
+		log.info('MonAst.clearStatus :: Cleaning all servers status')
+		
+		self.userDisplay       = {}
+		self.monitoredUsers    = {}
+		self.parked            = {}
+		self.meetme            = {}
+		self.calls             = {}
+		self.channels          = {}
+		self.queuesDisplay     = {}
+		self.queues            = {}
+		self.queueMemberCalls  = {}
+		self.queueMemberPaused = {}
+		
+		for server in self.servers:
+			self.userDisplay[server]       = {}
+			self.monitoredUsers[server]    = {}
+			self.parked[server]            = {}
+			self.meetme[server]            = {}
+			self.calls[server]             = {}
+			self.channels[server]          = {}
+			self.queuesDisplay[server]     = {}
+			self.queues[server]            = {}
+			self.queueMemberCalls[server]  = {}
+			self.queueMemberPaused[server] = {}
+	
 	
 	def start(self):
 		
@@ -2265,16 +2434,7 @@ class MonAst(protocol.ServerFactory):
 
 		self.AMI.close()
 		
-		self.userDisplay       = {}
-		self.monitoredUsers    = {}
-		self.parked            = {}
-		self.meetme            = {}
-		self.calls             = {}
-		self.channels          = {}
-		self.queuesDisplay     = {}
-		self.queues            = {}
-		self.queueMemberCalls  = {}
-		self.queueMemberPaused = {}
+		self.clearStatus()
 		
 		self.parseConfig()
 		

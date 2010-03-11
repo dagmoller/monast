@@ -76,6 +76,7 @@ $validActions = array
 session_start();
 $sessid   = session_id();
 $username = getValor('username', 'session');
+$server   = getValor('Server', 'session');
 session_write_close();
 
 $inicio     = time();
@@ -116,7 +117,7 @@ while ($message = socket_read($sock, 1024 * 16))
 	{
 		$buffer = "";
 		$isOk   = true;
-		socket_write($sock, "GET CHANGES\r\n");
+		socket_write($sock, "GET CHANGES: $server\r\n");
 	}
 	elseif ($buffer == "NO SESSION\r\n")
 	{
@@ -127,7 +128,7 @@ while ($message = socket_read($sock, 1024 * 16))
 	elseif ($buffer == "NO CHANGES\r\n")
 	{
 		$buffer = "";
-		socket_write($sock, "GET CHANGES\r\n");
+		socket_write($sock, "GET CHANGES: $server\r\n");
 		sleep(1);
 	}
 	elseif (strpos($buffer, "ERROR: Authentication Required") !== false)
@@ -161,10 +162,21 @@ while ($message = socket_read($sock, 1024 * 16))
 		    foreach ($actions as $action)
 		    {
 		    	$action = $json->decode($action);
-		    	$action['Session']  = $sessid;
-		    	$action['Username'] = $username;
-		    	$action = $json->encode($action);
-		        socket_write($sock, $action . "\r\n");
+		    	if ($action['Action'] == "ChangeServer")
+		    	{
+		    		setValor('Server', $action['Server']);
+		    		$lastEvents[] = array('Action' => 'Reload', 'Time' => 100);
+		    		$complete = true;
+		    		break;
+		    	}
+		    	else 
+		    	{
+			    	$action['Session']  = $sessid;
+			    	$action['Username'] = $username;
+			    	$action['Server']   = $server;
+			    	$action = $json->encode($action);
+			        socket_write($sock, $action . "\r\n");
+		    	}
 		    }
 		    setValor('Actions', array());
 		}
