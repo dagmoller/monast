@@ -175,7 +175,7 @@ class SimpleAmiAuthenticator(basic.LineOnlyReceiver):
 		self._sendLine('Username: %s' % self.username)
 		self._sendLine('Secret: %s' % self.password)
 		self._sendLine('')
-	
+		
 	def _sendLine(self, line):
 		self.sendLine(line.encode('UTF-8'))
 	
@@ -293,6 +293,7 @@ class MonAst(protocol.ServerFactory):
 	configFile      = None
 	
 	AMI             = None
+	amiAuthCheck    = {}
 	
 	bindHost        = None
 	bindPort        = None
@@ -572,6 +573,7 @@ class MonAst(protocol.ServerFactory):
 							break
 						
 					if ok:
+						print self.amiAuthCheck[session]
 						auth = (False, [])
 						for Server, Auth in responses:
 							if Auth[0]:
@@ -2339,7 +2341,7 @@ class MonAst(protocol.ServerFactory):
 		log.debug('MonAst.clientCliCommand (%s) :: Executing CLI command: %s on server %s' % (session, cliCommand, Server))
 		self.AMI.execute(Action = command, Handler = self.handlerCliCommand, Server = Server)
 	
-	amiAuthCheck = {}
+	
 	def clientCheckAmiAuth(self, session, username, password):
 		
 		log.info('MonAst.clientCheckAmiAuth (%s) :: Running...' % session)
@@ -2351,12 +2353,17 @@ class MonAst(protocol.ServerFactory):
 		def onFailure(auth):
 			Server, auth, roles = auth
 			self.amiAuthCheck[session][Server] = (auth, roles)
+			
+		def onError(*args, **kwargs):
+			Server = kwargs['Server']
+			self.amiAuthCheck[session][Server] = (False, [])
 		
 		self.amiAuthCheck[session] = {}
 		for Server in self.servers:
 			self.amiAuthCheck[session][Server] = False
 			c = protocol.ClientCreator(reactor, SimpleAmiAuthenticator, server = Server, username = username, password = password, onSuccess = onSuccess, onFailure = onFailure)
-			c.connectTCP(self.servers[Server]['hostname'], self.servers[Server]['hostport'], 2)
+			d = c.connectTCP(self.servers[Server]['hostname'], self.servers[Server]['hostport'], 5)
+			d.addErrback(onError, Server = Server)
 			
 
 	def onAuthenticationAccepted(self, message):
