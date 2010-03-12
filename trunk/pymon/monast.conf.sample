@@ -118,9 +118,20 @@ default = show
 ##                command   : user can execute asterisk cli commands
 
 [user: admin]
-secret = 12345
-roles  = originate,agent,command
+secret  = 12345
+roles   = originate,agent,command 
+servers = ALL
+
+[user: aguirre]
+secret  = 12345
+roles   = originate
+servers = Server_1, Server_2
+
+## per server roles for user aguirre
+Server_2 = originate,agent,command
 
 [user: demo]
-secret = 
-roles  = 
+secret  = 
+roles   = 
+servers = Server_1
+ 

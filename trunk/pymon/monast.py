@@ -425,12 +425,22 @@ class MonAst(protocol.ServerFactory):
 			try:
 				username = user.replace('user:', '').strip() 
 				self.clients[username] = {
-					'secret': cp.get(user, 'secret'), 
-					'roles' : [r.strip() for r in cp.get(user, 'roles').split(',')]
+					'secret'  : cp.get(user, 'secret'), 
+					'servers' : {}
 				}
+				defaultRoles = [r.strip() for r in cp.get(user, 'roles').split(',')]
+				userServers  = [s.strip() for s in cp.get(user, 'servers').split(',') if self.servers.has_key(s.strip())]
+				if cp.get(user, 'servers').upper() == 'ALL':
+					userServers = self.servers.keys()
+				for server in userServers:
+					try:
+						roles = [r.strip() for r in cp.get(user, server).split(',')]
+						self.clients[username]['servers'][server] = {'roles': roles}
+					except:
+						  self.clients[username]['servers'][server] = {'roles': defaultRoles}
 			except:
 				log.error("MonAst.__init__ :: Username %s has errors in config file!" % user)
-		
+		print self.clients
 		## Peers
 		try:
 			self.sortby = cp.get('peers', 'sortby')
@@ -553,7 +563,7 @@ class MonAst(protocol.ServerFactory):
 			if self.clients.has_key(username):
 				if self.clients[username]['secret'] == secret:
 					output.append('Authentication Success')
-					self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time(), 'roles': self.clients[username]['roles']}
+					self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time(), 'servers': self.clients[username]['servers']}
 					log.log(logging.NOTICE, 'MonAst.processClientMessage (%s:%s) :: New Authenticated (local) client session %s for %s' % (client.host, client.port, session, username))
 				else:
 					log.error('MonAst.processClientMessage (%s:%s) :: Invalid username or password for %s (local)' % (client.host, client.port, username))
@@ -573,20 +583,28 @@ class MonAst(protocol.ServerFactory):
 							break
 						
 					if ok:
-						auth = (False, [])
+						hasAuth = False
 						for Server, Auth in responses:
 							if Auth[0]:
-								auth = Auth
-								break
-					
-						if auth[0]:
+								hasAuth = True
+								if self.clientsAMI.has_key(username):
+									self.clientsAMI[username]['servers'][Server] = {'roles': Auth[1]}
+									if self.clientQueues.has_key(session):
+										self.clientQueues[session]['servers'][Server] = self.clientsAMI[username]['servers'][Server]
+									else:
+										self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time(), 'servers': {Server: self.clientsAMI[username]['servers'][Server]}}
+								else:
+									self.clientsAMI[username] = {'servers': {Server: {'roles': Auth[1]}}}
+									self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time(), 'servers': {Server: self.clientsAMI[username]['servers'][Server]}}
+									
+						if hasAuth:
 							output.append('Authentication Success')
-							self.clientsAMI[username] = {'roles': auth[1]}
-							self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time(), 'roles': auth[1]}
-							log.log(logging.NOTICE, 'MonAst.processClientMessage (%s:%s) :: New Authenticated (manager) client session %s for %s' % (client.host, client.port, session, username))
+							log.log(logging.NOTICE, 'MonAst.processClientMessage (%s:%s) :: New Authenticated (manager) client session %s for user %s on servers %s' \
+								% (client.host, client.port, session, username, ', '.join(self.clientQueues[session]['servers'].keys())))
 						else:
-							log.error('MonAst.processClientMessage (%s:%s) :: Invalid username or password for %s (manager)' % (client.host, client.port, username))
+							log.error('MonAst.processClientMessage (%s:%s) :: Can not authenticate username %s on any servers (manager)' % (client.host, client.port, username))
 							output.append('ERROR: Invalid user or secret')
+							
 						del self.amiAuthCheck[session]
 					else:
 						output.append('WAIT')
@@ -612,8 +630,8 @@ class MonAst(protocol.ServerFactory):
 					self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time()}
 					log.log(logging.NOTICE, 'MonAst.processClientMessage (%s:%s) :: New client session: %s' % (client.host, client.port, session))
 		
-		elif message.upper().startswith('GET STATUS'):
-			serverlist = self.servers.keys()
+		elif client.session and message.upper().startswith('GET STATUS'):
+			serverlist = self.clientQueues[client.session]['servers'].keys()
 			serverlist.sort()
 			servers = None
 			try:
@@ -630,8 +648,10 @@ class MonAst(protocol.ServerFactory):
 			output = ['SERVERS: %s' % ', '.join(serverlist)]
 			output += self.clientGetStatus(client.session, servers)
 		
-		elif message.upper().startswith('GET CHANGES'):
+		elif client.session and message.upper().startswith('GET CHANGES'):
 			servers = self.servers.keys()
+			if self.clientQueues.has_key(client.session):
+				servers = self.clientQueues[client.session]['servers'].keys()
 			servers.sort()
 			try:
 				dummy, Server = message.split(': ')
@@ -716,10 +736,11 @@ class MonAst(protocol.ServerFactory):
 	
 	def checkPermission(self, object, role):
 		
+		Server   = object['Server']
 		username = object['Username']
 		
 		if self.authRequired:
-			if (self.clients.has_key(username) and role in self.clients[username]['roles']) or (self.clientsAMI.has_key(username) and role in self.clientsAMI[username]['roles']):
+			if (self.clients.has_key(username) and role in self.clients[username]['servers'][Server]['roles']) or (self.clientsAMI.has_key(username) and role in self.clientsAMI[username]['servers'][Server]['roles']):
 				return True
 			else:
 				self.enqueue(__session = object['Session'], Action = 'doAlertError', Message = 'You do not have permission to execute this action.')
