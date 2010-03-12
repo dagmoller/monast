@@ -573,7 +573,6 @@ class MonAst(protocol.ServerFactory):
 							break
 						
 					if ok:
-						print self.amiAuthCheck[session]
 						auth = (False, [])
 						for Server, Auth in responses:
 							if Auth[0]:
