@@ -117,10 +117,10 @@ default = show
 ##                agent     : user cans add, remove, pause and unpause members on queues
 ##                command   : user can execute asterisk cli commands
 
-[admin]
+[user: admin]
 secret = 12345
 roles  = originate,agent,command
 
-[demo]
+[user: demo]
 secret = 
 roles  = 
