@@ -440,7 +440,7 @@ class MonAst(protocol.ServerFactory):
 						  self.clients[username]['servers'][server] = {'roles': defaultRoles}
 			except:
 				log.error("MonAst.__init__ :: Username %s has errors in config file!" % user)
-		print self.clients
+		
 		## Peers
 		try:
 			self.sortby = cp.get('peers', 'sortby')
