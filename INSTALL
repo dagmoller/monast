@@ -18,7 +18,11 @@
 3 - Copy pymon/monast.conf.sampe to /etc/monast.conf and edit it 
     properly as documented inside of this file.
 
-4 - Run monast.py:
+4 - Install dependencies:
+    Twisted Python (http://twistedmatrix.com)
+    zope.interface (http://pypi.python.org/pypi/zope.interface#download)
+
+5 - Run monast.py:
     # cd pymon
 
     - Verify if is everything OK.
@@ -27,8 +31,8 @@
     - If no ERRORS, stop monast.py pressing ctrl+c and run it as daemon.
     # ./monast.py --daemon
 
-5 - Edit lib/config.php as documented inside this file.
+6 - Edit lib/config.php as documented inside this file.
 
-6 - Point your browser to location that was configured in apache.
+7 - Point your browser to location that was configured in apache.
     http://server_addr/monast/index.php
 
