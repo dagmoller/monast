@@ -2019,6 +2019,7 @@ class MonAst(protocol.ServerFactory):
 			output += theEnd
 			output.append('END STATUS')
 		except:
+			output.append('END STATUS')
 			log.exception('MonAst.clientGetStatus (%s) :: Unhandled Exception' % session)
 		
 		return output
