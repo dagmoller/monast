@@ -1922,7 +1922,6 @@ class MonAst(protocol.ServerFactory):
 		
 		try:
 			self.clientQueues[session]['t'] = time.time()
-			output.append('BEGIN STATUS')
 			
 			users = self.__sortPeers()
 			
@@ -2017,10 +2016,11 @@ class MonAst(protocol.ServerFactory):
 					output.append(self.parseJson(Action = 'QueueParams', Server = Server, Queue = queue, Max = Max, Calls = Calls, Holdtime = Holdtime, Completed = Completed, Abandoned = Abandoned, ServiceLevel = ServiceLevel, ServicelevelPerf = ServicelevelPerf, Weight = Weight))
 			
 			output += theEnd
-			output.append('END STATUS')
 		except:
-			output.append('END STATUS')
 			log.exception('MonAst.clientGetStatus (%s) :: Unhandled Exception' % session)
+		
+		output.insert(0, 'BEGIN STATUS')
+		output.append('END STATUS')
 		
 		return output
 	
