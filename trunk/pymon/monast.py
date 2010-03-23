@@ -416,8 +416,13 @@ class MonAst(protocol.ServerFactory):
 		self.bindHost       = cp.get('global', 'bind_host')
 		self.bindPort       = int(cp.get('global', 'bind_port'))
 		
+		self.noAuthPerms = {}
+		
 		if cp.get('global', 'auth_required') == 'true':
 			self.authRequired = True
+		else:
+			for server in self.servers.keys():
+				self.noAuthPerms[server] = {'roles': ['originate', 'agent', 'command']}
 		
 		## Authentication Users
 		users = [s for s in cp.sections() if s.startswith('user:')]
@@ -428,16 +433,21 @@ class MonAst(protocol.ServerFactory):
 					'secret'  : cp.get(user, 'secret'), 
 					'servers' : {}
 				}
-				defaultRoles = [r.strip() for r in cp.get(user, 'roles').split(',')]
-				userServers  = [s.strip() for s in cp.get(user, 'servers').split(',') if self.servers.has_key(s.strip())]
-				if cp.get(user, 'servers').upper() == 'ALL':
+				if self.authRequired:
+					defaultRoles = [r.strip() for r in cp.get(user, 'roles').split(',')]
+					userServers  = [s.strip() for s in cp.get(user, 'servers').split(',') if self.servers.has_key(s.strip())]
+					if cp.get(user, 'servers').upper() == 'ALL':
+						userServers = self.servers.keys()
+					for server in userServers:
+						try:
+							roles = [r.strip() for r in cp.get(user, server).split(',')]
+							self.clients[username]['servers'][server] = {'roles': roles}
+						except:
+							  self.clients[username]['servers'][server] = {'roles': defaultRoles}
+				else:
 					userServers = self.servers.keys()
-				for server in userServers:
-					try:
-						roles = [r.strip() for r in cp.get(user, server).split(',')]
-						self.clients[username]['servers'][server] = {'roles': roles}
-					except:
-						  self.clients[username]['servers'][server] = {'roles': defaultRoles}
+					for server in userServers:
+						self.clients[username]['servers'] = self.noAuthPerms
 			except:
 				log.error("MonAst.__init__ :: Username %s has errors in config file!" % user)
 		
@@ -627,7 +637,7 @@ class MonAst(protocol.ServerFactory):
 					output.append('ERROR: Authentication Required')
 				else:
 					output.append('NEW SESSION')
-					self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time()}
+					self.clientQueues[session] = {'q': Queue.Queue(), 't': time.time(), 'servers': self.noAuthPerms}
 					log.log(logging.NOTICE, 'MonAst.processClientMessage (%s:%s) :: New client session: %s' % (client.host, client.port, session))
 		
 		elif client.session and message.upper().startswith('GET STATUS'):
