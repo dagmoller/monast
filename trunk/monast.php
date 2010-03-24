@@ -34,6 +34,7 @@ session_start();
 setValor('started', time());
 setValor('Actions', array());
 $sessionId = session_id();
+$servers   = array();
 $server    = getValor('Server', 'session');
 session_write_close();
 
@@ -104,7 +105,7 @@ else
 				$servers = explode(", ", $regs[1]);
 				session_start();
 				setValor('Servers', $servers);
-				if (!getValor('Server', 'session'))
+				if (!$server || array_search($server, $servers) === false)
 					setValor('Server', $servers[0]);
 				session_write_close();
 			}
