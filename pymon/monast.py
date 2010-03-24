@@ -271,7 +271,10 @@ class MonAstProtocol(basic.LineOnlyReceiver):
 		log.debug("MonAstProtocol.lineReceived (%s:%s) :: Received: %s" % (self.host, self.port, line))
 		if line.upper().startswith('SESSION: '):
 			self.session = line[9:]
-		self.factory.processClientMessage(self, line)
+		try:
+			self.factory.processClientMessage(self, line)
+		except:
+			log.exception("Unhandled Exception executing MonAst.processClientMessage with message %s" % line)
 		
 	def sendMessage(self, line):
 		log.debug("MonAstProtocol.sendMessage (%s:%s) :: Sending %s" % (self.host, self.port, line))
