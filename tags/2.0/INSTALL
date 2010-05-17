@@ -1,0 +1,38 @@
+
+1 - Configure the asterisk manager to create an user to use with monast.
+    - Sample manager.conf user:
+      [monast_user]
+      secret=monast_secret
+      writetimeout=100
+      read=system,call,log,verbose,command,agent,user,config
+      write=system,call,log,verbose,command,agent,user,config
+
+2 - Configure apache to point to location where you extracted monast.
+    - Sample:
+      Alias /monast /path/to/monast
+      <Directory /path/to/monast>
+          Order allow,deny
+          Allow from all
+      </Directory>
+
+3 - Copy pymon/monast.conf.sampe to /etc/monast.conf and edit it 
+    properly as documented inside of this file.
+
+4 - Install dependencies:
+    Twisted Python (http://twistedmatrix.com)
+    zope.interface (http://pypi.python.org/pypi/zope.interface#download)
+
+5 - Run monast.py:
+    # cd pymon
+
+    - Verify if is everything OK.
+    # ./monast.py
+
+    - If no ERRORS, stop monast.py pressing ctrl+c and run it as daemon.
+    # ./monast.py --daemon
+
+6 - Edit lib/config.php as documented inside this file.
+
+7 - Point your browser to location that was configured in apache.
+    http://server_addr/monast/index.php
+
