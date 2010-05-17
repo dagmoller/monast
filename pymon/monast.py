@@ -2419,6 +2419,8 @@ class MonAst(protocol.ServerFactory):
 			for user in users:
 				if not self.monitoredUsers[Server][user].has_key('forced'):
 					del self.monitoredUsers[Server][user]
+				else:
+					self.monitoredUsers[Server][user]['Calls'] = 0
 		
 		for Server in servers:
 			self.meetme[Server]   = {}
