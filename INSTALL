@@ -4,8 +4,8 @@
       [monast_user]
       secret=monast_secret
       writetimeout=100
-      read=system,call,log,verbose,command,agent,user,config
-      write=system,call,log,verbose,command,agent,user,config
+      read=system,call,log,verbose,command,agent,user,config,originate
+      write=system,call,log,verbose,command,agent,user,config,originate
 
 2 - Configure apache to point to location where you extracted monast.
     - Sample:
