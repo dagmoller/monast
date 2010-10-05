@@ -1402,12 +1402,12 @@ class MonAst(protocol.ServerFactory):
 				self.enqueue(Action = 'Unlink', Server = Server, Channel1 = None, Channel2 = None, Uniqueid1 = call[0], Uniqueid2 = call[1], CallerID1 = None, CallerID2 = None)
 			except:
 				#pass ## added to debug purposes
-				log.exception('MonAst.handlerStatusComplete :: Exception removing lost call %s-%s on server' % (call[0], call[1], Server))
+				log.exception('MonAst.handlerStatusComplete :: Exception removing lost call %s-%s on server %s' % (call[0], call[1], Server))
 			
 		## Search for lost queue member calls
 		lostQueueMemberCalls = [Uniqueid for Uniqueid in self.queueMemberCalls[Server] if not self.channels[Server].has_key(Uniqueid)]
 		for Uniqueid in lostQueueMemberCalls:
-			log.warning('MonAst.handlerStatusComplete :: Removing lost Queue Member Call %s on server' % (Uniqueid, Server))
+			log.warning('MonAst.handlerStatusComplete :: Removing lost Queue Member Call %s on server %s' % (Uniqueid, Server))
 			try:
 				Queue  = self.queueMemberCalls[Server][Uniqueid]['Queue']
 				Member = self.queueMemberCalls[Server][Uniqueid]['Member']
