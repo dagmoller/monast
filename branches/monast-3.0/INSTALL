@@ -21,6 +21,8 @@
 4 - Install dependencies:
     Twisted Python (http://twistedmatrix.com)
     zope.interface (http://pypi.python.org/pypi/zope.interface#download)
+    Starpy (http://sourceforge.net/projects/starpy/)
+    PHP PEAR Packages: (HTTP_Client)
 
 5 - Run monast.py:
     # cd pymon
