@@ -38,56 +38,93 @@ require_once 'lib/include.php';
 
 $json = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
 
-$validActions = array
-(
-	'Reload', 
-	'PeerStatus',
-	'NewChannel', 
-	'NewState',
-	'Hangup', 
-	'Dial', 
-	'Link',
-	'Unlink',
-	'NewCallerid', 
-	'Rename', 
-	'MeetmeCreate',
-	'MeetmeDestroy',
-	'MeetmeJoin',
-	'MeetmeLeave',
-	'ParkedCall',
-	'UnparkedCall',
-	'CliResponse',
-	'AddQueueMember',
-	'RemoveQueueMember',
-	'QueueMemberStatus',
-	'AddQueueClient',
-	'RemoveQueueClient',
-	'AddQueueMemberCall',
-	'RemoveQueueMemberCall',
-	'QueueParams',
-	'MonitorStart',
-	'MonitorStop',
-	'UpdateCallDuration',
-	'doAlertInfo',
-	'doAlertWarn',
-	'doAlertError',
-);
-	
 session_start();
-$sessid   = session_id();
 $username = getValor('username', 'session');
 $server   = getValor('Server', 'session');
 session_write_close();
 
-$inicio     = time();
-$buffer     = "";
-$events     = array();
+$start      = time();
+$current    = time();
+$complete   = false;
+$error      = "";
+$updates    = array();
 $lastEvents = array();
 
-$isOk     = false;
-$isStatus = false;
-$complete = false;
+while (!$complete)
+{
+	$response = doGet("getUpdates", array("servername" => $server));
+	switch ($response)
+	{
+		case "ERROR :: Connection Refused":
+		case "ERROR :: Internal Server Error":
+		case "ERROR :: Request Not Found":
+			$error  = "<font size='3'><b>Monast Error</b></font>\n<p>Could not connect to " . HOSTNAME . ":" . HOSTPORT . " ($response).<br>\n";
+			$error .= "Make sure monast.py is running so the panel can connect to its port properly.</p>";
+			
+			break;
+		
+		case "ERROR: Authentication Required":
+			session_start();
+			setValor('login', false);
+			setValor('username', '');
+			session_write_close();
+			break;
+		
+		case "NO UPDATES":
+			session_start();
+			$actions = getValor('Actions', 'session');
+			if (count($actions) > 0)
+			{
+			    foreach ($actions as $action)
+			    {
+			    	$action = $json->decode($action);
+			    	if ($action['Action'] == "ChangeServer")
+			    	{
+			    		setValor('Server', $action['Server']);
+			    		$lastEvents[] = array('action' => 'Reload', 'time' => 100);
+			    		$complete = true;
+			    		break;
+			    	}
+			    	/*else 
+			    	{
+				    	$action['Session']  = $sessid;
+				    	$action['Username'] = $username;
+				    	$action['Server']   = $server;
+				    	$action = $json->encode($action);
+				        socket_write($sock, $action . "\r\n");
+			    	}*/
+			    }
+			    setValor('Actions', array());
+			}
+			session_write_close();
+			
+			sleep(1);
+			$current = time();
+			if ($current - $start > MONAST_SOCKET_DURATION)
+				$complete = true;
+			break;
+			
+		default:
+			$updates  = $json->decode($response);
+			$complete = true;
+			break;
+	}
+	
+	if ($error)
+	{
+		echo $json->encode(array(array('action' => 'Error', 'message' => $error)));
+		die;
+	}
+	
+	if ($complete)
+		break;
+}
 
+$events = array_merge($updates, $lastEvents);
+
+echo $json->encode($events);
+
+/*
 $sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 if ($sock === false)
 {
@@ -223,5 +260,5 @@ foreach ($messages as $idx => $message)
 $events = array_merge($events, $lastEvents);
 
 echo $json->encode($events);
-
+*/
 ?>

@@ -37,10 +37,8 @@ header("Expires: -1");
 session_start();
 $login    = getValor('login', 'session');
 $username = getValor('username', 'session');
-$error = "";
-setValor('started', time());
+$error    = "";
 setValor('Actions', array());
-$sessionId = session_id();
 setValor('Servers', array());
 session_write_close();
 
@@ -49,46 +47,29 @@ $template = new TemplatePower('template/index.html');
 
 if (!$login)
 {
-	$sock = @socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-	if ($sock === false)
-		$error = "Could not create socket!<br>" . socket_strerror(socket_last_error());
-	else 
+	$response = doGet("isAuthenticated");
+	switch ($response)
 	{
-		$conn = @socket_connect($sock, HOSTNAME, HOSTPORT);
-		if ($conn === false)
-		{
-			$error  = "Could not connect to " . HOSTNAME . ":" . HOSTPORT . " (" . socket_strerror(socket_last_error()) . ").<br>";
+		case "ERROR :: Connection Refused":
+		case "ERROR :: Internal Server Error":
+		case "ERROR :: Request Not Found":
+			$error  = "Could not connect to " . HOSTNAME . ":" . HOSTPORT . " ($response).<br>";
 			$error .= "Make sure monast.py is running so the panel can connect to its port properly.";
-		}
-	}
-	
-	if (!$error)
-	{
-		$buffer = "";
-		socket_write($sock, "SESSION: $sessionId\r\n");
-		while ($message = socket_read($sock, 1024 * 16)) 
-		{
-			$buffer .= $message;
+			break;
+		
+		case "ERROR: Authentication Required":
+			session_start();
+			setValor('login', false);
+			setValor('username', '');
+			session_write_close();
+			break;
 			
-			if ($buffer == "NEW SESSION\r\n" || $buffer == "OK\r\n")
-			{
-				$login = true;
-				session_start();
-				setValor('login', true);
-				session_write_close();
-				socket_write($sock, "BYE\r\n");
-			}
-			
-			if ($buffer == "ERROR: Authentication Required\r\n")
-			{
-				session_start();
-				setValor('login', false);
-				setValor('username', '');
-				session_write_close();
-				socket_write($sock, "BYE\r\n");
-			}
-		}
-		socket_close($sock);
+		case "OK":
+			$login = true;
+			session_start();
+			setValor('login', true);
+			session_write_close();
+			break;
 	}
 }
 

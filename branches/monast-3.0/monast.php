@@ -31,109 +31,61 @@
 require_once 'lib/include.php';
 
 session_start();
-setValor('started', time());
 setValor('Actions', array());
-$sessionId = session_id();
 $servers   = array();
 $server    = getValor('Server', 'session');
 session_write_close();
 
-$validActions = array
-(
-	'PeerStatus'         => array(), 
-	'NewChannel'         => array(), 
-	'Call'               => array(), 
-	'MeetmeCreate'       => array(), 
-	'MeetmeJoin'         => array(), 
-	'ParkedCall'         => array(), 
-	'Queue'              => array(), 
-	'AddQueueMember'     => array(), 
-	'AddQueueClient'     => array(), 
-	'AddQueueMemberCall' => array(), 
-	'QueueParams'        => array()
-);
-
 $json     = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
 $template = new TemplatePower('template/monast.html');
-$isStatus = false;
-$buffer   = "";
 
-$sock = @socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-if ($sock === false)
+$response = doGet("listServers");
+switch ($response)
 {
-	session_start();
-	setValor('login', false);
-	session_write_close();
-	header("Location: index.php");
-}
-else 
-{
-	$conn = @socket_connect($sock, HOSTNAME, HOSTPORT);
-	if ($conn === false)
-	{
+	case "ERROR :: Connection Refused":
+	case "ERROR :: Internal Server Error":
+	case "ERROR :: Authentication Required":
+	case "ERROR :: Request Not Found":
 		session_start();
 		setValor('login', false);
 		session_write_close();
 		header("Location: index.php");
-	}
-	else 
-	{
-		socket_write($sock, "SESSION: $sessionId\r\n");
-		while ($message = socket_read($sock, 1024 * 16)) 
-		{
-			$buffer .= $message;
-			
-			if ($buffer == "NEW SESSION\r\n" || $buffer == "OK\r\n")
-			{
-				$buffer = "";
-				socket_write($sock, "GET STATUS: $server\r\n");
-			}
-			
-			if ($buffer == "ERROR: Authentication Required\r\n")
-			{
-				session_start();
-				setValor('login', false);
-				session_write_close();
-				socket_write($sock, "BYE\r\n");
-				header("Location: index.php");
-			}
-			
-			if (strpos($buffer, "SERVERS: ") !== false && count($servers) == 0)
-			{
-				$regs = array();
-				ereg("SERVERS: ([^\r\n]*)\r\n", $buffer, $regs);
-				$servers = explode(", ", $regs[1]);
-				session_start();
-				setValor('Servers', $servers);
-				if (!$server || array_search($server, $servers) === false)
-					setValor('Server', $servers[0]);
-				session_write_close();
-			}
-			
-			if (strpos($buffer, "BEGIN STATUS\r\n") !== false)
-				$isStatus = true;
-				
-			if (strpos($buffer, "END STATUS\r\n") !== false)
-			{
-				$buffer   = trim(str_replace("BEGIN STATUS\r\n", "", str_replace("END STATUS\r\n", "", $buffer)));
-				$isStatus = false;
-				socket_write($sock, "BYE\r\n");
-			}
-		}
-		socket_close($sock);
-	}
+		break;
+		
+	default:
+		$servers = $json->decode($response);
+		session_start();
+		setValor('Servers', $servers);
+		if (!$server || array_search($server, $servers) === false)
+			setValor('Server', $servers[0]);
+		session_write_close();
+		break;
 }
 
-$messages = explode("\r\n", $buffer);
-foreach ($messages as $idx => $message)
+$status   = null;
+$response = doGet("getStatus");
+switch ($response)
 {
-	$object = $json->decode($message);
-	if (array_key_exists($object['Action'], $validActions))
-		$validActions[$object['Action']][] = $object;
+	case "ERROR :: Connection Refused":
+	case "ERROR :: Internal Server Error":
+	case "ERROR :: Authentication Required":
+	case "ERROR :: Request Not Found":
+		session_start();
+		setValor('login', false);
+		session_write_close();
+		header("Location: index.php");
+		break;
+		
+	default:
+		$status = $json->decode($response);
+		break;
 }
+
+//print_pre($status);
+//die;
 
 $template->prepare();
-
+$template->assign("templates", file_get_contents("template/templates.html"));
 $template->assign('MONAST_CALL_TIME', MONAST_CALL_TIME ? 'true' : 'false');
 
 if (MONAST_CLI_TAB)
@@ -148,43 +100,33 @@ if (MONAST_DEBUG_TAB || getValor('debug'))
 	$template->newBlock('debug_tab_div');
 }
 
-// Counter
-$peerCounter = array();
-foreach ($validActions['PeerStatus'] as $idx => $peer)
+// Users/Peers
+$techs = array_keys($status[$server]['peers']);
+sort($techs);
+foreach ($techs as $tech)
 {
-	list($tech, $tmp) = explode('/', $peer['Peer']);
-	
-	if (array_key_exists($tech, $peerCounter))
-		$peerCounter[$tech] += 1;
-	else 
-		$peerCounter[$tech] = 1;
-}
-
-// Peers
-$lastTech = null;
-foreach ($validActions['PeerStatus'] as $idx => $peer)
-{
-	list($tech, $tmp) = explode('/', $peer['Peer']);
-	
-	if ($tech != $lastTech)
+	$peers = $status[$server]['peers'][$tech];
+	if (count($peers) > 0)
 	{
-		$lastTech = $tech;
 		$template->newBlock('technology');
 		$template->assign('technology', $tech);
-		$template->assign('count', $peerCounter[$tech]);
+		$template->assign('count', count($peers));
+		
+		foreach ($peers as $peer)
+		{
+			$template->newBlock('peer');
+			$template->assign('peer', $peer['channel']);
+			$template->assign('CallerID', htmlentities($peer['callerid']));
+			$template->assign('status', $peer['status']);
+			$template->assign('status-color', color($peer['status']));
+			$template->assign('calls', $peer['calls'] . " call(s)");
+			$template->assign('calls-color', ($peer['calls'] > 0 ? '#ffffb0' : '#b0ffb0'));
+		}
 	}
-    
-    $template->newBlock('peer');
-    $template->assign('peer', $peer['Peer']);
-    $template->assign('CallerID', str_replace('<', '&lt;', str_replace('>', '&gt;', $peer['CallerID'])));
-    $template->assign('status', $peer['Status']);
-    $template->assign('status-color', color($peer['Status']));
-    $template->assign('calls', $peer['Calls'] . " call(s)");
-    $template->assign('calls-color', ($peer['Calls'] > 0 ? '#ffffb0' : '#b0ffb0'));
 }
-unset($validActions['PeerStatus']);
 
 // Queues
+/*
 foreach ($validActions['Queue'] as $idx => $queue)
 {
 	if ($idx % 2 == 0)
@@ -194,15 +136,23 @@ foreach ($validActions['Queue'] as $idx => $queue)
 	$template->assign('queue', $queue['Queue']);
 }
 unset($validActions['Queue']);
+*/
 
-// All Other Actions
-foreach ($validActions as $item => $actions)
+// Channels and Bridges
+foreach ($status[$server]['channels'] as $channel)
 {
-	foreach ($actions as $action)
-	{
-		$template->newBlock('process');
-		$template->assign('json', $json->encode($action));
-	}
+	$channel['channel'] = htmlentities($channel['channel']);
+	
+	$template->newBlock('process');
+	$template->assign('json', $json->encode($channel));
+}
+foreach ($status[$server]['bridges'] as $bridge)
+{
+	$bridge['channel']        = htmlentities($bridge['channel']);
+	$bridge['bridgedchannel'] = htmlentities($bridge['bridgedchannel']);
+	
+	$template->newBlock('process');
+	$template->assign('json', $json->encode($bridge));
 }
 
 $template->printToScreen();

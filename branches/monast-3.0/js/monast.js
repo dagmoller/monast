@@ -36,7 +36,7 @@ String.prototype.trim = function() { return this.replace(/^\s*/, "").replace(/\s
 
 function color(t)
 {
-	t = t.toLowerCase();
+	t = t.toLowerCase().trim();
 	switch (t)
 	{
 		case 'down':
@@ -67,9 +67,22 @@ function color(t)
         case 'unmonitored':
         case 'not in use':
         case 'logged in':
+        case 'no alarm':
             //return 'green';
             return '#b0ffb0';
     }
+    
+    if (t.indexOf('signal') != -1)
+    {
+    	var level = t.replace('%', '').replace('signal: ', '');
+    	if (level >= 70)
+    		return '#b0ffb0';
+    	if (level >= 40 && level < 70)
+    		return '#ffffb0';
+    	if (level < 40)
+    		return '#ffb0b0';
+    }
+    
     return '#dddddd';
 }
 
@@ -139,7 +152,11 @@ function getStatus()
 			var events = transport.responseJSON;
 			for (i = 0; i < events.length; i++)
 			{
-				Process(events[i]);
+				try {
+					Process(events[i]);
+				} catch (e) {
+					console.log(e, events[i]);
+				}
 			}
 		},
 		onFailure: function()
@@ -154,6 +171,156 @@ function Process(o)
 {
 	if ($('debugMsg'))
 		$('debugMsg').innerHTML += Object.toJSON(o) + "<br>\r\n";
+	
+	//
+	// Monast NOVO
+	//
+	if (!Object.isUndefined(o['objecttype']))
+	{
+		switch (o['objecttype'])
+		{
+			// Users/Peers
+			case "User/Peer":
+				var td                   = $('peerStatus-' + o['channel']);
+				td.style.backgroundColor = color(o['status']);
+				td.innerHTML             = o['status'];
+				
+				td                       = $('peerCalls-' + o['channel']);
+				td.style.backgroundColor = (o['calls'] > 0 ? '#ffffb0' : '#b0ffb0');
+				td.innerHTML             = o['calls'] + ' call(s)';
+				
+				break;
+			
+			// Channels
+			case "Channel":
+				var div = $(o['uniqueid']);
+				if (!div)
+				{
+					div             = document.createElement('div');
+					div.id          = o['uniqueid'];
+					div.className   = 'channelDiv';
+					
+					$('channelsDiv').appendChild(div);
+				
+					ddDivs[o['uniqueid']]               = new YAHOO.util.DD(o['uniqueid']);
+					ddDivs[o['uniqueid']].onMouseDown   = setStartPosition;
+					ddDivs[o['uniqueid']].onDragDrop    = channelCallDrop;
+					ddDivs[o['uniqueid']].onInvalidDrop = invalidDrop;
+					ddDivs[o['uniqueid']].onDragOver    = dragOver;
+					ddDivs[o['uniqueid']].onDragOut     = dragOut;
+					
+					_countChannels += 1;
+					$('countChannels').innerHTML = _countChannels;
+				}
+				
+				var template_channel = new Template($('Template::Channel').innerHTML);
+				var monitor          = "";
+				
+				if (o['monitor'] == 'True')
+				{
+					monitor = new Template($('Template::Channel::Monitor').innerHTML);
+					monitor = monitor.evaluate(o);
+				}
+				o['monitor'] = monitor;
+				o['color']   = color(o['state']);
+				o['channel'] = o['channel'].replace('<', '&lt;').replace('>', '&gt;');
+				
+				div.innerHTML = template_channel.evaluate(o);
+				
+				break;
+			
+			// Bridges
+			case "Bridge":
+				if (o['status'] == "Unlink")
+				{
+					o['action'] = "RemoveBridge";
+					break;
+				}
+			
+				var id  = "bridge-" + o['uniqueid'] + '+++' + o['bridgeduniqueid'];
+				var div = $(id);
+				if (!div)
+				{
+					div           = document.createElement('div');
+					div.id        = id;
+					div.className = 'callDiv';
+					
+					$('callsDiv').appendChild(div);
+					
+					ddDivs[div.id]               = new YAHOO.util.DD(div.id);
+					ddDivs[div.id].onMouseDown   = setStartPosition;
+					ddDivs[div.id].onDragDrop    = channelCallDrop;
+					ddDivs[div.id].onInvalidDrop = invalidDrop;
+					ddDivs[div.id].onDragOver    = dragOver;
+					ddDivs[div.id].onDragOut     = dragOut;
+					
+					_countCalls += 1;
+					$('countCalls').innerHTML = _countCalls;
+				}
+				
+				o['color']           = color(o['status']);
+				o['callerid']        = $('callerid-' + o['uniqueid']) ? $('callerid-' + o['uniqueid']).innerHTML : "";
+				o['bridgedcallerid'] = $('callerid-' + o['bridgeduniqueid']) ? $('callerid-' + o['bridgeduniqueid']).innerHTML : "";
+				o['channel']         = o['channel'].replace('<', '&lt;').replace('>', '&gt;');
+				o['bridgedchannel']  = o['bridgedchannel'].replace('<', '&lt;').replace('>', '&gt;');
+				
+				var template  = new Template($("Template::Bridge").innerHTML);
+				div.innerHTML = template.evaluate(o);
+				
+				if (o['status'] == 'Link')
+				{
+					var _t = new Date().getTime() / 1000;
+					stopChrono('callStatus-' + o['uniqueid'] + '+++' + o['bridgeduniqueid']);
+					chrono('callStatus-' + o['uniqueid'] + '+++' + o['bridgeduniqueid'], _t - o['starttime']);
+				}
+					
+				break;
+		}
+	}
+	
+	if (!Object.isUndefined(o['action']))
+	{
+		switch (o['action'])
+		{
+			case "Error":
+				_statusError = true;
+				doError(o['message']);
+				return;
+				break;
+				
+			case "Reload":
+				_statusReload = true;
+				setTimeout("location.href = 'index.php'", o['time']);
+				return;
+				break;
+		
+			case "RemoveChannel":
+				var div = $(o['uniqueid']);
+				if (div)
+				{
+					$('channelsDiv').removeChild(div);
+					_countChannels -= 1;
+					$('countChannels').innerHTML = _countChannels;
+				}
+				break;
+				
+			case "RemoveBridge":
+				var div = $("bridge-" + o['uniqueid'] + '+++' + o['bridgeduniqueid']);
+				if (div)
+				{
+					stopChrono('callStatus-' + o['uniqueid'] + '+++' + o['bridgeduniqueid']);
+					$('callsDiv').removeChild(div);
+					_countCalls -= 1;
+					$('countCalls').innerHTML = _countCalls;
+				}
+				break;
+		}
+	}
+	
+	return;
+	//
+	//
+	//
 	
 	if (o['Action'] == 'Error')
 	{
