@@ -370,6 +370,7 @@ class Monast():
 			peer.context     = kw.get('context', server.default_context)
 			peer.variables   = kw.get('variables', [])
 			peer.status      = kw.get('status', '--')
+			peer.time        = kw.get('time', -1)
 			peer.calls       = int(kw.get('calls', 0))
 			peer.forced      = kw.get('forced', False)
 			
@@ -896,6 +897,12 @@ class Monast():
 		status      = event.get('status')
 		channeltype = event.get('channeltype')
 		objectname  = event.get('objectname').split('/')[0]
+		time        = -1
+		
+		reTime = re.compile("([0-9]+)\s+ms")
+		gTime  = reTime.search(status)
+		if gTime:
+			time = int(gTime.group(1))
 		
 		if status.startswith('OK'):
 			status = 'Registered'
@@ -909,7 +916,8 @@ class Monast():
 				ami.servername,
 				channeltype = channeltype,
 				peername    = objectname,
-				status      = status
+				status      = status,
+				time        = time
 			)
 		else:
 			user = None
@@ -962,12 +970,15 @@ class Monast():
 				
 	def handlerEventPeerStatus(self, ami, event):
 		#log.debug("Server %s :: Processing Event PeerStatus..." % ami.servername)
-		
 		channel = event.get('peer')
 		status  = event.get('peerstatus')
+		time    = event.get('time')
 		channeltype, peername = channel.split('/', 1)
-		
-		self._updatePeer(ami.servername, channeltype = channeltype, peername = peername, status = status)
+		print event
+		if time:
+			self._updatePeer(ami.servername, channeltype = channeltype, peername = peername, status = status, time = time)
+		else:
+			self._updatePeer(ami.servername, channeltype = channeltype, peername = peername, status = status)
 		
 	def handlerEventNewchannel(self, ami, event):
 		#log.debug("Server %s :: Processing Event Newchannel..." % ami.servername)
