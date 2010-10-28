@@ -121,6 +121,7 @@ foreach ($techs as $tech)
 			$template->assign('status-color', color($peer['status']));
 			$template->assign('calls', $peer['calls'] . " call(s)");
 			$template->assign('calls-color', ($peer['calls'] > 0 ? '#ffffb0' : '#b0ffb0'));
+			$template->assign('time', "Latency: " . $peer['time'] . " ms");
 		}
 	}
 }

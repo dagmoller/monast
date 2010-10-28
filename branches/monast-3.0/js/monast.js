@@ -30,6 +30,7 @@
 var ddDivs        = new Array();
 var callerIDs     = new Array();
 var pausedMembers = new Array();
+var toolTips      = {};
 
 String.prototype.trim = function() { return this.replace(/^\s*/, "").replace(/\s*$/, ""); }
 //function $(id) { return document.getElementById(id); }
@@ -184,6 +185,7 @@ function Process(o)
 				var td                   = $('peerStatus-' + o['channel']);
 				td.style.backgroundColor = color(o['status']);
 				td.innerHTML             = o['status'];
+				td.title                 = "Latency: " + o['time'] + " ms";
 				
 				td                       = $('peerCalls-' + o['channel']);
 				td.style.backgroundColor = (o['calls'] > 0 ? '#ffffb0' : '#b0ffb0');
