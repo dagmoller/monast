@@ -114,6 +114,7 @@ foreach ($techs as $tech)
 		
 		foreach ($peers as $peer)
 		{
+			/*
 			$template->newBlock('peer');
 			$template->assign('peer', $peer['channel']);
 			$template->assign('CallerID', htmlentities($peer['callerid']));
@@ -122,6 +123,9 @@ foreach ($techs as $tech)
 			$template->assign('calls', $peer['calls'] . " call(s)");
 			$template->assign('calls-color', ($peer['calls'] > 0 ? '#ffffb0' : '#b0ffb0'));
 			$template->assign('time', "Latency: " . $peer['time'] . " ms");
+			*/
+			$template->newBlock('process');
+			$template->assign('json', $json->encode($peer));
 		}
 	}
 }

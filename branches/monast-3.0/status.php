@@ -73,6 +73,7 @@ while (!$complete)
 		case "NO UPDATES":
 			session_start();
 			$actions = getValor('Actions', 'session');
+			session_write_close();
 			if (count($actions) > 0)
 			{
 			    foreach ($actions as $action)
@@ -80,23 +81,25 @@ while (!$complete)
 			    	$action = $json->decode($action);
 			    	if ($action['Action'] == "ChangeServer")
 			    	{
+			    		session_start();
 			    		setValor('Server', $action['Server']);
+			    		session_write_close();
 			    		$lastEvents[] = array('action' => 'Reload', 'time' => 100);
 			    		$complete = true;
 			    		break;
 			    	}
-			    	/*else 
+			    	else
 			    	{
-				    	$action['Session']  = $sessid;
-				    	$action['Username'] = $username;
-				    	$action['Server']   = $server;
-				    	$action = $json->encode($action);
-				        socket_write($sock, $action . "\r\n");
-			    	}*/
+			    		$action['Server'] = $server;
+			    		$tmp      = doGet('doAction', $action);
+			    		$complete = true;
+			    		break;
+			    	}
 			    }
+			    session_start();
 			    setValor('Actions', array());
+			    session_write_close();
 			}
-			session_write_close();
 			
 			sleep(1);
 			$current = time();

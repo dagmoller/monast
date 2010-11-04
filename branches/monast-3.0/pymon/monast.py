@@ -29,9 +29,9 @@ except ImportError:
 ##
 ## Defines
 ##
-HTTP_SESSION_TIMEOUT       = 60
-AMI_RECONNECT_INTERVAL     = 10
-TASK_CHECK_STATUS_INTERVAL = 60
+HTTP_SESSION_TIMEOUT        = 60
+AMI_RECONNECT_INTERVAL      = 10
+TASK_CHECK_STATUS_INTERVAL  = 60
 
 MONAST_CALLERID = "MonAst WEB"
 
@@ -158,7 +158,8 @@ class MonastHTTP(resource.Resource):
 			'/isAuthenticated' : self.isAuthenticated,
 			'/getStatus'       : self.getStatus,
 			'/listServers'     : self.listServers,
-			'/getUpdates'      : self.getUpdates
+			'/getUpdates'      : self.getUpdates,
+			'/doAction'        : self.doAction
 		}
 	
 	def _expireSession(self):
@@ -230,6 +231,11 @@ class MonastHTTP(resource.Resource):
 	
 	def listServers(self, request):
 		return json.dumps(self.monast.servers.keys())
+	
+	def doAction(self, request):
+		self.monast.clientActions.append(request.args)
+		reactor.callWhenRunning(self.monast._processClientActions)
+		return 'OK'
 
 ##
 ## Monast AMI
@@ -260,6 +266,8 @@ class Monast():
 	servers = {}
 	
 	sortby = 'callerid'
+	
+	clientActions = []
 	
 	def __init__(self, configFile):
 		log.log(logging.NOTICE, "Initializing Monast AMI Interface...")
@@ -305,6 +313,10 @@ class Monast():
 			#'MonitorStart'        : self.handlerMonitorStart,
 			#'MonitorStop'         : self.handlerMonitorStop,
 			'AntennaLevel'        : self.handlerEventAntennaLevel,
+		}
+		
+		self.actionHandlers = {
+			'OriginateCall': self.clientAction_OriginateCall
 		}
 		
 		self.configFile = configFile
@@ -887,6 +899,26 @@ class Monast():
 		
 		# request status	
 		server.ami.status().addCallbacks(onStatusComplete, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Channels Status"))
+		
+	##
+	## Client Action Handler
+	##
+	def _processClientActions(self):
+		log.info("Processing Client Actions...")
+		while self.clientActions:
+			action  = self.clientActions.pop(0)
+			handler = self.actionHandlers.get(action['action'][0])
+			if handler:
+				reactor.callWhenRunning(handler, action)
+			else:
+				log.error("ClientActionHandler for action %s does not exixts..." % action['action'][0]) 
+			
+	def clientAction_OriginateCall(self, action):
+		servername  = action['server'][0]
+		source      = action['source'][0]
+		destination = action['destination'][0] 
+		
+		log.debug("Server %s :: Executting OriginateCall from %s to %s..." % (source, destination, servername))
 	
 	##
 	## Event Handlers
@@ -974,7 +1006,7 @@ class Monast():
 		status  = event.get('peerstatus')
 		time    = event.get('time')
 		channeltype, peername = channel.split('/', 1)
-		print event
+		
 		if time:
 			self._updatePeer(ami.servername, channeltype = channeltype, peername = peername, status = status, time = time)
 		else:
