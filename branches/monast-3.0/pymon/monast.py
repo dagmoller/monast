@@ -203,6 +203,7 @@ class MonastHTTP(resource.Resource):
 				'peers': {},
 				'channels': [],
 				'bridges': [],
+				'meetmes': [],
 			}
 			## Peers
 			for tech, peerlist in server.status.peers.items():
@@ -216,6 +217,10 @@ class MonastHTTP(resource.Resource):
 			## Bridges
 			for uniqueid, bridge in server.status.bridges.items():
 				tmp[servername]['bridges'].append(bridge.__dict__)
+			## Meetmes
+			for meetmeroom, meetme in server.status.meetmes.items():
+				tmp[servername]['meetmes'].append(meetme.__dict__)
+			tmp[servername]['meetmes'].sort(lambda x, y: cmp(x.get('meetme'), y.get('meetme')))
 					 
 		return json.dumps(tmp)
 	
@@ -290,8 +295,8 @@ class Monast():
 			'Link'                : self.handlerEventLink,
 			'Unlink'              : self.handlerEventUnlink,
 			'Bridge'              : self.handlerEventBridge,
-			#'MeetmeJoin'          : self.handlerMeetmeJoin,
-			#'MeetmeLeave'         : self.handlerMeetmeLeave,
+			'MeetmeJoin'          : self.handlerEventMeetmeJoin,
+			'MeetmeLeave'         : self.handlerEventMeetmeLeave,
 			#'ParkedCall'          : self.handlerParkedCall,
 			#'UnParkedCall'        : self.handlerUnParkedCall,
 			#'ParkedCallTimeOut'   : self.handlerParkedCallTimeOut,
@@ -368,6 +373,7 @@ class Monast():
 	##
 	## Helpers
 	##
+	## Users/Peers
 	def _createPeer(self, servername, **kw):
 		server      = self.servers.get(servername)
 		channeltype = kw.get('channeltype')
@@ -433,7 +439,8 @@ class Monast():
 				log.warning("Server %s :: User/Peer not found: %s/%s", servername, channeltype, peername)
 		except:
 			log.exception("Server %s :: Unhandled exception updating User/Peer: %s/%s", servername, channeltype, peername)
-			
+	
+	## Channels	
 	def _createChannel(self, servername, **kw):
 		server        = self.servers.get(servername)
 		uniqueid      = kw.get('uniqueid')
@@ -515,6 +522,7 @@ class Monast():
 		except:
 			log.exception("Server %s :: Unhandled exception removing channel: %s (%s)", servername, uniqueid, channel)
 	
+	## Bridges
 	def _createBridge(self, servername, **kw):
 		server          = self.servers.get(servername)
 		uniqueid        = kw.get('uniqueid')
@@ -611,6 +619,77 @@ class Monast():
 				log.warning("Server %s :: Bridge does not exists: %s (%s) with %s (%s)", servername, uniqueid, channel, bridgeduniqueid, bridgedchannel)
 		except:
 			log.exception("Server %s :: Unhandled exception removing bridge: %s (%s) with %s (%s)", servername, uniqueid, channel, bridgeduniqueid, bridgedchannel)
+			
+	## Meetme
+	def _createMeetme(self, servername, **kw):
+		server     = self.servers.get(servername)
+		meetmeroom = kw.get('meetme')
+		dynamic    = kw.get("dynamic", False)
+		_log       = kw.get('_log')
+		meetme     = server.status.meetmes.get(meetmeroom)
+		
+		if not meetme:
+			meetme = GenericObject("Meetme")
+			meetme.meetme  = meetmeroom
+			meetme.dynamic = dynamic
+			meetme.users   = {}
+			
+			log.debug("Server %s :: Meetme create: %s %s", servername, meetme.meetme, _log)
+			server.status.meetmes[meetmeroom] = meetme
+			if dynamic:
+				self.http._addUpdate(servername = servername, **meetme.__dict__.copy())
+			if logging.DUMPOBJECTS:
+				log.debug("Object Dump:%s", meetme)
+		else:
+			log.warning("Server %s :: Meetme already exists: %s", servername, meetme.meetme)
+			
+		return meetme
+			
+	def _updateMeetme(self, servername, **kw):
+		meetmeroom = kw.get("meetme")
+		_log       = kw.get('_log', '')
+		try:
+			meetme = self.servers.get(servername).status.meetmes.get(meetmeroom)
+			if not meetme:
+				meetme = self._createMeetme(servername, meetme = meetmeroom, dynamic = True, _log = "(dynamic)")
+			
+			user = kw.get('addUser')
+			if user:
+				meetme.users[user.get('usernum')] = user
+				log.debug("Server %s :: Added user %s to Meetme %s %s", servername, user.get('usernum'), meetme.meetme, _log)
+				
+			user = kw.get('removeUser')
+			if user:
+				u = meetme.users.get(user.get('usernum'))
+				if u:
+					log.debug("Server %s :: Removed user %s from Meetme %s %s", servername, u.get('usernum'), meetme.meetme, _log)
+					del meetme.users[u.get('usernum')]
+					
+			self.http._addUpdate(servername = servername, **meetme.__dict__.copy())
+					
+			if meetme.dynamic and len(meetme.users) == 0:
+				self._removeMeetme(servername, meetme = meetme.meetme, _log = "(dynamic)")
+			if logging.DUMPOBJECTS:
+				log.debug("Object Dump:%s", meetme)
+		except:
+			log.exception("Server %s :: Unhandled exception updating meetme: %s", servername, meetmeroom)
+			
+	def _removeMeetme(self, servername, **kw):
+		meetmeroom = kw.get("meetme")
+		_log       = kw.get('_log', '')
+		try:
+			server = self.servers.get(servername)
+			meetme = server.status.meetmes.get(meetmeroom)
+			if meetme:
+				log.debug("Server %s :: Meetme remove: %s %s", servername, meetme.meetme, _log)
+				del server.status.meetmes[meetme.meetme]
+				self.http._addUpdate(servername = servername, action = 'RemoveMeetme', meetme = meetme.meetme)
+				if logging.DUMPOBJECTS:
+					log.debug("Object Dump:%s", meetme)
+			else:
+				log.warning("Server %s :: Meetme does not exists: %s", servername, meetmeroom)
+		except:
+			log.exception("Server %s :: Unhandled exception removing meetme: %s", servername, meetmeroom)
 		
 	##
 	## Parse monast.conf
@@ -655,6 +734,7 @@ class Monast():
 			self.servers[servername].taskCheckStatus  = task.LoopingCall(self.taskCheckStatus, servername)
 			
 			self.servers[servername].status           = GenericObject()
+			self.servers[servername].status.meetmes   = {}
 			self.servers[servername].status.channels  = {}
 			self.servers[servername].status.bridges   = {}
 			self.servers[servername].status.peers     = {
@@ -798,14 +878,17 @@ class Monast():
 			.addCallbacks(onKhompChannelsShow, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Khomp Channels"))
 		
 		# Meetme
-		def onGetConfig(result):
+		def onGetMeetmeConfig(result):
 			log.debug("Server %s :: Processing meetme.conf..." % servername)
-			#print result
+			for k, v in result.items():
+				if v.startswith("conf="):
+					meetmeroom = v.replace("conf=", "")
+					self._createMeetme(servername, meetme = meetmeroom)
 
 		log.debug("Server %s :: Requesting meetme.conf..." % servername)
 		server.ami.sendDeferred({'Action': 'GetConfig', 'Filename': 'meetme.conf'}) \
 			.addCallback(server.ami.errorUnlessResponse) \
-			.addCallbacks(onGetConfig, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting meetme.conf"))
+			.addCallbacks(onGetMeetmeConfig, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting meetme.conf"))
 		
 		# Queues
 		def onQueueStatus(events):
@@ -1169,6 +1252,40 @@ class Monast():
 		#log.debug("Server %s :: Processing Event Bridge..." % ami.servername)
 		self.handlerEventLink(ami, event)
 	
+	# Meetme Events
+	def handlerEventMeetmeJoin(self, ami, event):
+		#log.debug("Server %s :: Processing Event MeetmeJoin..." % ami.servername)
+		meetme = event.get("meetme")
+		
+		self._updateMeetme(
+			ami.servername,
+			meetme  = meetme,
+			addUser = {
+				'uniqueid'     : event.get('uniqueid'), 
+				'channel'      : event.get('channel'),
+				'usernum'      : event.get("usernum"), 
+				'calleridnum'  : event.get("calleridnum"), 
+				'calleridname' : event.get("calleridname"),
+			}  
+		)
+		
+	# Meetme Events
+	def handlerEventMeetmeLeave(self, ami, event):
+		#log.debug("Server %s :: Processing Event MeetmeLeave..." % ami.servername)
+		meetme = event.get("meetme")
+		
+		self._updateMeetme(
+			ami.servername,
+			meetme  = meetme,
+			removeUser = {
+				'uniqueid'     : event.get('uniqueid'), 
+				'channel'      : event.get('channel'),
+				'usernum'      : event.get("usernum"), 
+				'calleridnum'  : event.get("calleridnum"), 
+				'calleridname' : event.get("calleridname"),
+			}  
+		)
+	
 	# Khomp Events
 	def handlerEventAntennaLevel(self, ami, event):
 		#log.debug("Server %s :: Processing Event AntennaLevel..." % ami.servername)
@@ -1176,7 +1293,7 @@ class Monast():
 		signal  = event.get('signal')
 		channeltype, peername = channel.split('/', 1)
 		self._updatePeer(ami.servername, channeltype = channeltype, peername = peername, status = 'Signal: %s' % signal)
-
+		
 ##
 ## Daemonizer
 ##

@@ -127,13 +127,16 @@ var Monast = {
 		{
 			$(c.id).innerHTML = new Template($('Template::Channel').innerHTML).evaluate(c);
 		}
-		this.channels.set(c.id, c); 
+		
+		this.channels.set(c.id, c);
+		$('countChannels').innerHTML = this.channels.keys().length; 
 	},
 	removeChannel: function (c)
 	{
 		var channel = this.channels.unset(c.uniqueid);
 		if (!Object.isUndefined(channel))
 			$('channelsDiv').removeChild($(channel.id));
+		$('countChannels').innerHTML = this.channels.keys().length;
 	},
 	
 	// Bridges
@@ -173,6 +176,7 @@ var Monast = {
 		}
 		
 		this.bridges.set(b.id, b);
+		$('countCalls').innerHTML = this.bridges.keys().length;
 	},
 	removeBridge: function (b)
 	{
@@ -183,8 +187,54 @@ var Monast = {
 			$('callsDiv').removeChild($(bridge.id));
 			this.stopChrono(id);
 		}
+		$('countCalls').innerHTML = this.bridges.keys().length;
 	},
 	
+	// Meetmes
+	meetmes: new Hash(),
+	processMeetme: function (m)
+	{
+		m.id = md5("meetme-" + m.meetme);
+		
+		if (Object.isUndefined(this.meetmes.get(m.id))) // Meetme does not exists
+		{
+			var div       = document.createElement('div');
+			div.id        = m.id;
+			div.className = 'meetmeDivWrap';
+			div.innerHTML = new Template($("Template::Meetme").innerHTML).evaluate(m);
+			$('meetmeDivWrapper').appendChild(div);
+		}
+		else
+		{
+			$(m.id).innerHTML = new Template($("Template::Meetme").innerHTML).evaluate(m);
+		}
+	
+		if (!Object.isArray(m.users))
+		{
+			var keys = Object.keys(m.users).sort();
+			keys.each(function (user) {
+				var user          = m.users[user];
+				user.userinfo     = (user.calleridnum && user.calleridname) ? new Template("#{calleridname} &lt;#{calleridnum}&gt;").evaluate(user) : user.channel;
+				var divUser       = document.createElement("div");
+				divUser.className = 'meetmeDiv';
+				divUser.innerHTML = new Template($("Template::Meetme::User").innerHTML).evaluate(user);
+				$(m.id).appendChild(divUser);
+			});
+			$("countMeetme-" + m.id).innerHTML = keys.length;
+		}
+
+		this.meetmes.set(m.id, m);
+	},
+	removeMeetme: function (m)
+	{
+		var id     = md5("meetme-" + m.meetme);
+		var meetme = this.meetmes.unset(id);
+		if (!Object.isUndefined(meetme))
+		{
+			$('meetmeDivWrapper').removeChild($(meetme.id));
+		}
+	},
+
 	// Process Events
 	processEvent: function (event)
 	{
@@ -202,6 +252,10 @@ var Monast = {
 					
 				case "Bridge":
 					this.processBridge(event);
+					break;
+					
+				case "Meetme":
+					this.processMeetme(event);
 					break;
 			}
 		}
@@ -226,6 +280,10 @@ var Monast = {
 					
 				case "RemoveBridge":
 					this.removeBridge(event);
+					break;
+					
+				case "RemoveMeetme":
+					this.removeMeetme(event);
 					break;
 			}
 		}
