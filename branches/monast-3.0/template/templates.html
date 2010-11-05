@@ -1,0 +1,62 @@
+
+<!-- TEMPLATES -->
+
+<!-- User/Peer -->
+<div style="display: none" id="Template::Userpeer">
+  <table class="status" width="175px">
+    <tr>
+      <td colspan="2" bgcolor="#DDDDDD" nowrap="nowrap"><b>#{callerid}</b></td>
+    </tr>
+    <tr>
+      <td bgcolor="#{statuscolor}" width="115px" title="#{time} ms">#{status}</td>
+      <td bgcolor="#{callscolor}" width="60px">#{calls} call(s)</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Monitor -->
+<div style="display: none" id="Template::Channel::Monitor">
+  <a href="javascript:recordStop('#{{uniqueid}}')" title='Stop Monitor'><img src='image/record.png' border='0' width='8' height='8'></a>&nbsp;&nbsp;
+</div>
+
+<!-- Channel -->
+<div style="display: none" id="Template::Channel">
+  <table width='330'>
+    <tr>
+      <td class='status' width='260'>#{monitor}#{_channel}</td>
+      <td bgcolor='#{statecolor}' class='status' width='70'>#{state}</td>
+    </tr> 
+  </table>
+  <span style="display: none">#{calleridname} &lt;#{calleridnum}&gt;</span>
+</div>
+
+<!-- Bridge -->
+<div style="display: none" id="Template::Bridge">
+  <table width='570'>
+    <tr>
+      <td class='status' width='250'>#{_channel}<br>#{callerid}</td>
+      <td class='status' width='70' bgcolor='#{statuscolor}'>#{status}<br><span style='font-family: monospace;' id='chrono-#{id}'></span></td>
+      <td class='status' width='250' >#{_bridgedchannel}<br>#{bridgedcallerid}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Meetme -->
+<div style="display: none" id="Template::Meetme">
+  <div class='meetmeDiv'>
+    <table width='250'>
+      <tr>
+        <td align='center' class='statusHeader'>Meetme "#{meetme}" (<span id='countMeetme-#{id}'>0</span>)</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- MeetmeUser -->
+<div style="display: none" id="Template::Meetme::User">
+  <table width='250'>
+    <tr>
+      <td class='status'>#{userinfo}</td>
+    </tr>
+  </table>
+</div>
