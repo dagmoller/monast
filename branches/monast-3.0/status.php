@@ -79,10 +79,10 @@ while (!$complete)
 			    foreach ($actions as $action)
 			    {
 			    	$action = $json->decode($action);
-			    	if ($action['Action'] == "ChangeServer")
+			    	if ($action['action'] == "ChangeServer")
 			    	{
 			    		session_start();
-			    		setValor('Server', $action['Server']);
+			    		setValor('Server', $action['server']);
 			    		session_write_close();
 			    		$lastEvents[] = array('action' => 'Reload', 'time' => 100);
 			    		$complete = true;
@@ -90,7 +90,7 @@ while (!$complete)
 			    	}
 			    	else
 			    	{
-			    		$action['Server'] = $server;
+			    		$action['server'] = $server;
 			    		$tmp      = doGet('doAction', $action);
 			    		$complete = true;
 			    		break;

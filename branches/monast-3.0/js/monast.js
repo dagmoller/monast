@@ -32,6 +32,8 @@ String.prototype.trim = function() { return this.replace(/^\s*/, "").replace(/\s
 
 // Monast
 var Monast = {
+	// Globals
+	_contextMenu: new YAHOO.widget.Menu("ContextMenu"),
 	// Colors
 	getColor: function (status)
 	{
@@ -93,10 +95,17 @@ var Monast = {
 		
 		if (Object.isUndefined(this.userspeers.get(u.id))) // User does not exists
 		{
-			var div       = document.createElement('div');
-			div.id        = u.id;
-			div.className = 'peerTable';
-			div.innerHTML = new Template($('Template::Userpeer').innerHTML).evaluate(u);
+			var div           = document.createElement('div');
+			div.id            = u.id;
+			div.className     = 'peerTable';
+			div.innerHTML     = new Template($('Template::Userpeer').innerHTML).evaluate(u);
+			div.oncontextmenu = function () { return false; };
+			div.onmouseup     = function (event)
+			{
+				var e = event ? event : window.event;
+				if (e.button == 2)
+					Monast.showUserpeerContextMenu(u.id);
+			};
 			$('fieldset-' + u.channeltype).appendChild(div);
 		}
 		else
@@ -104,6 +113,22 @@ var Monast = {
 			$(u.id).innerHTML = new Template($('Template::Userpeer').innerHTML).evaluate(u);
 		}
 		this.userspeers.set(u.id, u);
+	},
+	showUserpeerContextMenu: function (id)
+	{
+		this._contextMenu.clearContent();
+		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition(event));
+	
+		var u = this.userspeers.get(id);
+		var m = [
+			[
+				{text: "Originate Call"}
+			]
+		];
+		this._contextMenu.addItems(m);
+		this._contextMenu.setItemGroupTitle("User/Peer: " + u.channel, 0);
+		this._contextMenu.render(document.body);
+		this._contextMenu.show();
 	},
 	
 	// Channels
@@ -117,10 +142,17 @@ var Monast = {
 		
 		if (Object.isUndefined(this.channels.get(c.id))) // Channel does not exists
 		{
-			var div       = document.createElement('div');
-			div.id        = c.id;
-			div.className = 'channelDiv';
-			div.innerHTML = new Template($('Template::Channel').innerHTML).evaluate(c);
+			var div           = document.createElement('div');
+			div.id            = c.id;
+			div.className     = 'channelDiv';
+			div.innerHTML     = new Template($('Template::Channel').innerHTML).evaluate(c);
+			div.oncontextmenu = function () { return false; };
+			div.onmouseup     = function (event)
+			{
+				var e = event ? event : window.event;
+				if (e.button == 2)
+					Monast.showChannelContextMenu(c.id);
+			};
 			$('channelsDiv').appendChild(div);
 		}
 		else
@@ -137,6 +169,29 @@ var Monast = {
 		if (!Object.isUndefined(channel))
 			$('channelsDiv').removeChild($(channel.id));
 		$('countChannels').innerHTML = this.channels.keys().length;
+	},
+	showChannelContextMenu: function (id)
+	{
+		this._contextMenu.clearContent();
+		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition(event));
+	
+		var tmp = function (p_sType, p_aArgs, p_oValue)
+		{
+			Monast.doAlert(p_oValue);
+		};
+	
+		var c = this.channels.get(id);
+		var m = [
+			[
+				{text: "Start Monitor", disabled: c.monitor},
+				{text: "Stop Monitor", disabled: !c.monitor},
+				{text: "Hangup", onclick: {fn: tmp, obj: "Hangup Channel: " + c.uniqueid}}
+			]
+		];
+		this._contextMenu.addItems(m);
+		this._contextMenu.setItemGroupTitle("Uniqueid:  " + c.uniqueid, 0);
+		this._contextMenu.render(document.body);
+		this._contextMenu.show();
 	},
 	
 	// Bridges
@@ -271,7 +326,7 @@ var Monast = {
 					
 				case "Reload":
 					this._statusReload = true;
-					setTimeout("location.href = 'index.php'", o.time);
+					setTimeout("location.href = 'index.php'", event.time);
 					return;
 					
 				case "RemoveChannel":
@@ -449,16 +504,6 @@ var Monast = {
 		window._dTrash  = new YAHOO.util.DDTarget("trash");
 		window._dPark   = new YAHOO.util.DDTarget("park");
 		window._dRecord = new YAHOO.util.DDTarget("record");
-		
-		// EventListener to move ActionsDIV
-		var _onScroll = function ()
-		{
-			$('actionsDiv').style.top = (document.documentElement.scrollTop + 10) + 'px';
-		};
-		if (window.addEventListener)
-			window.addEventListener('scroll', _onScroll, false);
-		else
-			window.onscroll = _onScroll;
 	},
 	
 	showHidePannels: function (e)
@@ -466,6 +511,19 @@ var Monast = {
 		$(this.get('value')).className = (e.newValue ? '' : 'yui-hidden');
 		_state.buttons[this.get('id')] = e.newValue;
 		YAHOO.util.Cookie.set('_state', Object.toJSON(_state));
+	},
+	
+	changeServer: function (server)
+	{
+		$('_reqStatus').innerHTML = "Changing Server...";
+		new Ajax.Request('action.php', 
+		{
+			method: 'get',
+			parameters: {
+				reqTime: new Date().getTime(),
+				action: Object.toJSON({action: 'ChangeServer', server: server})
+			}
+		});
 	},
 	
 	// Chrono
@@ -532,5 +590,26 @@ var Monast = {
 		var chrono = this._chrono.unset(id);
 		if (!Object.isUndefined(chrono))
 			clearTimeout(chrono.run);
+	},
+	
+	// Extra Utils
+	getMousePosition: function (event)
+	{
+		var e    = event ? event : window.event;
+		var posx = 0;
+		var posy = 0;
+		
+		// Mozilla
+		if (e.pageX || e.pageY) 
+		{
+			posx = e.pageX;
+			posy = e.pageY
+		}
+		else if (e.clientX || e.clientY) 
+		{
+			posx = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+			posy = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+		}
+		return [posx, posy];
 	}
 };

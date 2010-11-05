@@ -57,7 +57,10 @@ switch ($response)
 		session_start();
 		setValor('Servers', $servers);
 		if (!$server || array_search($server, $servers) === false)
-			setValor('Server', $servers[0]);
+		{
+			$server = $servers[0];
+			setValor('Server', $server);
+		}
 		session_write_close();
 		break;
 }

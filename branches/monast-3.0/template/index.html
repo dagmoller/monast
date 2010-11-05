@@ -64,6 +64,7 @@
 <body class="yui-skin-sam">
 <div id="_alertDialog"></div>
 <div id="_confirmDialog"></div>
+<div id="rendertarget"></div>
 
 <div class="monast-logo">
   <span class="monast-name">MonAst</span>&nbsp;
@@ -74,7 +75,7 @@
     <!-- END BLOCK : singleServer -->
     <!-- START BLOCK : serverList -->
     Server: 
-    <select id="serverlist" onchange="changeServer(this.options[this.selectedIndex].value)">
+    <select id="serverlist" onchange="Monast.changeServer(this.options[this.selectedIndex].value)">
       <!-- START BLOCK : optionServer -->
       <option value="{server}" {selected}>{server}</option>
       <!-- END BLOCK : optionServer -->
