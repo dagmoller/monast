@@ -1188,7 +1188,7 @@ class Monast():
 	def handlerEventDial(self, ami, event):
 		#log.debug("Server %s :: Processing Event Dial..." % ami.servername)
 		server   = self.servers.get(ami.servername)
-		subevent = event.get('subevent', "")
+		subevent = event.get('subevent', "begin")
 		if subevent.lower() == 'begin':
 			#log.debug("Server %s :: Processing Dial SubEvent Begin..." % ami.servername)
 			self._createBridge(
