@@ -12,11 +12,21 @@ import optparse
 
 from ConfigParser import SafeConfigParser, NoOptionError
 
-from twisted.internet import reactor, task, defer
-from twisted.web import server as TWebServer
-from twisted.web import resource
+try:
+	from twisted.internet import reactor, task, defer
+	from twisted.web import server as TWebServer
+	from twisted.web import resource
+except ImportError:
+	print "Monast ERROR: Module twisted not found."
+	print "You need twisted matrix 10.1+ to run Monast. Get it from http://twistedmatrix.com/"
+	sys.exit(1)
 
-from starpy import manager
+try:
+	from starpy import manager
+except ImportError:
+	print "Monast ERROR: Module starpy not found."
+	print "You need starpy to run Monast. Get it from http://www.vrplumber.com/programming/starpy/"
+	sys.exit(1)
 
 try:
 	import json
