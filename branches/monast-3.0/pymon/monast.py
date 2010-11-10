@@ -445,8 +445,8 @@ class Monast():
 				self.http._addUpdate(servername = servername, **peer.__dict__.copy())
 				if logging.DUMPOBJECTS:
 					log.debug("Object Dump:%s", peer)
-			else:
-				log.warning("Server %s :: User/Peer not found: %s/%s", servername, channeltype, peername)
+			#else:
+			#	log.warning("Server %s :: User/Peer not found: %s/%s", servername, channeltype, peername)
 		except:
 			log.exception("Server %s :: Unhandled exception updating User/Peer: %s/%s", servername, channeltype, peername)
 	
