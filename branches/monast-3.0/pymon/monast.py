@@ -788,6 +788,7 @@ class Monast():
 						member.paused     = kw.get('paused')
 						member.penalty    = kw.get('penalty')
 						member.status     = kw.get('status')
+						member.statustext = AST_DEVICE_STATES.get(member.status, 'Unknown')
 						server.status.queueMembers[memberid] = member
 					else:
 						log.debug("Server %s :: Queue update, member updated: %s -> %s %s", servername, queuename, location, _log)
@@ -799,6 +800,7 @@ class Monast():
 						member.paused     = kw.get('paused')
 						member.penalty    = kw.get('penalty')
 						member.status     = kw.get('status')
+						member.statustext = AST_DEVICE_STATES.get(member.status, 'Unknown')
 						server.status.queueMembers[memberid] = member
 					self.http._addUpdate(servername = servername, **member.__dict__.copy())
 					if logging.DUMPOBJECTS:

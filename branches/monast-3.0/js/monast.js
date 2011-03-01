@@ -343,6 +343,35 @@ var Monast = {
 		}
 		this.queues.set(q.id, q);
 	},
+	queueMembers: new Hash(),
+	processQueueMember: function (m)
+	{
+		m.id          = md5("queueMember-" + m.queue + '::' + m.location);
+		m.queueid     = md5("queue-" + m.queue);
+		m.statuscolor = this.getColor(m.statustext); 
+		
+		if (Object.isUndefined(this.queueMembers.get(m.id))) // Queue Member does not exists
+		{
+			var div       = document.createElement('div');
+			div.id        = m.id;
+			div.className = 'queueMembersDiv';
+			div.innerHTML = new Template($("Template::Queue::Member").innerHTML).evaluate(m);
+			$('queueMembers-' + m.queueid).appendChild(div);
+		}
+		else
+		{
+			$(m.id).innerHTML = new Template($("Template::Queue::Member").innerHTML).evaluate(m);
+		}
+	},
+	removeQueueMember: function (m)
+	{
+		var id     = md5("queueMember-" + m.queue + '::' + m.location);
+		var member = this.queueMembers.unset(id);
+		if (!Object.isUndefined(member))
+		{
+			$('queueMembers-' + member.queueid).removeChild($(member.id));
+		}
+	},
 
 	// Process Events
 	processEvent: function (event)
@@ -369,6 +398,10 @@ var Monast = {
 					
 				case "Queue":
 					this.processQueue(event);
+					break;
+					
+				case "QueueMember":
+					this.processQueueMember(event);
 					break;
 			}
 		}
@@ -397,6 +430,10 @@ var Monast = {
 					
 				case "RemoveMeetme":
 					this.removeMeetme(event);
+					break;
+					
+				case "RemoveQueueMember":
+					this.removeQueueMember(event);
 					break;
 			}
 		}
