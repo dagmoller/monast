@@ -788,7 +788,7 @@ class Monast():
 						member.penalty    = kw.get('penalty')
 						member.status     = kw.get('status')
 						server.status.queueMembers[memberid] = member
-					else:
+					else: 
 						log.debug("Server %s :: Queue update, member updated: %s -> %s %s", servername, queuename, location, _log)
 						member.name       = kw.get('name')
 						member.queue      = kw.get('queue')
