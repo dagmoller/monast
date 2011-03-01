@@ -185,7 +185,7 @@ var Monast = {
 			[
 				{text: "Start Monitor", disabled: c.monitor},
 				{text: "Stop Monitor", disabled: !c.monitor},
-				{text: "Hangup", onclick: {fn: tmp, obj: "Hangup Channel: " + c.uniqueid}}
+				{text: "Hangup", onclick: {fn: tmp, obj: "Hangup Channel: " + c.channel}}
 			]
 		];
 		this._contextMenu.addItems(m);

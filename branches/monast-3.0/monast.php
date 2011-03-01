@@ -123,19 +123,6 @@ foreach ($techs as $tech)
 	}
 }
 
-// Queues
-/*
-foreach ($validActions['Queue'] as $idx => $queue)
-{
-	if ($idx % 2 == 0)
-		$template->newBlock('queueDualDiv');
-	
-	$template->newBlock('queue');
-	$template->assign('queue', $queue['Queue']);
-}
-unset($validActions['Queue']);
-*/
-
 // Channels and Bridges
 foreach ($status[$server]['channels'] as $channel)
 {
@@ -158,6 +145,23 @@ foreach ($status[$server]['meetmes'] as $meetme)
 {
 	$template->newBlock('process');
 	$template->assign('json', $json->encode($meetme));
+}
+
+// Queues
+foreach ($status[$server]['queues'] as $queue)
+{
+	$template->newBlock('process');
+	$template->assign('json', $json->encode($queue));
+}
+foreach ($status[$server]['queueMembers'] as $queueMember)
+{
+	$template->newBlock('process');
+	$template->assign('json', $json->encode($queueMember));
+}
+foreach ($status[$server]['queueClients'] as $queueClient)
+{
+	$template->newBlock('process');
+	$template->assign('json', $json->encode($queueClient));
 }
 
 $template->printToScreen();

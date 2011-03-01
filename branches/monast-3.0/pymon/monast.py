@@ -42,6 +42,7 @@ except ImportError:
 HTTP_SESSION_TIMEOUT        = 60
 AMI_RECONNECT_INTERVAL      = 10
 TASK_CHECK_STATUS_INTERVAL  = 60
+TASK_CHECK_STATUS_INTERVAL  = 10
 
 MONAST_CALLERID = "MonAst WEB"
 
@@ -147,7 +148,7 @@ class GenericObject(object):
 		out.append("##################################################")
 		
 		return "\n".join(out)
-
+	
 
 class MyConfigParser(SafeConfigParser):
 	def optionxform(self, optionstr):
@@ -214,6 +215,9 @@ class MonastHTTP(resource.Resource):
 				'channels': [],
 				'bridges': [],
 				'meetmes': [],
+				'queues': [],
+				'queueMembers': [],
+				'queueClients': []
 			}
 			## Peers
 			for tech, peerlist in server.status.peers.items():
@@ -231,6 +235,18 @@ class MonastHTTP(resource.Resource):
 			for meetmeroom, meetme in server.status.meetmes.items():
 				tmp[servername]['meetmes'].append(meetme.__dict__)
 			tmp[servername]['meetmes'].sort(lambda x, y: cmp(x.get('meetme'), y.get('meetme')))
+			## Queues
+			for queuename, queue in server.status.queues.items():
+				tmp[servername]['queues'].append(queue.__dict__)
+			tmp[servername]['queues'].sort(lambda x, y: cmp(x.get('queue'), y.get('queue')))
+			
+			for (queuename, membername), member in server.status.queueMembers.items():
+				tmp[servername]['queueMembers'].append(member.__dict__)
+			tmp[servername]['queueMembers'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
+			
+			for (queuename, uniqueid), client in server.status.queueClients.items():
+				tmp[servername]['queueClients'].append(client.__dict__)
+			#tmp[servername]['queueClients'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
 					 
 		return json.dumps(tmp)
 	
@@ -700,7 +716,98 @@ class Monast():
 				log.warning("Server %s :: Meetme does not exists: %s", servername, meetmeroom)
 		except:
 			log.exception("Server %s :: Unhandled exception removing meetme: %s", servername, meetmeroom)
+			
+	## Queues
+	def _createQueue(self, servername, **kw):
+		server    = self.servers.get(servername)
+		queuename = kw.get('queue')
+		_log      = kw.get('_log', '')
 		
+		queue     = server.status.queues.get(queuename)
+		
+		if not queue:
+			queue                  = GenericObject("Queue")
+			queue.queue            = queuename
+			queue.calls            = int(kw.get('calls', 0))
+			queue.completed        = int(kw.get('completed', 0))
+			queue.holdtime         = kw.get('holdtime', 0)
+			queue.max              = kw.get('max', 0)
+			queue.servicelevel     = kw.get('servicelevel', 0)
+			queue.servicelevelperf = kw.get('servicelevelperf', 0)
+			queue.weight           = kw.get('weight', 0)
+			queue.strategy         = kw.get('strategy')
+			queue.talktime         = kw.get('talktime', 0)
+			
+			log.debug("Server %s :: Queue create: %s %s", servername, queue.queue, _log)
+			server.status.queues[queuename] = queue
+			if logging.DUMPOBJECTS:
+				log.debug("Object Dump:%s", queue)
+		else:
+			log.warning("Server %s :: Queue already exists: %s", servername, queue.queue)
+			
+		return queue
+	
+	def _updateQueue(self, servername, **kw):
+		server    = self.servers.get(servername)
+		queuename = kw.get('queue')
+		event     = kw.get('event')
+		_log      = kw.get('_log', '')
+		
+		try:
+			queue = server.status.queues.get(queuename)
+			if queue:
+				if event == "QueueParams":
+					log.debug("Server %s :: Queue update: %s %s", servername, queuename, _log)
+					queue.calls            = int(kw.get('calls', 0))
+					queue.completed        = int(kw.get('completed', 0))
+					queue.holdtime         = kw.get('holdtime', 0)
+					queue.max              = kw.get('max', 0)
+					queue.servicelevel     = kw.get('servicelevel', 0)
+					queue.servicelevelperf = kw.get('servicelevelperf', 0)
+					queue.weight           = kw.get('weight', 0)
+					queue.talktime         = kw.get('talktime', 0)
+					self.http._addUpdate(servername = servername, **queue.__dict__.copy())
+					if logging.DUMPOBJECTS:
+						log.debug("Object Dump:%s", queue)
+					return
+				
+				if event == "QueueMember":
+					location = kw.get('location')
+					memberid = (queuename, location)
+					member   = server.status.queueMembers.get(memberid)
+					if not member:
+						log.debug("Server %s :: Queue update, member added: %s -> %s %s", servername, queuename, location, _log)
+						member            = GenericObject("QueueMember")
+						member.location   = location
+						member.name       = kw.get('name')
+						member.queue      = kw.get('queue')
+						member.callstaken = kw.get('callstaken')
+						member.lastcall   = kw.get('lastcall')
+						member.membership = kw.get('membership')
+						member.paused     = kw.get('paused')
+						member.penalty    = kw.get('penalty')
+						member.status     = kw.get('status')
+						server.status.queueMembers[memberid] = member
+					else:
+						log.debug("Server %s :: Queue update, member updated: %s -> %s %s", servername, queuename, location, _log)
+						member.name       = kw.get('name')
+						member.queue      = kw.get('queue')
+						member.callstaken = kw.get('callstaken')
+						member.lastcall   = kw.get('lastcall')
+						member.membership = kw.get('membership')
+						member.paused     = kw.get('paused')
+						member.penalty    = kw.get('penalty')
+						member.status     = kw.get('status')
+						server.status.queueMembers[memberid] = member
+					self.http._addUpdate(servername = servername, **member.__dict__.copy())
+					if logging.DUMPOBJECTS:
+						log.debug("Object Dump:%s", member)
+					return
+			else:
+				log.warning("Server %s :: Queue not found: %s", servername, queuename)
+		except:
+			log.exception("Server %s :: Unhandled exception updating queue: %s", servername, queuename)
+			
 	##
 	## Parse monast.conf
 	##	
@@ -743,18 +850,21 @@ class Monast():
 			self.servers[servername].ami              = None
 			self.servers[servername].taskCheckStatus  = task.LoopingCall(self.taskCheckStatus, servername)
 			
-			self.servers[servername].status           = GenericObject()
-			self.servers[servername].status.meetmes   = {}
-			self.servers[servername].status.channels  = {}
-			self.servers[servername].status.bridges   = {}
-			self.servers[servername].status.peers     = {
+			self.servers[servername].status              = GenericObject()
+			self.servers[servername].status.meetmes      = {}
+			self.servers[servername].status.channels     = {}
+			self.servers[servername].status.bridges      = {}
+			self.servers[servername].status.peers        = {
 				'SIP': {},
 				'IAX2': {},
 				'DAHDI': {},
 				'Khomp': {},
 			}
-			self.servers[servername].displayUsers     = {}
-			self.servers[servername].displayQueues    = {}
+			self.servers[servername].displayUsers        = {}
+			self.servers[servername].displayQueues       = {}
+			self.servers[servername].status.queues       = {}
+			self.servers[servername].status.queueMembers = {}
+			self.servers[servername].status.queueClients = {}
 			
 		## Peers
 		self.displayUsersDefault = config.get('peers', 'default') == 'show'
@@ -902,8 +1012,14 @@ class Monast():
 		
 		# Queues
 		def onQueueStatus(events):
-			log.debug("Server %s :: Processing Queue Status..." % servername)
-			#print events
+			log.debug("Server %s :: Processing Queues..." % servername)
+			for event in events:
+				eventType = event.get('event')
+				if eventType == "QueueParams":
+					queuename = event.get('queue')
+					if (self.displayQueuesDefault and not server.displayQueues.has_key(queuename)) or (not self.displayQueuesDefault and server.displayQueues.has_key(queuename)):
+						self._createQueue(servername, **event)
+					continue
 		
 		log.debug("Server %s :: Requesting Queue Status..." % servername)
 		server.ami.collectDeferred({'Action': 'QueueStatus'}, 'QueueStatusComplete') \
@@ -916,7 +1032,7 @@ class Monast():
 	## Tasks
 	##
 	def taskCheckStatus(self, servername):
-		log.info("Server %s :: Requesting channels status..." % servername)
+		log.info("Server %s :: Requesting asterisk status..." % servername)
 		server = self.servers.get(servername)
 		
 		# process results
@@ -989,9 +1105,21 @@ class Monast():
 				self._removeBridge(servername, uniqueid = uniqueid, bridgeduniqueid = bridgeduniqueid, _isLostBridge = True, _log = "-- Lost Bridge")
 					
 			log.debug("Server %s :: End of channels status..." % servername)
-		
-		# request status	
+			
+		# request channels status	
 		server.ami.status().addCallbacks(onStatusComplete, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Channels Status"))
+		
+		# Queues
+		def onQueueStatusComplete(events):
+			log.debug("Server %s :: Processing queues status..." % servername)
+			for event in events:
+				queuename = event.get('queue')
+				if (self.displayQueuesDefault and not server.displayQueues.has_key(queuename)) or (not self.displayQueuesDefault and server.displayQueues.has_key(queuename)):
+					self._updateQueue(servername, **event)
+		
+		for queuename in server.status.queues.keys():
+			server.ami.collectDeferred({'Action': 'QueueStatus', 'Queue': queuename}, 'QueueStatusComplete') \
+				.addCallbacks(onQueueStatusComplete, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Queues Status"))
 		
 	##
 	## Client Action Handler
