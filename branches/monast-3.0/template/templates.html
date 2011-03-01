@@ -60,3 +60,67 @@
     </tr>
   </table>
 </div>
+
+<!-- Queue -->
+<div style="display: none" id="Template::Queue">
+  <fieldset>
+    <legend>Queue: #{queue}</legend>
+    <div class="queueStatisticsDiv">
+      <table width="532">
+        <tr>
+          <td class="tableTitle" colspan="8" align="center">Statistics</td>
+        </tr>
+        <tr>
+          <td class="statusHeader" align="right">Max:&nbsp;</td>
+          <td class="status">#{max}</td>
+                
+          <td class="statusHeader" align="right">Calls:&nbsp;</td>
+          <td class="status">#{calls}</td>
+                
+          <td class="statusHeader" align="right">Holdtime:&nbsp;</td>
+          <td class="status">#{holdtime}</td>
+                
+          <td class="statusHeader" align="right">Completed:&nbsp;</td>
+          <td class="status">#{completed}</td>
+        </tr>
+        <tr>
+          <td class="statusHeader" align="right">Abandoned:&nbsp;</td>
+          <td class="status">#{abandoned}</td>
+                
+          <td class="statusHeader" align="right">Service Level:&nbsp;</td>
+          <td class="status">#{servicelevel}</td>
+                
+          <td class="statusHeader" align="right">Service level Perf.:&nbsp;</td>
+          <td class="status">#{servicelevelperf}</td>
+                
+          <td class="statusHeader" align="right">Weight:&nbsp;</td>
+          <td class="status">#{weight}</td>
+        </tr>
+      </table>
+    </div>
+    <div class="queueMembersDivWrap" id="queueMembers-#{id}">
+      <div class="queueMembersDiv" id="queueMembersDrop-#{id}">
+        <table width="300">
+          <tr>
+            <td class="tableTitle" colspan="3" align="center">Members (<span id="queueMembersCount-#{id}">0</span>)</td>
+          </tr>
+          <tr>
+            <td class="statusHeader" width="170" align="center">Location/Name</td>
+            <td class="statusHeader" width="40" align="center">Calls Taken</td>
+            <td class="statusHeader" width="90" align="center">Status</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div class="queueClientsDivWrap" id="queueClients-#{id}">
+      <div class="queueClientsDiv">
+        <table width="220">
+          <tr>
+            <td class="tableTitle" align="center">Clients (<span id="queueClientsCount-#{id}">0</span>)</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </fieldset>
+</div>
+

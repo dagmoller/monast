@@ -289,6 +289,60 @@ var Monast = {
 			$('meetmeDivWrapper').removeChild($(meetme.id));
 		}
 	},
+	
+	// Queues
+	queuesDual: [],
+	queues: new Hash(),
+	processQueue: function (q)
+	{
+		q.id = md5("queue-" + q.queue);
+		
+		if (Object.isUndefined(this.queues.get(q.id))) // Queue does not exists
+		{
+			var div       = document.createElement('div');
+			div.id        = q.id;
+			div.className = "queueDiv";
+			div.innerHTML = new Template($("Template::Queue").innerHTML).evaluate(q);
+			
+			// Lookup Dual Free
+			var dualid = null;
+			if (this.queuesDual.length == 0)
+			{
+				this.queuesDual.push([div.id]);
+				dualid = "dual::0";
+			}
+			else
+			{
+				var l = this.queuesDual.length;
+				if (this.queuesDual[l - 1].length < 2)
+				{
+					this.queuesDual[l - 1].push(div.id);
+					dualid = "dual::" + (l - 1);
+				}
+				else
+				{
+					this.queuesDual.push([div.id]);
+					dualid = "dual::" + l;
+				}
+			}
+			
+			var dual = $(dualid);
+			if (!dual)
+			{
+				dual             = document.createElement('div');
+				dual.id          = dualid;
+				dual.className   = 'queueDualDiv';
+			}
+			
+			dual.appendChild(div);
+			$('fieldset-queuedual').appendChild(dual);
+		}
+		else
+		{
+			$(q.id).innerHTML = new Template($("Template::Queue").innerHTML).evaluate(q);
+		}
+		this.queues.set(q.id, q);
+	},
 
 	// Process Events
 	processEvent: function (event)
@@ -311,6 +365,10 @@ var Monast = {
 					
 				case "Meetme":
 					this.processMeetme(event);
+					break;
+					
+				case "Queue":
+					this.processQueue(event);
 					break;
 			}
 		}

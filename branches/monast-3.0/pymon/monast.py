@@ -760,6 +760,7 @@ class Monast():
 					log.debug("Server %s :: Queue update: %s %s", servername, queuename, _log)
 					queue.calls            = int(kw.get('calls', 0))
 					queue.completed        = int(kw.get('completed', 0))
+					queue.abandoned        = int(kw.get('abandoned', 0))
 					queue.holdtime         = kw.get('holdtime', 0)
 					queue.max              = kw.get('max', 0)
 					queue.servicelevel     = kw.get('servicelevel', 0)

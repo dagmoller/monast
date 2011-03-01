@@ -136,76 +136,10 @@
     </div>
     
     <div id="queuesDiv">
-    <fieldset>
+    <fieldset id="fieldset-queuedual">
       <legend>Queues</legend>
-      <!-- START BLOCK : queueDualDiv -->
-      <div class="queueDualDiv"><!-- inicio -->
-      <!-- START BLOCK : queue -->
-      <div class="queueDiv">
-        <fieldset>
-          <legend>Queue: {queue}</legend>
-          <div class="queueStatisticsDiv">
-            <table width="532">
-              <tr>
-                <td class="tableTitle" colspan="8" align="center">Statistics</td>
-              </tr>
-              <tr>
-                <td class="statusHeader" align="right">Max:&nbsp;</td>
-                <td class="status"><span id="queueStatsMax-{queue}">0</span></td>
-                
-                <td class="statusHeader" align="right">Calls:&nbsp;</td>
-                <td class="status"><span id="queueStatsCalls-{queue}">0</span></td>
-                
-                <td class="statusHeader" align="right">Holdtime:&nbsp;</td>
-                <td class="status"><span id="queueStatsHoldtime-{queue}">0</span></td>
-                
-                <td class="statusHeader" align="right">Completed:&nbsp;</td>
-                <td class="status"><span id="queueStatsCompleted-{queue}">0</span></td>
-              </tr>
-              <tr>
-                <td class="statusHeader" align="right">Abandoned:&nbsp;</td>
-                <td class="status"><span id="queueStatsAbandoned-{queue}">0</span></td>
-                
-                <td class="statusHeader" align="right">Service Level:&nbsp;</td>
-                <td class="status"><span id="queueStatsServiceLevel-{queue}">0</span></td>
-                
-                <td class="statusHeader" align="right">Service level Perf.:&nbsp;</td>
-                <td class="status"><span id="queueStatsServicelevelPerf-{queue}">0.0</span></td>
-                
-                <td class="statusHeader" align="right">Weight:&nbsp;</td>
-                <td class="status"><span id="queueStatsWeight-{queue}">0</span></td>
-              </tr>
-            </table>
-          </div>
-          <div class="queueMembersDivWrap" id="queueMembers-{queue}">
-            <div class="queueMembersDiv" id="queueMembersDrop-{queue}">
-              <table width="300">
-                <tr>
-                  <td class="tableTitle" colspan="3" align="center">Members (<span id="queueMembersCount-{queue}">0</span>)</td>
-                </tr>
-                <tr>
-                  <td class="statusHeader" width="170" align="center">Location/Name</td>
-                  <td class="statusHeader" width="40" align="center">Calls Taken</td>
-                  <td class="statusHeader" width="90" align="center">Status</td>
-                </tr>
-              </table>
-            </div>
-          </div>
-          <div class="queueClientsDivWrap" id="queueClients-{queue}">
-            <div class="queueClientsDiv">
-              <table width="220">
-                <tr>
-                  <td class="tableTitle" align="center">Clients (<span id="queueClientsCount-{queue}">0</span>)</td>
-                </tr>
-              </table>
-            </div>
-          </div>
-        </fieldset>
-      </div>
-      <!-- END BLOCK : queue -->
-      </div><!-- fim -->
-      <!-- END BLOCK : queueDualDiv -->
-      <div style="clear: both;"></div>
+      
+      <!-- <div style="clear: both;"></div> -->
     </fieldset>
     </div>
 
