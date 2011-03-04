@@ -341,6 +341,7 @@ var Monast = {
 		{
 			$(q.id).innerHTML = new Template($("Template::Queue").innerHTML).evaluate(q);
 		}
+		q.members = new Hash();
 		this.queues.set(q.id, q);
 	},
 	queueMembers: new Hash(),
@@ -350,27 +351,51 @@ var Monast = {
 		m.queueid     = md5("queue-" + m.queue);
 		m.statuscolor = this.getColor(m.statustext); 
 		
-		if (Object.isUndefined(this.queueMembers.get(m.id))) // Queue Member does not exists
+		var div       = document.createElement('div');
+		div.id        = m.id;
+		div.className = 'queueMembersDiv';
+		div.innerHTML = new Template($("Template::Queue::Member").innerHTML).evaluate(m);
+		div.oncontextmenu = function () { return false; };
+		div.onmouseup     = function (event)
 		{
-			var div       = document.createElement('div');
-			div.id        = m.id;
-			div.className = 'queueMembersDiv';
-			div.innerHTML = new Template($("Template::Queue::Member").innerHTML).evaluate(m);
-			$('queueMembers-' + m.queueid).appendChild(div);
-		}
-		else
-		{
-			$(m.id).innerHTML = new Template($("Template::Queue::Member").innerHTML).evaluate(m);
-		}
+			var e = event ? event : window.event;
+			if (e.button == 2)
+				Monast.showQueueMemberContextMenu(m.queueid, m.id);
+		};
+		$('queueMembers-' + m.queueid).appendChild(div);
+		this.queues.get(m.queueid).members.set(m.id, m);
 	},
 	removeQueueMember: function (m)
 	{
-		var id     = md5("queueMember-" + m.queue + '::' + m.location);
-		var member = this.queueMembers.unset(id);
+		var id       = md5("queueMember-" + m.queue + '::' + m.location);
+		var queueid  = md5("queue-" + m.queue);
+		var member = this.queues.get(queueid).members.unset(id);
 		if (!Object.isUndefined(member))
 		{
 			$('queueMembers-' + member.queueid).removeChild($(member.id));
 		}
+	},
+	showQueueMemberContextMenu: function (queueid, id)
+	{
+		this._contextMenu.clearContent();
+		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition(event));
+	
+		var tmp = function (p_sType, p_aArgs, p_oValue)
+		{
+			Monast.doAlert(p_oValue);
+		};
+		
+		var qm = this.queues.get(queueid).members.get(id);
+		var m = [
+			[
+				{text: qm.paused == "0" ? "Pause Member" : "Unpause Member"},
+				{text: "Remove Member"}
+			]
+		];
+		this._contextMenu.addItems(m);
+		this._contextMenu.setItemGroupTitle("Queue Member:  " + qm.name, 0);
+		this._contextMenu.render(document.body);
+		this._contextMenu.show();
 	},
 
 	// Process Events
