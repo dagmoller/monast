@@ -30,6 +30,36 @@
   <span style="display: none">#{calleridname} &lt;#{calleridnum}&gt;</span>
 </div>
 
+<!-- Channel Information -->
+<div style="display: none" id="Template::Channel::Info">
+  <table class="tableInfo">
+    <tr>
+      <td class="key">Uniqueid:</td>
+      <td>#{uniqueid}</td>
+    </tr>
+    <tr>
+      <td class="key">Channel Name:</td>
+      <td>#{channel}</td>
+    </tr>
+    <tr>
+      <td class="key">Callerid Name:</td>
+      <td>#{calleridname}</td>
+    </tr>
+    <tr>
+      <td class="key">Callerid Number:</td>
+      <td>#{calleridnum}</td>
+    </tr>
+    <tr>
+      <td class="key">State:</td>
+      <td>#{state}</td>
+    </tr>
+    <tr>
+      <td class="key">Monitor:</td>
+      <td>#{monitortext}</td>
+    </tr>
+  </table>
+</div>
+
 <!-- Bridge -->
 <div style="display: none" id="Template::Bridge">
   <table width='570'>
@@ -133,4 +163,42 @@
       <td class='status' width='90' align='center' bgcolor='#{statuscolor}'>#{statustext}</td>
     </tr>
   </table>
-</div>			
+</div>
+
+<!-- Queue Member Information -->
+<div style="display: none" id="Template::Queue::Member::Info">
+  <table class="tableInfo">
+    <tr>
+      <td class="key">Name:</td>
+      <td>#{name}</td>
+    </tr>
+    <tr>
+      <td class="key">Location:</td>
+      <td>#{location}</td>
+    </tr>
+    <tr>
+      <td class="key">Membership:</td>
+      <td>#{membership}</td>
+    </tr>
+    <tr>
+      <td class="key">Calls Taken:</td>
+      <td>#{callstaken}</td>
+    </tr>
+    <tr>
+      <td class="key">Last Call:</td>
+      <td>#{lastcalltext}</td>
+    </tr>
+    <tr>
+      <td class="key">Paused:</td>
+      <td>#{pausedtext}</td>
+    </tr>
+    <tr>
+      <td class="key">Penalty:</td>
+      <td>#{penalty}</td>
+    </tr>
+    <tr>
+      <td class="key">Status:</td>
+      <td>#{statustext}</td>
+    </tr>
+  </table>
+</div>

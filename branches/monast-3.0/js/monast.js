@@ -175,9 +175,10 @@ var Monast = {
 		this._contextMenu.clearContent();
 		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition(event));
 	
-		var tmp = function (p_sType, p_aArgs, p_oValue)
+		var viewChannelInfo = function (p_sType, p_aArgs, p_oValue)
 		{
-			Monast.doAlert(p_oValue);
+			p_oValue.monitortext = p_oValue.monitor ? "True" : "False";
+			Monast.doAlert(new Template($("Template::Channel::Info").innerHTML).evaluate(p_oValue));
 		};
 	
 		var c = this.channels.get(id);
@@ -185,7 +186,8 @@ var Monast = {
 			[
 				{text: "Start Monitor", disabled: c.monitor},
 				{text: "Stop Monitor", disabled: !c.monitor},
-				{text: "Hangup", onclick: {fn: tmp, obj: "Hangup Channel: " + c.channel}}
+				{text: "Hangup"},
+				{text: "View Channel Info", onclick: {fn: viewChannelInfo, obj: c}}
 			]
 		];
 		this._contextMenu.addItems(m);
@@ -344,7 +346,6 @@ var Monast = {
 		q.members = new Hash();
 		this.queues.set(q.id, q);
 	},
-	queueMembers: new Hash(),
 	processQueueMember: function (m)
 	{
 		m.id          = md5("queueMember-" + m.queue + '::' + m.location);
@@ -380,16 +381,19 @@ var Monast = {
 		this._contextMenu.clearContent();
 		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition(event));
 	
-		var tmp = function (p_sType, p_aArgs, p_oValue)
+		var viewMemberInfo = function (p_sType, p_aArgs, p_oValue)
 		{
-			Monast.doAlert(p_oValue);
+			p_oValue.pausedtext   = p_oValue.paused == "1" ? "True" : "False";
+			p_oValue.lastcalltext = new Date(p_oValue.lastcall * 1000).toLocaleString();
+			Monast.doAlert(new Template($("Template::Queue::Member::Info").innerHTML).evaluate(p_oValue));
 		};
 		
 		var qm = this.queues.get(queueid).members.get(id);
 		var m = [
 			[
 				{text: qm.paused == "0" ? "Pause Member" : "Unpause Member"},
-				{text: "Remove Member"}
+				{text: "Remove Member"},
+				{text: "View Member Info", onclick: {fn: viewMemberInfo, obj: qm}}
 			]
 		];
 		this._contextMenu.addItems(m);

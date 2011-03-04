@@ -233,6 +233,13 @@ fieldset legend {
 	font-size: 0.8em;
 }
 
+.tableInfo {
+	font-size: 0.7em;
+}
+.tableInfo .key {
+	font-weight: bold;
+	text-align: right;
+}
 
 /* YUI */
 .yui-skin-sam .yui-button button, .yui-skin-sam .yui-button a {
