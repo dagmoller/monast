@@ -14,6 +14,40 @@
   </table>
 </div>
 
+<!-- User/Peer Information -->
+<div style="display: none" id="Template::Userpeer::Info">
+  <table class="tableInfo" id="Template::Userpeer::Info::Table">
+    <tr>
+      <td class="key">Channel Type:</td>
+      <td>#{channeltype}</td>
+    </tr>
+    <tr>
+      <td class="key">Peer Name:</td>
+      <td>#{peername}</td>
+    </tr>
+    <tr>
+      <td class="key">Peer Context:</td>
+      <td>#{context}</td>
+    </tr>
+    <tr>
+      <td class="key">Callerid:</td>
+      <td>#{callerid}</td>
+    </tr>
+    <tr>
+      <td class="key">Status:</td>
+      <td>#{status}</td>
+    </tr>
+    <tr>
+      <td class="key">Active Calls:</td>
+      <td>#{calls}</td>
+    </tr>
+    <tr>
+      <td class="key">Latency:</td>
+      <td>#{latency}</td>
+    </tr>
+  </table>
+</div>
+
 <!-- Monitor -->
 <div style="display: none" id="Template::Channel::Monitor">
   <a href="javascript:recordStop('#{{uniqueid}}')" title='Stop Monitor'><img src='image/record.png' border='0' width='8' height='8'></a>&nbsp;&nbsp;

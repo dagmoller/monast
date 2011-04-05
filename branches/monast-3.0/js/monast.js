@@ -119,10 +119,31 @@ var Monast = {
 		this._contextMenu.clearContent();
 		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition(event));
 	
+		var viewUserpeerInfo = function (p_sType, p_aArgs, p_oValue)
+		{
+			p_oValue.latency          = p_oValue.time == -1 ? "--" : p_oValue.time + " ms";
+			p_oValue.channelVariables = [];
+			
+			if (p_oValue.variables.length > 0)
+			{
+				p_oValue.channelVariables.push('<tr><td colspan="2"><hr></td></tr>');
+				p_oValue.channelVariables.push('<tr><td colspan="2" class="key" style="text-align: center;">Channel Variables</td></tr>');
+			} 
+			
+			p_oValue.variables.each(function (v) {
+				var item = v.split('=', 2);
+				p_oValue.channelVariables.push('<tr><td class="key">' + item[0] + ':</td><td>' + item[1] + '</td></tr>');
+			});
+			
+			Monast.doAlert(new Template($("Template::Userpeer::Info").innerHTML).evaluate(p_oValue));
+			$("Template::Userpeer::Info::Table").innerHTML = $("Template::Userpeer::Info::Table").innerHTML + p_oValue.channelVariables.join("\n");
+		};
+		
 		var u = this.userspeers.get(id);
 		var m = [
 			[
-				{text: "Originate Call"}
+				{text: "Originate Call"},
+				{text: "View User/Peer Info", onclick: {fn: viewUserpeerInfo, obj: u}}
 			]
 		];
 		this._contextMenu.addItems(m);
