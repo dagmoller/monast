@@ -246,7 +246,7 @@ class MonastHTTP(resource.Resource):
 			
 			for (queuename, uniqueid), client in server.status.queueClients.items():
 				tmp[servername]['queueClients'].append(client.__dict__)
-			#tmp[servername]['queueClients'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
+			tmp[servername]['queueClients'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
 					 
 		return json.dumps(tmp)
 	
@@ -332,7 +332,7 @@ class Monast():
 			#'StatusComplete'      : self.handlerStatusComplete,
 			#'QueueMemberAdded'    : self.handlerQueueMemberAdded,
 			#'QueueMemberRemoved'  : self.handlerQueueMemberRemoved,
-			#'Join'                : self.handlerJoin, # Queue Join
+			'Join'                 : self.handlerEventJoin, # Queue Join
 			#'Leave'               : self.handlerLeave, # Queue Leave
 			#'QueueCallerAbandon'  : self.handlerQueueCallerAbandon,
 			#'QueueParams'         : self.handlerQueueParams,
@@ -789,7 +789,6 @@ class Monast():
 						member.penalty    = kw.get('penalty')
 						member.status     = kw.get('status')
 						member.statustext = AST_DEVICE_STATES.get(member.status, 'Unknown')
-						server.status.queueMembers[memberid] = member
 					else:
 						log.debug("Server %s :: Queue update, member updated: %s -> %s %s", servername, queuename, location, _log)
 						member.name       = kw.get('name')
@@ -801,11 +800,46 @@ class Monast():
 						member.penalty    = kw.get('penalty')
 						member.status     = kw.get('status')
 						member.statustext = AST_DEVICE_STATES.get(member.status, 'Unknown')
-						server.status.queueMembers[memberid] = member
+					server.status.queueMembers[memberid] = member
 					self.http._addUpdate(servername = servername, **member.__dict__.copy())
 					if logging.DUMPOBJECTS:
 						log.debug("Object Dump:%s", member)
 					return
+				
+				if event in ("QueueEntry", "Join"):
+					uniqueid = kw.get('uniqueid', None)
+					if not uniqueid:
+						# try to found uniqueid based on channel name
+						channel  = kw.get('channel')
+						for uniqueid, chan in server.status.channels.items():
+							if channel == chan:
+								break
+					clientid = (queuename, uniqueid) 
+					client   = server.status.queueClients.get(clientid)
+					if not client:
+						log.debug("Server %s :: Queue update, client added: %s -> %s %s", servername, queuename, uniqueid, _log)
+						client              = GenericObject("QueueClient")
+						client.uniqueid     = uniqueid
+						client.channel      = kw.get('channel')
+						client.queue        = kw.get('queue')
+						client.calleridname = kw.get('calleridname')
+						client.calleridnum  = kw.get('calleridnum')
+						client.position     = kw.get('position')
+						client.jointime     = int(time.time() - int(kw.get('wait', 0)))
+					else:
+						log.debug("Server %s :: Queue update, client updates: %s -> %s %s", servername, queuename, uniqueid, _log)
+						client.channel      = kw.get('channel')
+						client.queue        = kw.get('queue')
+						client.calleridname = kw.get('calleridname')
+						client.calleridnum  = kw.get('calleridnum')
+						client.position     = kw.get('position')
+					server.status.queueClients[clientid] = client
+					self.http._addUpdate(servername = servername, **client.__dict__.copy())
+					print client
+					if logging.DUMPOBJECTS:
+						log.debug("Object Dump:%s", client)
+					return
+					
 			else:
 				log.warning("Server %s :: Queue not found: %s", servername, queuename)
 		except:
@@ -1155,6 +1189,9 @@ class Monast():
 		objectname  = event.get('objectname').split('/')[0]
 		time        = -1
 		
+		#import pprint
+		#pprint.pprint(event)
+		
 		reTime = re.compile("([0-9]+)\s+ms")
 		gTime  = reTime.search(status)
 		if gTime:
@@ -1188,6 +1225,9 @@ class Monast():
 				callerid  = None
 				context   = None
 				variables = []
+				
+				#import pprint
+				#pprint.pprint(response)
 				
 				try:
 					callerid = re.compile("['\"]").sub("", re.search('Callerid[\s]+:[\s](.*)\n', result).group(1))
@@ -1426,6 +1466,11 @@ class Monast():
 				'calleridname' : event.get("calleridname"),
 			}  
 		)
+		
+	# Queue Events
+	def handlerEventJoin(self, ami, event):
+		log.debug("Server %s :: Processing Event Join..." % ami.servername)
+		self._updateQueue(ami.servername, **event)
 	
 	# Khomp Events
 	def handlerEventAntennaLevel(self, ami, event):

@@ -199,6 +199,15 @@
   </table>
 </div>
 
+<!-- QueueClient -->
+<div style="display: none" id="Template::Queue::Client">
+  <table width='220'>
+    <tr>
+      <td class='status' align='center'>#{callerid}</td>
+    </tr>
+  </table>
+</div>
+
 <!-- Queue Member Information -->
 <div style="display: none" id="Template::Queue::Member::Info">
   <table class="tableInfo">
@@ -233,6 +242,32 @@
     <tr>
       <td class="key">Status:</td>
       <td>#{statustext}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Queue Client Information -->
+<div style="display: none" id="Template::Queue::Client::Info">
+  <table class="tableInfo">
+    <tr>
+      <td class="key">Uniqueid:</td>
+      <td>#{uniqueid}</td>
+    </tr>
+    <tr>
+      <td class="key">Callerid Name:</td>
+      <td>#{calleridname}</td>
+    </tr>
+    <tr>
+      <td class="key">Callerid Number:</td>
+      <td>#{calleridnum}</td>
+    </tr>
+    <tr>
+      <td class="key">Position:</td>
+      <td>#{position}</td>
+    </tr>
+    <tr>
+      <td class="key">Waiting since:</td>
+      <td>#{waittime}</td>
     </tr>
   </table>
 </div>

@@ -365,6 +365,7 @@ var Monast = {
 			$(q.id).innerHTML = new Template($("Template::Queue").innerHTML).evaluate(q);
 		}
 		q.members = new Hash();
+		q.clients = new Hash();
 		this.queues.set(q.id, q);
 	},
 	processQueueMember: function (m)
@@ -386,6 +387,7 @@ var Monast = {
 		};
 		$('queueMembers-' + m.queueid).appendChild(div);
 		this.queues.get(m.queueid).members.set(m.id, m);
+		$('queueMembersCount-' + m.queueid).innerHTML = this.queues.get(m.queueid).members.keys().length;
 	},
 	removeQueueMember: function (m)
 	{
@@ -396,6 +398,7 @@ var Monast = {
 		{
 			$('queueMembers-' + member.queueid).removeChild($(member.id));
 		}
+		$('queueMembersCount-' + member.queueid).innerHTML = this.queues.get(member.queueid).members.keys().length;
 	},
 	showQueueMemberContextMenu: function (queueid, id)
 	{
@@ -419,6 +422,65 @@ var Monast = {
 		];
 		this._contextMenu.addItems(m);
 		this._contextMenu.setItemGroupTitle("Queue Member:  " + qm.name, 0);
+		this._contextMenu.render(document.body);
+		this._contextMenu.show();
+	},
+	processQueueClient: function (c)
+	{
+		c.id          = md5("queueClient-" + c.queue + '::' + c.uniqueid);
+		c.queueid     = md5("queue-" + c.queue);
+		c.callerid    = c.channel;
+		
+		if (c.calleridname)
+			c.callerid = c.calleridname + " &lt;" + c.calleridnum + "&gt;";
+		
+		var div       = document.createElement('div');
+		div.id        = c.id;
+		div.className = 'queueClientsDiv';
+		div.innerHTML = new Template($("Template::Queue::Client").innerHTML).evaluate(c);
+		div.oncontextmenu = function () { return false; };
+		div.onmouseup     = function (event)
+		{
+			var e = event ? event : window.event;
+			if (e.button == 2)
+				Monast.showQueueClientContextMenu(c.queueid, c.id);
+		};
+		$('queueClients-' + c.queueid).appendChild(div);
+		this.queues.get(c.queueid).clients.set(c.id, c);
+		$('queueClientsCount-' + c.queueid).innerHTML = this.queues.get(c.queueid).clients.keys().length;
+	},
+	removeQueueClient: function (c)
+	{
+		var id       = md5("queueClient-" + c.queue + '::' + c.uniqueid);
+		var queueid  = md5("queue-" + c.queue);
+		var client   = this.queues.get(queueid).clients.unset(id);
+		if (!Object.isUndefined(client))
+		{
+			$('queueClients-' + client.queueid).removeChild($(client.id));
+		}
+		$('queueClientsCount-' + client.queueid).innerHTML = this.queues.get(client.queueid).clients.keys().length;
+	},
+	showQueueClientContextMenu: function (queueid, id)
+	{
+		this._contextMenu.clearContent();
+		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition(event));
+	
+		var viewClientInfo = function (p_sType, p_aArgs, p_oValue)
+		{
+			p_oValue.pausedtext = p_oValue.paused == "1" ? "True" : "False";
+			p_oValue.waittime   = new Date(p_oValue.jointime * 1000).toLocaleString();
+			Monast.doAlert(new Template($("Template::Queue::Client::Info").innerHTML).evaluate(p_oValue));
+		};
+		
+		var qc = this.queues.get(queueid).clients.get(id);
+		var c = [
+			[
+				{text: "Drop Client"},
+				{text: "View Client Info", onclick: {fn: viewClientInfo, obj: qc}}
+			]
+		];
+		this._contextMenu.addItems(c);
+		this._contextMenu.setItemGroupTitle("Queue Client:  " + qc.callerid, 0);
 		this._contextMenu.render(document.body);
 		this._contextMenu.show();
 	},
@@ -453,6 +515,10 @@ var Monast = {
 				case "QueueMember":
 					this.processQueueMember(event);
 					break;
+					
+				case "QueueClient":
+					this.processQueueClient(event);
+					break;
 			}
 		}
 		
@@ -483,6 +549,10 @@ var Monast = {
 					break;
 					
 				case "RemoveQueueMember":
+					this.removeQueueMember(event);
+					break;
+					
+				case "RemoveQueueClient":
 					this.removeQueueMember(event);
 					break;
 			}
