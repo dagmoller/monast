@@ -333,7 +333,7 @@ class Monast():
 			#'QueueMemberAdded'    : self.handlerQueueMemberAdded,
 			#'QueueMemberRemoved'  : self.handlerQueueMemberRemoved,
 			'Join'                 : self.handlerEventJoin, # Queue Join
-			#'Leave'               : self.handlerLeave, # Queue Leave
+			'Leave'                : self.handlerEventLeave, # Queue Leave
 			#'QueueCallerAbandon'  : self.handlerQueueCallerAbandon,
 			#'QueueParams'         : self.handlerQueueParams,
 			#'QueueMember'         : self.handlerQueueMember,
@@ -835,9 +835,28 @@ class Monast():
 						client.position     = kw.get('position')
 					server.status.queueClients[clientid] = client
 					self.http._addUpdate(servername = servername, **client.__dict__.copy())
-					print client
 					if logging.DUMPOBJECTS:
 						log.debug("Object Dump:%s", client)
+					return
+				
+				if event == "Leave":
+					uniqueid = kw.get('uniqueid', None)
+					if not uniqueid:
+						# try to found uniqueid based on channel name
+						channel  = kw.get('channel')
+						for uniqueid, chan in server.status.channels.items():
+							if channel == chan:
+								break
+					clientid = (queuename, uniqueid) 
+					client   = server.status.queueClients.get(clientid)
+					if client:
+						log.debug("Server %s :: Queue update, client removed: %s -> %s %s", servername, queuename, uniqueid, _log)
+						del server.status.queueClients[clientid]
+						self.http._addUpdate(servername = servername, action = 'RemoveQueueClient', uniqueid = client.uniqueid, queue = client.queue)
+						if logging.DUMPOBJECTS:
+							log.debug("Object Dump:%s", meetme)
+					else:
+						log.warning("Server %s :: Queue Client does not exists: %s -> %s", servername, queuename, uniqueid)
 					return
 					
 			else:
@@ -1469,7 +1488,11 @@ class Monast():
 		
 	# Queue Events
 	def handlerEventJoin(self, ami, event):
-		log.debug("Server %s :: Processing Event Join..." % ami.servername)
+		#log.debug("Server %s :: Processing Event Join..." % ami.servername)
+		self._updateQueue(ami.servername, **event)
+		
+	def handlerEventLeave(self, ami, event):
+		#log.debug("Server %s :: Processing Event Leave..." % ami.servername)
 		self._updateQueue(ami.servername, **event)
 	
 	# Khomp Events

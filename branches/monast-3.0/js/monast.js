@@ -553,7 +553,7 @@ var Monast = {
 					break;
 					
 				case "RemoveQueueClient":
-					this.removeQueueMember(event);
+					this.removeQueueClient(event);
 					break;
 			}
 		}
