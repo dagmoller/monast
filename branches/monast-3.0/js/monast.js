@@ -372,7 +372,13 @@ var Monast = {
 	{
 		m.id          = md5("queueMember-" + m.queue + '::' + m.location);
 		m.queueid     = md5("queue-" + m.queue);
+		m.statustext  = m.paused == '1' ? 'Paused<br><span style="font-family: monospace;" id="chrono-' + m.id + '">00:00:00</span>' : m.statustext;
 		m.statuscolor = this.getColor(m.statustext); 
+		
+		if ($(m.id))
+		{
+			$('queueMembers-' + m.queueid).removeChild($(m.id));
+		}
 		
 		var div       = document.createElement('div');
 		div.id        = m.id;
@@ -385,9 +391,16 @@ var Monast = {
 			if (e.button == 2)
 				Monast.showQueueMemberContextMenu(m.queueid, m.id);
 		};
+		
 		$('queueMembers-' + m.queueid).appendChild(div);
 		this.queues.get(m.queueid).members.set(m.id, m);
 		$('queueMembersCount-' + m.queueid).innerHTML = this.queues.get(m.queueid).members.keys().length;
+		
+		if (m.paused == '1')
+		{
+			this.stopChrono(m.id);
+			this.startChrono(m.id, (new Date().getTime() / 1000) - parseInt(m.pausedat));
+		}		
 	},
 	removeQueueMember: function (m)
 	{
@@ -396,6 +409,7 @@ var Monast = {
 		var member = this.queues.get(queueid).members.unset(id);
 		if (!Object.isUndefined(member))
 		{
+			this.stopChrono(member.id);
 			$('queueMembers-' + member.queueid).removeChild($(member.id));
 		}
 		$('queueMembersCount-' + member.queueid).innerHTML = this.queues.get(member.queueid).members.keys().length;

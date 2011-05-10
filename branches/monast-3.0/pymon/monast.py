@@ -330,15 +330,15 @@ class Monast():
 			#'ParkedCallsComplete' : self.handlerParkedCallsComplete,
 			#'Status'              : self.handlerStatus,
 			#'StatusComplete'      : self.handlerStatusComplete,
-			#'QueueMemberAdded'    : self.handlerQueueMemberAdded,
-			#'QueueMemberRemoved'  : self.handlerQueueMemberRemoved,
+			'QueueMemberAdded'    : self.handlerEventQueueMemberAdded,
+			'QueueMemberRemoved'  : self.handlerEventQueueMemberRemoved,
 			'Join'                 : self.handlerEventJoin, # Queue Join
 			'Leave'                : self.handlerEventLeave, # Queue Leave
 			#'QueueCallerAbandon'  : self.handlerQueueCallerAbandon,
 			#'QueueParams'         : self.handlerQueueParams,
 			#'QueueMember'         : self.handlerQueueMember,
-			#'QueueMemberStatus'   : self.handlerQueueMemberStatus,
-			#'QueueMemberPaused'   : self.handlerQueueMemberPaused,
+			'QueueMemberStatus'   : self.handlerEventQueueMemberStatus,
+			'QueueMemberPaused'   : self.handlerEventQueueMemberPaused,
 			#'QueueEntry'          : self.handlerQueueEntry,
 			#'QueueStatusComplete' : self.handlerQueueStatusComplete,
 			#'MonitorStart'        : self.handlerMonitorStart,
@@ -772,7 +772,7 @@ class Monast():
 						log.debug("Object Dump:%s", queue)
 					return
 				
-				if event == "QueueMember":
+				if event in ("QueueMember", "QueueMemberAdded", "QueueMemberStatus", "QueueMemberPaused"):
 					location = kw.get('location')
 					memberid = (queuename, location)
 					member   = server.status.queueMembers.get(memberid)
@@ -780,23 +780,25 @@ class Monast():
 						log.debug("Server %s :: Queue update, member added: %s -> %s %s", servername, queuename, location, _log)
 						member            = GenericObject("QueueMember")
 						member.location   = location
-						member.name       = kw.get('name')
+						member.name       = kw.get('name', kw.get('membername'))
 						member.queue      = kw.get('queue')
-						member.callstaken = kw.get('callstaken')
-						member.lastcall   = kw.get('lastcall')
+						member.callstaken = kw.get('callstaken', 0)
+						member.lastcall   = kw.get('lastcall', 0)
 						member.membership = kw.get('membership')
 						member.paused     = kw.get('paused')
+						member.pausedat   = time.time() if member.paused == '1' else 0
 						member.penalty    = kw.get('penalty')
 						member.status     = kw.get('status')
 						member.statustext = AST_DEVICE_STATES.get(member.status, 'Unknown')
 					else:
 						log.debug("Server %s :: Queue update, member updated: %s -> %s %s", servername, queuename, location, _log)
-						member.name       = kw.get('name')
+						member.name       = kw.get('name', kw.get('membername'))
 						member.queue      = kw.get('queue')
-						member.callstaken = kw.get('callstaken')
-						member.lastcall   = kw.get('lastcall')
+						member.callstaken = kw.get('callstaken', 0)
+						member.lastcall   = kw.get('lastcall', 0)
 						member.membership = kw.get('membership')
 						member.paused     = kw.get('paused')
+						member.pausedat   = time.time() if event == "QueueMemberPaused" and member.paused == '1' else 0
 						member.penalty    = kw.get('penalty')
 						member.status     = kw.get('status')
 						member.statustext = AST_DEVICE_STATES.get(member.status, 'Unknown')
@@ -804,6 +806,20 @@ class Monast():
 					self.http._addUpdate(servername = servername, **member.__dict__.copy())
 					if logging.DUMPOBJECTS:
 						log.debug("Object Dump:%s", member)
+					return
+				
+				if event == "QueueMemberRemoved":
+					location = kw.get('location')
+					memberid = (queuename, location)
+					member   = server.status.queueMembers.get(memberid)
+					if member:
+						log.debug("Server %s :: Queue update, member removed: %s -> %s %s", servername, queuename, location, _log)
+						del server.status.queueMembers[memberid]
+						self.http._addUpdate(servername = servername, action = 'RemoveQueueMember', location = member.location, queue = member.queue)
+						if logging.DUMPOBJECTS:
+							log.debug("Object Dump:%s", meetme)
+					else:
+						log.warning("Server %s :: Queue Member does not exists: %s -> %s", servername, queuename, location)
 					return
 				
 				if event in ("QueueEntry", "Join"):
@@ -858,6 +874,9 @@ class Monast():
 					else:
 						log.warning("Server %s :: Queue Client does not exists: %s -> %s", servername, queuename, uniqueid)
 					return
+				
+				import pprint
+				pprint.pprint(kw)
 					
 			else:
 				log.warning("Server %s :: Queue not found: %s", servername, queuename)
@@ -1487,12 +1506,39 @@ class Monast():
 		)
 		
 	# Queue Events
+	def handlerEventQueueMemberAdded(self, ami, event):
+		#log.debug("Server %s :: Processing Event QueueMemberAdded..." % ami.servername)
+		self._updateQueue(ami.servername, **event)
+	
+	def handlerEventQueueMemberRemoved(self, ami, event):
+		#log.debug("Server %s :: Processing Event QueueMemberRemoved..." % ami.servername)
+		self._updateQueue(ami.servername, **event)
+	
 	def handlerEventJoin(self, ami, event):
 		#log.debug("Server %s :: Processing Event Join..." % ami.servername)
 		self._updateQueue(ami.servername, **event)
 		
 	def handlerEventLeave(self, ami, event):
 		#log.debug("Server %s :: Processing Event Leave..." % ami.servername)
+		self._updateQueue(ami.servername, **event)
+		
+	def handlerEventQueueMemberStatus(self, ami, event):
+		#log.debug("Server %s :: Processing Event QueueMemberStatus..." % ami.servername)
+		self._updateQueue(ami.servername, **event)
+		
+	def handlerEventQueueMemberPaused(self, ami, event):
+		#log.debug("Server %s :: Processing Event QueueMemberPaused..." % ami.servername)
+		
+		server   = self.servers.get(ami.servername)
+		queue    = event.get('queue')
+		location = event.get('location')
+		member   = server.status.queueMembers.get((queue, location))
+		
+		event['callstaken'] = member.callstaken
+		event['lastcall']   = member.lastcall
+		event['penalty']    = member.penalty
+		event['status']     = member.status
+		
 		self._updateQueue(ami.servername, **event)
 	
 	# Khomp Events
