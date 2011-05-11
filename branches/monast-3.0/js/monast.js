@@ -320,6 +320,15 @@ var Monast = {
 	{
 		q.id = md5("queue-" + q.queue);
 		
+		if (!Object.isUndefined(q.subaction) && q.subaction == "Update")
+		{
+			Object.keys(q).each(function (key) {
+				if ($(q.id + "-" + key))
+					$(q.id + "-" + key).innerHTML = q[key];
+			});
+			return;
+		}
+		
 		if (Object.isUndefined(this.queues.get(q.id))) // Queue does not exists
 		{
 			var div       = document.createElement('div');
@@ -366,6 +375,7 @@ var Monast = {
 		}
 		q.members = new Hash();
 		q.clients = new Hash();
+		q.calls   = new Hash();
 		this.queues.set(q.id, q);
 	},
 	processQueueMember: function (m)
@@ -375,9 +385,22 @@ var Monast = {
 		m.statustext  = m.paused == '1' ? 'Paused<br><span style="font-family: monospace;" id="chrono-' + m.id + '">00:00:00</span>' : m.statustext;
 		m.statuscolor = this.getColor(m.statustext); 
 		
-		if ($(m.id))
+		if (!Object.isUndefined(m.subaction) && m.subaction == "Update")
 		{
-			$('queueMembers-' + m.queueid).removeChild($(m.id));
+			Object.keys(m).each(function (key) {
+				if ($(m.id + "-" + key))
+				{
+					$(m.id + "-" + key).innerHTML = m[key];
+					if (key == 'statustext')
+						$(m.id + "-" + key).style.backgroundColor = m.statuscolor;
+				}
+			});
+			if (m.paused == '1')
+			{
+				this.stopChrono(m.id);
+				this.startChrono(m.id, (new Date().getTime() / 1000) - parseInt(m.pausedat));
+			}
+			return;
 		}
 		
 		var div       = document.createElement('div');
@@ -400,7 +423,7 @@ var Monast = {
 		{
 			this.stopChrono(m.id);
 			this.startChrono(m.id, (new Date().getTime() / 1000) - parseInt(m.pausedat));
-		}		
+		}
 	},
 	removeQueueMember: function (m)
 	{
@@ -498,12 +521,80 @@ var Monast = {
 		this._contextMenu.render(document.body);
 		this._contextMenu.show();
 	},
+	processQueueCall: function (c)
+	{
+		/*
+		if (Object.isUndefined(c.id))
+		{
+			c.id       = md5("queueCall-" + c.client.uniqueid + "::" + c.member.location);
+			c.queueid  = md5("queue-" + c.client.queue);
+			c.memberid = md5("queueMember-" + c.member.queue + '::' + c.member.location); 
+			
+			c.callerid = c.client.channel;
+			
+			if (c.client.calleridname)
+				c.callerid = c.client.calleridname + " &lt;" + c.client.calleridnum + "&gt;";
+			
+			this.queues.get(c.queueid).calls.set(c.id, c);
+		}
+		
+		if (!$(c.id) && c.link)
+		{
+			var div       = document.createElement('div');
+			div.id        = c.id;
+			div.innerHTML = new Template($("Template::Queue::Call").innerHTML).evaluate(c);
+			div.oncontextmenu = function () { return false; };
+			$(c.memberid).innerHTML += div.innerHTML;
+			this.stopChrono(c.id);
+			this.startChrono(c.id, (new Date().getTime() / 1000) - parseInt(c.starttime));
+		}
+		else if ($(c.id) && !c.link)
+		{
+			this.stopChrono(c.id);
+			$(c.memberid).removeChild($(c.id));
+		}
+		*/
+		
+		c.id       = md5("queueCall-" + c.client.uniqueid + "::" + c.member.location);
+		c.queueid  = md5("queue-" + c.client.queue);
+		c.memberid = md5("queueMember-" + c.member.queue + '::' + c.member.location); 
+		
+		c.callerid = c.client.channel;
+		
+		if (c.client.calleridname)
+			c.callerid = c.client.calleridname + " &lt;" + c.client.calleridnum + "&gt;";
+		
+		if (!$(c.id) && c.link)
+		{
+			var div       = document.createElement('div');
+			div.id        = c.id;
+			div.innerHTML = new Template($("Template::Queue::Call").innerHTML).evaluate(c);
+			div.oncontextmenu = function () { return false; };
+			$(c.memberid).innerHTML += div.innerHTML;
+			
+			this.stopChrono(c.id);
+			this.startChrono(c.id, (new Date().getTime() / 1000) - parseInt(c.starttime));
+		}
+		this.queues.get(c.queueid).calls.set(c.id, c);
+	},
+	removeQueueCall: function (c)
+	{
+		c.id       = md5("queueCall-" + c.uniqueid + "::" + c.location);
+		c.queueid  = md5("queue-" + c.queue);
+		call       = this.queues.get(c.queueid).calls.unset(c.id);
+		if (!Object.isUndefined(call))
+		{
+			this.stopChrono(c.id);
+			$(call.memberid).removeChild($(call.id));
+		}
+	},
 
 	// Process Events
 	processEvent: function (event)
 	{
 		if (!Object.isUndefined(event.objecttype))
 		{
+			console.log("ObjectType:", event.objecttype, event);
 			switch (event.objecttype)
 			{
 				case "User/Peer":
@@ -533,11 +624,16 @@ var Monast = {
 				case "QueueClient":
 					this.processQueueClient(event);
 					break;
+					
+				case "QueueCall":
+					this.processQueueCall(event);
+					break;
 			}
 		}
 		
 		if (!Object.isUndefined(event.action))
 		{
+			console.log("Action:", event.action, event);
 			switch (event.action)
 			{
 				case "Error":
@@ -568,6 +664,10 @@ var Monast = {
 					
 				case "RemoveQueueClient":
 					this.removeQueueClient(event);
+					break;
+					
+				case "RemoveQueueCall":
+					this.removeQueueCall(event);
 					break;
 			}
 		}

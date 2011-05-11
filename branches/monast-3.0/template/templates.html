@@ -136,29 +136,29 @@
         </tr>
         <tr>
           <td class="statusHeader" align="right">Max:&nbsp;</td>
-          <td class="status">#{max}</td>
+          <td class="status" id="#{id}-max">#{max}</td>
                 
           <td class="statusHeader" align="right">Calls:&nbsp;</td>
-          <td class="status">#{calls}</td>
+          <td class="status" id="#{id}-calls">#{calls}</td>
                 
           <td class="statusHeader" align="right">Holdtime:&nbsp;</td>
-          <td class="status">#{holdtime}</td>
+          <td class="status" id="#{id}-holdtime">#{holdtime}</td>
                 
           <td class="statusHeader" align="right">Completed:&nbsp;</td>
-          <td class="status">#{completed}</td>
+          <td class="status" id="#{id}-completed">#{completed}</td>
         </tr>
         <tr>
           <td class="statusHeader" align="right">Abandoned:&nbsp;</td>
-          <td class="status">#{abandoned}</td>
+          <td class="status" id="#{id}-abandoned">#{abandoned}</td>
                 
           <td class="statusHeader" align="right">Service Level:&nbsp;</td>
-          <td class="status">#{servicelevel}</td>
+          <td class="status" id="#{id}-servicelevel">#{servicelevel}</td>
                 
           <td class="statusHeader" align="right">Service level Perf.:&nbsp;</td>
-          <td class="status">#{servicelevelperf}</td>
+          <td class="status" id="#{id}-servicelevelperf">#{servicelevelperf}</td>
                 
           <td class="statusHeader" align="right">Weight:&nbsp;</td>
-          <td class="status">#{weight}</td>
+          <td class="status" id="#{id}-weight">#{weight}</td>
         </tr>
       </table>
     </div>
@@ -192,9 +192,9 @@
 <div style="display: none" id="Template::Queue::Member">
   <table width='300'>
     <tr>
-      <td class='status' width='170' align='center'>#{name}</td>
-      <td class='status' width='40' align='center'>#{callstaken}</td>
-      <td class='status' width='90' align='center' bgcolor='#{statuscolor}'>#{statustext}</td>
+      <td class='status' width='170' align='center' id="#{id}-name">#{name}</td>
+      <td class='status' width='40' align='center' id="#{id}-callstaken">#{callstaken}</td>
+      <td class='status' width='90' align='center' bgcolor='#{statuscolor}'  id="#{id}-statustext">#{statustext}</td>
     </tr>
   </table>
 </div>
@@ -204,6 +204,16 @@
   <table width='220'>
     <tr>
       <td class='status' align='center'>#{callerid}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- QueueCall -->
+<div style="display: none" id="Template::Queue::Call">
+  <table width='300' id='#{id}'>
+    <tr>
+      <td class='status' width='213'>#{callerid}<br><span style='font-family: monospace;' id='chrono-#{id}'></span></td>
+      <td class='status' width='87' bgcolor='#ffffb0'>Answered</td>
     </tr>
   </table>
 </div>

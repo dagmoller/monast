@@ -163,6 +163,11 @@ foreach ($status[$server]['queueClients'] as $queueClient)
 	$template->newBlock('process');
 	$template->assign('json', $json->encode($queueClient));
 }
+foreach ($status[$server]['queueCalls'] as $queueCall)
+{
+	$template->newBlock('process');
+	$template->assign('json', $json->encode($queueCall));
+}
 
 $template->printToScreen();
 

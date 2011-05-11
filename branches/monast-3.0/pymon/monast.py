@@ -217,7 +217,8 @@ class MonastHTTP(resource.Resource):
 				'meetmes': [],
 				'queues': [],
 				'queueMembers': [],
-				'queueClients': []
+				'queueClients': [],
+				'queueCalls': []
 			}
 			## Peers
 			for tech, peerlist in server.status.peers.items():
@@ -247,6 +248,10 @@ class MonastHTTP(resource.Resource):
 			for (queuename, uniqueid), client in server.status.queueClients.items():
 				tmp[servername]['queueClients'].append(client.__dict__)
 			tmp[servername]['queueClients'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
+			
+			for uniqueid, call in server.status.queueCalls.items():
+				tmp[servername]['queueCalls'].append(call.__dict__)
+			#tmp[servername]['queueCalls'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
 					 
 		return json.dumps(tmp)
 	
@@ -332,9 +337,9 @@ class Monast():
 			#'StatusComplete'      : self.handlerStatusComplete,
 			'QueueMemberAdded'    : self.handlerEventQueueMemberAdded,
 			'QueueMemberRemoved'  : self.handlerEventQueueMemberRemoved,
-			'Join'                 : self.handlerEventJoin, # Queue Join
-			'Leave'                : self.handlerEventLeave, # Queue Leave
-			#'QueueCallerAbandon'  : self.handlerQueueCallerAbandon,
+			'Join'                : self.handlerEventJoin, # Queue Join
+			'Leave'               : self.handlerEventLeave, # Queue Leave
+			'QueueCallerAbandon'  : self.handlerEventQueueCallerAbandon,
 			#'QueueParams'         : self.handlerQueueParams,
 			#'QueueMember'         : self.handlerQueueMember,
 			'QueueMemberStatus'   : self.handlerEventQueueMemberStatus,
@@ -767,7 +772,7 @@ class Monast():
 					queue.servicelevelperf = kw.get('servicelevelperf', 0)
 					queue.weight           = kw.get('weight', 0)
 					queue.talktime         = kw.get('talktime', 0)
-					self.http._addUpdate(servername = servername, **queue.__dict__.copy())
+					self.http._addUpdate(servername = servername, subaction = 'Update', **queue.__dict__.copy())
 					if logging.DUMPOBJECTS:
 						log.debug("Object Dump:%s", queue)
 					return
@@ -790,6 +795,7 @@ class Monast():
 						member.penalty    = kw.get('penalty')
 						member.status     = kw.get('status')
 						member.statustext = AST_DEVICE_STATES.get(member.status, 'Unknown')
+						self.http._addUpdate(servername = servername, **member.__dict__.copy())
 					else:
 						log.debug("Server %s :: Queue update, member updated: %s -> %s %s", servername, queuename, location, _log)
 						member.name       = kw.get('name', kw.get('membername'))
@@ -802,8 +808,9 @@ class Monast():
 						member.penalty    = kw.get('penalty')
 						member.status     = kw.get('status')
 						member.statustext = AST_DEVICE_STATES.get(member.status, 'Unknown')
+						self.http._addUpdate(servername = servername, subaction = 'Update', **member.__dict__.copy())
 					server.status.queueMembers[memberid] = member
-					self.http._addUpdate(servername = servername, **member.__dict__.copy())
+					#self.http._addUpdate(servername = servername, **member.__dict__.copy())
 					if logging.DUMPOBJECTS:
 						log.debug("Object Dump:%s", member)
 					return
@@ -841,6 +848,7 @@ class Monast():
 						client.calleridname = kw.get('calleridname')
 						client.calleridnum  = kw.get('calleridnum')
 						client.position     = kw.get('position')
+						client.abandonned   = False
 						client.jointime     = int(time.time() - int(kw.get('wait', 0)))
 					else:
 						log.debug("Server %s :: Queue update, client updates: %s -> %s %s", servername, queuename, uniqueid, _log)
@@ -851,8 +859,30 @@ class Monast():
 						client.position     = kw.get('position')
 					server.status.queueClients[clientid] = client
 					self.http._addUpdate(servername = servername, **client.__dict__.copy())
+					if event == "Join":
+						queue.calls += 1
+						self.http._addUpdate(servername = servername, subaction = 'Update', **queue.__dict__.copy())
 					if logging.DUMPOBJECTS:
 						log.debug("Object Dump:%s", client)
+					return
+				
+				if event == "QueueCallerAbandon":
+					uniqueid = kw.get('uniqueid', None)
+					if not uniqueid:
+						# try to found uniqueid based on channel name
+						channel  = kw.get('channel')
+						for uniqueid, chan in server.status.channels.items():
+							if channel == chan:
+								break
+					clientid = (queuename, uniqueid) 
+					client   = server.status.queueClients.get(clientid)
+					if client:
+						log.debug("Server %s :: Queue update, client marked as abandonned: %s -> %s %s", servername, queuename, uniqueid, _log)
+						client.abandonned == True
+						queue.abandoned   += 1
+						self.http._addUpdate(servername = servername, subaction = 'Update', **queue.__dict__.copy())
+					else:
+						log.warning("Server %s :: Queue Client does not exists: %s -> %s", servername, queuename, uniqueid)
 					return
 				
 				if event == "Leave":
@@ -866,6 +896,16 @@ class Monast():
 					clientid = (queuename, uniqueid) 
 					client   = server.status.queueClients.get(clientid)
 					if client:
+						queue.calls -= 1
+						self.http._addUpdate(servername = servername, subaction = 'Update', **queue.__dict__.copy())
+						if not client.abandonned:
+							call           = GenericObject("QueueCall")
+							call.client    = client.__dict__
+							call.member    = None
+							call.link      = False
+							call.starttime = time.time()
+							server.status.queueCalls[client.uniqueid] = call
+						
 						log.debug("Server %s :: Queue update, client removed: %s -> %s %s", servername, queuename, uniqueid, _log)
 						del server.status.queueClients[clientid]
 						self.http._addUpdate(servername = servername, action = 'RemoveQueueClient', uniqueid = client.uniqueid, queue = client.queue)
@@ -940,6 +980,7 @@ class Monast():
 			self.servers[servername].status.queues       = {}
 			self.servers[servername].status.queueMembers = {}
 			self.servers[servername].status.queueClients = {}
+			self.servers[servername].status.queueCalls   = {}
 			
 		## Peers
 		self.displayUsersDefault = config.get('peers', 'default') == 'show'
@@ -1191,6 +1232,8 @@ class Monast():
 				queuename = event.get('queue')
 				if (self.displayQueuesDefault and not server.displayQueues.has_key(queuename)) or (not self.displayQueuesDefault and server.displayQueues.has_key(queuename)):
 					self._updateQueue(servername, **event)
+			for callid, call in server.status.queueCalls.items():
+				self.http._addUpdate(servername = servername, **call.__dict__.copy())
 		
 		for queuename in server.status.queues.keys():
 			server.ami.collectDeferred({'Action': 'QueueStatus', 'Queue': queuename}, 'QueueStatusComplete') \
@@ -1384,6 +1427,7 @@ class Monast():
 		
 	def handlerEventHangup(self, ami, event):
 		#log.debug("Server %s :: Processing Event Hangup..." % ami.servername)
+		server   = self.servers.get(ami.servername)
 		uniqueid = event.get('uniqueid')
 		channel  = event.get('channel')
 		
@@ -1393,6 +1437,19 @@ class Monast():
 			channel  = channel,
 			_log     = "-- Hangup"
 		)
+		
+		# Detect QueueCall
+		queueCall = server.status.queueCalls.get(uniqueid)
+		if queueCall:
+			log.debug("Server %s :: Queue update, call hangup: %s -> %s", ami.servername, queueCall.client.get('queue'), uniqueid)
+			del server.status.queueCalls[uniqueid]
+			if queueCall.member:
+				self.http._addUpdate(servername = ami.servername, action = "RemoveQueueCall", uniqueid = uniqueid, queue = queueCall.client.get('queue'), location = queueCall.member.get('location'))
+				queue = server.status.queues.get(queueCall.client.get('queue'))
+				queue.completed += 1
+				self.http._addUpdate(servername = ami.servername, subaction = 'Update', **queue.__dict__.copy())
+			if logging.DUMPOBJECTS:
+				log.debug("Object Dump:%s", queueCall)
 		
 	def handlerEventDial(self, ami, event):
 		#log.debug("Server %s :: Processing Event Dial..." % ami.servername)
@@ -1415,6 +1472,18 @@ class Monast():
 			bridgekey = self._locateBridge(ami.servername, uniqueid = event.get('uniqueid'))
 			if bridgekey:
 				self._removeBridge(ami.servername, uniqueid = bridgekey[0], bridgeduniqueid = bridgekey[1], _log = "-- Dial End")
+				
+			# Detect QueueCall
+			uniqueid = event.get('uniqueid', event.get('srcuniqueid'))
+			queueCall = server.status.queueCalls.get(uniqueid)
+			if queueCall:
+				queueCall.link = False
+				if queueCall.member:
+					log.debug("Server %s :: Queue update, client -> member call unlink: %s -> %s -> %s", ami.servername, queueCall.client.get('queue'), uniqueid, queueCall.member.get('location'))
+					#self.http._addUpdate(servername = ami.servername,  **queueCall.__dict__.copy())
+					self.http._addUpdate(servername = ami.servername, action = "RemoveQueueCall", uniqueid = uniqueid, queue = queueCall.client.get('queue'), location = queueCall.member.get('location'))
+					if logging.DUMPOBJECTS:
+						log.debug("Object Dump:%s", queueCall)
 		else:
 			log.warning("Server %s :: Unhandled Dial SubEvent %s", ami.servername, subevent)
 	
@@ -1451,8 +1520,23 @@ class Monast():
 				_log            = "-- Link"
 			)
 		
+		# Detect QueueCall
+		queueCall = server.status.queueCalls.get(uniqueid)
+		if queueCall:
+			queuename = queueCall.client.get('queue')
+			location  = bridgedchannel[:bridgedchannel.rfind('-')]
+			member    = server.status.queueMembers.get((queuename, location))
+			if member:
+				log.debug("Server %s :: Queue update, client -> member call link: %s -> %s -> %s", ami.servername, queuename, uniqueid, location)
+				queueCall.member = member.__dict__
+				queueCall.link   = True
+				self.http._addUpdate(servername = ami.servername, **queueCall.__dict__.copy())
+				if logging.DUMPOBJECTS:
+					log.debug("Object Dump:%s", queueCall)
+		
 	def handlerEventUnlink(self, ami, event):
 		#log.debug("Server %s :: Processing Event Unlink..." % ami.servername)
+		server          = self.servers.get(ami.servername)
 		uniqueid        = event.get('uniqueid1')
 		channel         = event.get('channel1')
 		bridgeduniqueid = event.get('uniqueid2')
@@ -1466,6 +1550,17 @@ class Monast():
 			status          = 'Unlink',
 			_log            = "-- Status changed to Unlink"
 		)
+		
+		# Detect QueueCall
+		queueCall = server.status.queueCalls.get(uniqueid)
+		if queueCall:
+			queueCall.link = False
+			if queueCall.member:
+				log.debug("Server %s :: Queue update, client -> member call unlink: %s -> %s -> %s", ami.servername, queueCall.client.get('queue'), uniqueid, queueCall.member.get('location'))
+				#self.http._addUpdate(servername = ami.servername, **queueCall.__dict__.copy())
+				self.http._addUpdate(servername = ami.servername, action = "RemoveQueueCall", uniqueid = uniqueid, queue = queueCall.client.get('queue'), location = queueCall.member.get('location'))
+				if logging.DUMPOBJECTS:
+					log.debug("Object Dump:%s", queueCall)
 	
 	def handlerEventBridge(self, ami, event):
 		#log.debug("Server %s :: Processing Event Bridge..." % ami.servername)
@@ -1520,6 +1615,10 @@ class Monast():
 		
 	def handlerEventLeave(self, ami, event):
 		#log.debug("Server %s :: Processing Event Leave..." % ami.servername)
+		self._updateQueue(ami.servername, **event)
+		
+	def handlerEventQueueCallerAbandon(self, ami, event):
+		#log.debug("Server %s :: Processing Event QueueCallerAbandon..." % ami.servername)
 		self._updateQueue(ami.servername, **event)
 		
 	def handlerEventQueueMemberStatus(self, ami, event):
