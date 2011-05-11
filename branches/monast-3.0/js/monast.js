@@ -523,38 +523,6 @@ var Monast = {
 	},
 	processQueueCall: function (c)
 	{
-		/*
-		if (Object.isUndefined(c.id))
-		{
-			c.id       = md5("queueCall-" + c.client.uniqueid + "::" + c.member.location);
-			c.queueid  = md5("queue-" + c.client.queue);
-			c.memberid = md5("queueMember-" + c.member.queue + '::' + c.member.location); 
-			
-			c.callerid = c.client.channel;
-			
-			if (c.client.calleridname)
-				c.callerid = c.client.calleridname + " &lt;" + c.client.calleridnum + "&gt;";
-			
-			this.queues.get(c.queueid).calls.set(c.id, c);
-		}
-		
-		if (!$(c.id) && c.link)
-		{
-			var div       = document.createElement('div');
-			div.id        = c.id;
-			div.innerHTML = new Template($("Template::Queue::Call").innerHTML).evaluate(c);
-			div.oncontextmenu = function () { return false; };
-			$(c.memberid).innerHTML += div.innerHTML;
-			this.stopChrono(c.id);
-			this.startChrono(c.id, (new Date().getTime() / 1000) - parseInt(c.starttime));
-		}
-		else if ($(c.id) && !c.link)
-		{
-			this.stopChrono(c.id);
-			$(c.memberid).removeChild($(c.id));
-		}
-		*/
-		
 		c.id       = md5("queueCall-" + c.client.uniqueid + "::" + c.member.location);
 		c.queueid  = md5("queue-" + c.client.queue);
 		c.memberid = md5("queueMember-" + c.member.queue + '::' + c.member.location); 
@@ -594,7 +562,7 @@ var Monast = {
 	{
 		if (!Object.isUndefined(event.objecttype))
 		{
-			console.log("ObjectType:", event.objecttype, event);
+			//console.log("ObjectType:", event.objecttype, event);
 			switch (event.objecttype)
 			{
 				case "User/Peer":
@@ -633,7 +601,7 @@ var Monast = {
 		
 		if (!Object.isUndefined(event.action))
 		{
-			console.log("Action:", event.action, event);
+			//console.log("Action:", event.action, event);
 			switch (event.action)
 			{
 				case "Error":
