@@ -483,6 +483,10 @@ var Monast = {
 				Monast.showQueueClientContextMenu(c.queueid, c.id);
 		};
 		$('queueClients-' + c.queueid).appendChild(div);
+		
+		this.stopChrono(c.id);
+		this.startChrono(c.id, (new Date().getTime() / 1000) - parseInt(c.jointime));
+		
 		this.queues.get(c.queueid).clients.set(c.id, c);
 		$('queueClientsCount-' + c.queueid).innerHTML = this.queues.get(c.queueid).clients.keys().length;
 	},
@@ -493,6 +497,7 @@ var Monast = {
 		var client   = this.queues.get(queueid).clients.unset(id);
 		if (!Object.isUndefined(client))
 		{
+			this.stopChrono(client.id);
 			$('queueClients-' + client.queueid).removeChild($(client.id));
 		}
 		$('queueClientsCount-' + client.queueid).innerHTML = this.queues.get(client.queueid).clients.keys().length;
