@@ -160,6 +160,7 @@ var Monast = {
 		c.statecolor = this.getColor(c.state);
 		c.monitor    = c.monitor == "True" ? new Template($('Template::Channel::Monitor').innerHTML).evaluate(c) : "";
 		c._channel   = c.channel.replace('<', '&lt;').replace('>', '&gt;');
+		c.callerid   = new Template("#{calleridname} &lt;#{calleridnum}&gt;").evaluate(c);
 		
 		this.channels.set(c.id, c);
 		
