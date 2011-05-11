@@ -57,11 +57,14 @@
 <div style="display: none" id="Template::Channel">
   <table width='330'>
     <tr>
-      <td class='status' width='260'>#{monitor}#{_channel}</td>
-      <td bgcolor='#{statecolor}' class='status' width='70'>#{state}</td>
+      <td class='status' width='260'>
+        <span id="#{id}-monitor">#{monitor}</span><span id="#{id}-_channel">#{_channel}</span>
+        <br>
+        <span id="#{id}-calleridname">#{calleridname}</span> &lt;<span id="#{id}-calleridnum">#{calleridnum}</span>&gt;
+      </td>
+      <td bgcolor='#{statecolor}' class='status' width='70' id="#{id}-state">#{state}</td>
     </tr> 
   </table>
-  <span style="display: none">#{calleridname} &lt;#{calleridnum}&gt;</span>
 </div>
 
 <!-- Channel Information -->
@@ -98,9 +101,9 @@
 <div style="display: none" id="Template::Bridge">
   <table width='570'>
     <tr>
-      <td class='status' width='250'>#{_channel}<br>#{callerid}</td>
-      <td class='status' width='70' bgcolor='#{statuscolor}'>#{status}<br><span style='font-family: monospace;' id='chrono-#{id}'></span></td>
-      <td class='status' width='250' >#{_bridgedchannel}<br>#{bridgedcallerid}</td>
+      <td class='status' width='250'><span id="#{id}-_channel">#{_channel}</span><br><span id="#{id}-callerid">#{callerid}</span></td>
+      <td class='status' width='70' bgcolor='#{statuscolor}' id="#{id}-statuscolor-fake"><span id="#{id}-status">#{status}</span><br><span style='font-family: monospace;' id='chrono-#{id}'></span></td>
+      <td class='status' width='250'><span id="#{id}-_bridgedchannel">#{_bridgedchannel}</span><br><span id="#{id}-bridgedcallerid">#{bridgedcallerid}</span></td>
     </tr>
   </table>
 </div>

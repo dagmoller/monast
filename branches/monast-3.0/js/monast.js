@@ -161,27 +161,31 @@ var Monast = {
 		c.monitor    = c.monitor == "True" ? new Template($('Template::Channel::Monitor').innerHTML).evaluate(c) : "";
 		c._channel   = c.channel.replace('<', '&lt;').replace('>', '&gt;');
 		
-		if (Object.isUndefined(this.channels.get(c.id))) // Channel does not exists
-		{
-			var div           = document.createElement('div');
-			div.id            = c.id;
-			div.className     = 'channelDiv';
-			div.innerHTML     = new Template($('Template::Channel').innerHTML).evaluate(c);
-			div.oncontextmenu = function () { return false; };
-			div.onmouseup     = function (event)
-			{
-				var e = event ? event : window.event;
-				if (e.button == 2)
-					Monast.showChannelContextMenu(c.id);
-			};
-			$('channelsDiv').appendChild(div);
-		}
-		else
-		{
-			$(c.id).innerHTML = new Template($('Template::Channel').innerHTML).evaluate(c);
-		}
-		
 		this.channels.set(c.id, c);
+		
+		if (!Object.isUndefined(c.subaction) && c.subaction == "Update")
+		{
+			Object.keys(c).each(function (key) {
+				if ($(c.id + "-" + key))
+					$(c.id + "-" + key).innerHTML = c[key];
+				if (key == "state")
+					$(c.id + "-" + key).style.backgroundColor = c.statecolor;
+			});
+			return;
+		}
+				
+		var div           = document.createElement('div');
+		div.id            = c.id;
+		div.className     = 'channelDiv';
+		div.innerHTML     = new Template($('Template::Channel').innerHTML).evaluate(c);
+		div.oncontextmenu = function () { return false; };
+		div.onmouseup     = function (event)
+		{
+			var e = event ? event : window.event;
+			if (e.button == 2)
+				Monast.showChannelContextMenu(c.id);
+		};
+		$('channelsDiv').appendChild(div);
 		$('countChannels').innerHTML = this.channels.keys().length; 
 	},
 	removeChannel: function (c)
@@ -234,18 +238,31 @@ var Monast = {
 		b.callerid        = new Template("#{calleridname} &lt;#{calleridnum}&gt;").evaluate(this.channels.get(b.uniqueid));
 		b.bridgedcallerid = new Template("#{calleridname} &lt;#{calleridnum}&gt;").evaluate(this.channels.get(b.bridgeduniqueid));
 		
-		if (Object.isUndefined(this.bridges.get(b.id))) // Bridge does not exists
+		this.bridges.set(b.id, b);
+		
+		if (!Object.isUndefined(b.subaction) && b.subaction == "Update" && $(b.id))
 		{
-			var div       = document.createElement('div');
-			div.id        = b.id;
-			div.className = 'callDiv';
-			div.innerHTML = new Template($("Template::Bridge").innerHTML).evaluate(b);
-			$('callsDiv').appendChild(div);
+			Object.keys(b).each(function (key) {
+				if ($(b.id + "-" + key))
+				{
+					$(b.id + "-" + key).innerHTML = b[key];
+				}
+			});
+			if ($(b.id + "-statuscolor-fake"))
+				$(b.id + "-statuscolor-fake").style.backgroundColor = b.statuscolor;
+			if (b.status == "Link")
+			{
+				this.stopChrono(b.id);
+				this.startChrono(b.id, (new Date().getTime() / 1000) - b.starttime);
+			}
+			return;
 		}
-		else
-		{
-			$(b.id).innerHTML = new Template($("Template::Bridge").innerHTML).evaluate(b);
-		}
+		
+		var div       = document.createElement('div');
+		div.id        = b.id;
+		div.className = 'callDiv';
+		div.innerHTML = new Template($("Template::Bridge").innerHTML).evaluate(b);
+		$('callsDiv').appendChild(div);
 		
 		if (b.status == "Link")
 		{
@@ -253,7 +270,6 @@ var Monast = {
 			this.startChrono(b.id, (new Date().getTime() / 1000) - b.starttime);
 		}
 		
-		this.bridges.set(b.id, b);
 		$('countCalls').innerHTML = this.bridges.keys().length;
 	},
 	removeBridge: function (b)
@@ -385,6 +401,8 @@ var Monast = {
 		m.statustext  = m.paused == '1' ? 'Paused<br><span style="font-family: monospace;" id="chrono-' + m.id + '">00:00:00</span>' : m.statustext;
 		m.statuscolor = this.getColor(m.statustext); 
 		
+		this.queues.get(m.queueid).members.set(m.id, m);
+		
 		if (!Object.isUndefined(m.subaction) && m.subaction == "Update")
 		{
 			Object.keys(m).each(function (key) {
@@ -416,7 +434,6 @@ var Monast = {
 		};
 		
 		$('queueMembers-' + m.queueid).appendChild(div);
-		this.queues.get(m.queueid).members.set(m.id, m);
 		$('queueMembersCount-' + m.queueid).innerHTML = this.queues.get(m.queueid).members.keys().length;
 		
 		if (m.paused == '1')

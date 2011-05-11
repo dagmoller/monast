@@ -517,7 +517,7 @@ class Monast():
 							chan.__dict__[k] = v
 						else:
 							log.warning("Server %s :: Channel %s (%s) does not have attribute %s", servername, uniqueid, chan.channel, k)
-				self.http._addUpdate(servername = servername, **chan.__dict__.copy())
+				self.http._addUpdate(servername = servername, subaction = 'Update', **chan.__dict__.copy())
 				if logging.DUMPOBJECTS:
 					log.debug("Object Dump:%s", chan)
 			else:
@@ -605,7 +605,7 @@ class Monast():
 							bridge.__dict__[k] = v
 						else:
 							log.warning("Server %s :: Bridge %s (%s) with %s (%s) does not have attribute %s", servername, uniqueid, bridge.channel, bridgeduniqueid, bridge.bridgedchannel, k)
-				self.http._addUpdate(servername = servername, **bridge.__dict__.copy())
+				self.http._addUpdate(servername = servername, subaction = 'Update', **bridge.__dict__.copy())
 				if logging.DUMPOBJECTS:
 					log.debug("Object Dump:%s", bridge)
 			else:
@@ -810,7 +810,6 @@ class Monast():
 						member.statustext = AST_DEVICE_STATES.get(member.status, 'Unknown')
 						self.http._addUpdate(servername = servername, subaction = 'Update', **member.__dict__.copy())
 					server.status.queueMembers[memberid] = member
-					#self.http._addUpdate(servername = servername, **member.__dict__.copy())
 					if logging.DUMPOBJECTS:
 						log.debug("Object Dump:%s", member)
 					return
