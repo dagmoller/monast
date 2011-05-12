@@ -66,7 +66,7 @@ switch ($response)
 }
 
 $status   = null;
-$response = doGet("getStatus");
+$response = doGet("getStatus", array("servername" => $server));
 switch ($response)
 {
 	case "ERROR :: Connection Refused":
@@ -84,6 +84,7 @@ switch ($response)
 		break;
 }
 
+//print_pre($response);
 //print_pre($status);
 //die;
 
@@ -109,6 +110,7 @@ sort($techs);
 foreach ($techs as $tech)
 {
 	$peers = $status[$server]['peers'][$tech];
+	
 	if (count($peers) > 0)
 	{
 		$template->newBlock('technology');
@@ -118,7 +120,7 @@ foreach ($techs as $tech)
 		foreach ($peers as $peer)
 		{
 			$template->newBlock('process');
-			$template->assign('json', $json->encode($peer));
+			$template->assign('json', $json->encodeUnsafe($peer));
 		}
 	}
 }
@@ -129,7 +131,7 @@ foreach ($status[$server]['channels'] as $channel)
 	$channel['channel'] = htmlentities($channel['channel']);
 	
 	$template->newBlock('process');
-	$template->assign('json', $json->encode($channel));
+	$template->assign('json', $json->encodeUnsafe($channel));
 }
 foreach ($status[$server]['bridges'] as $bridge)
 {
@@ -137,36 +139,36 @@ foreach ($status[$server]['bridges'] as $bridge)
 	$bridge['bridgedchannel'] = htmlentities($bridge['bridgedchannel']);
 	
 	$template->newBlock('process');
-	$template->assign('json', $json->encode($bridge));
+	$template->assign('json', $json->encodeUnsafe($bridge));
 }
 
 // Meetmes
 foreach ($status[$server]['meetmes'] as $meetme)
 {
 	$template->newBlock('process');
-	$template->assign('json', $json->encode($meetme));
+	$template->assign('json', $json->encodeUnsafe($meetme));
 }
 
 // Queues
 foreach ($status[$server]['queues'] as $queue)
 {
 	$template->newBlock('process');
-	$template->assign('json', $json->encode($queue));
+	$template->assign('json', $json->encodeUnsafe($queue));
 }
 foreach ($status[$server]['queueMembers'] as $queueMember)
 {
 	$template->newBlock('process');
-	$template->assign('json', $json->encode($queueMember));
+	$template->assign('json', $json->encodeUnsafe($queueMember));
 }
 foreach ($status[$server]['queueClients'] as $queueClient)
 {
 	$template->newBlock('process');
-	$template->assign('json', $json->encode($queueClient));
+	$template->assign('json', $json->encodeUnsafe($queueClient));
 }
 foreach ($status[$server]['queueCalls'] as $queueCall)
 {
 	$template->newBlock('process');
-	$template->assign('json', $json->encode($queueCall));
+	$template->assign('json', $json->encodeUnsafe($queueCall));
 }
 
 $template->printToScreen();

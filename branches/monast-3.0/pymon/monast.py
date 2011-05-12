@@ -207,6 +207,7 @@ class MonastHTTP(resource.Resource):
 		return "OK"
 		#return "ERROR :: Authentication Required"
 	
+	"""
 	def getStatus(self, request):
 		tmp = {}
 		for servername, server in self.monast.servers.items():
@@ -252,6 +253,56 @@ class MonastHTTP(resource.Resource):
 			for uniqueid, call in server.status.queueCalls.items():
 				tmp[servername]['queueCalls'].append(call.__dict__)
 			#tmp[servername]['queueCalls'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
+					 
+		return json.dumps(tmp)
+	"""
+	def getStatus(self, request):
+		tmp        = {}
+		servername = request.args.get('servername', [None])[0]
+		server     = self.monast.servers.get(servername)
+
+		tmp[servername] = {
+			'peers': {},
+			'channels': [],
+			'bridges': [],
+			'meetmes': [],
+			'queues': [],
+			'queueMembers': [],
+			'queueClients': [],
+			'queueCalls': []
+		}
+		## Peers
+		for tech, peerlist in server.status.peers.items():
+			tmp[servername]['peers'][tech] = []
+			for peername, peer in peerlist.items():
+				tmp[servername]['peers'][tech].append(peer.__dict__)
+			tmp[servername]['peers'][tech].sort(lambda x, y: cmp(x.get('callerid'), y.get('callerid')))
+		## Channels
+		for uniqueid, channel in server.status.channels.items():
+			tmp[servername]['channels'].append(channel.__dict__)
+		## Bridges
+		for uniqueid, bridge in server.status.bridges.items():
+			tmp[servername]['bridges'].append(bridge.__dict__)
+		## Meetmes
+		for meetmeroom, meetme in server.status.meetmes.items():
+			tmp[servername]['meetmes'].append(meetme.__dict__)
+		tmp[servername]['meetmes'].sort(lambda x, y: cmp(x.get('meetme'), y.get('meetme')))
+		## Queues
+		for queuename, queue in server.status.queues.items():
+			tmp[servername]['queues'].append(queue.__dict__)
+		tmp[servername]['queues'].sort(lambda x, y: cmp(x.get('queue'), y.get('queue')))
+		
+		for (queuename, membername), member in server.status.queueMembers.items():
+			tmp[servername]['queueMembers'].append(member.__dict__)
+		tmp[servername]['queueMembers'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
+		
+		for (queuename, uniqueid), client in server.status.queueClients.items():
+			tmp[servername]['queueClients'].append(client.__dict__)
+		tmp[servername]['queueClients'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
+		
+		for uniqueid, call in server.status.queueCalls.items():
+			tmp[servername]['queueCalls'].append(call.__dict__)
+		#tmp[servername]['queueCalls'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
 					 
 		return json.dumps(tmp)
 	
