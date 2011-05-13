@@ -701,6 +701,10 @@ var Monast = {
 				case "RemoveQueueCall":
 					this.removeQueueCall(event);
 					break;
+					
+				case "CliResponse":
+					this.cliResponse(event);
+					break;
 			}
 		}
 	},
@@ -874,19 +878,6 @@ var Monast = {
 		YAHOO.util.Cookie.set('_state', Object.toJSON(_state));
 	},
 	
-	changeServer: function (server)
-	{
-		$('_reqStatus').innerHTML = "Changing Server...";
-		new Ajax.Request('action.php', 
-		{
-			method: 'get',
-			parameters: {
-				reqTime: new Date().getTime(),
-				action: Object.toJSON({action: 'ChangeServer', server: server})
-			}
-		});
-	},
-	
 	// Chrono
 	_chrono: new Hash(),
 	startChrono: function (id, seconds, hideSeconds)
@@ -972,5 +963,53 @@ var Monast = {
 			posy = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
 		}
 		return [posx, posy];
+	},
+	
+	// User Actions
+	changeServer: function (server)
+	{
+		$('_reqStatus').innerHTML = "Changing Server...";
+		new Ajax.Request('action.php', 
+		{
+			method: 'get',
+			parameters: {
+				reqTime: new Date().getTime(),
+				action: Object.toJSON({action: 'ChangeServer', server: server})
+			}
+		});
+	},
+	
+	onKeyPressCliCommand: function (e)
+	{
+		if (e.keyCode == 13 && $('cliCommand').value.trim()) //Enter
+			Monast.cliCommand();
+	},
+	cliCommand: function ()
+	{
+		var command = $('cliCommand').value.trim();
+		$('cliCommand').value = '';
+		
+		$('cliResponse').value += '\r\n> ' + command;
+		$('cliResponse').scrollTop = $('cliResponse').scrollHeight - $('cliResponse').offsetHeight + 10;
+		
+		if (command)
+		{
+			new Ajax.Request('action.php', 
+			{
+				method: 'get',
+				parameters: {
+					reqTime: new Date().getTime(),
+					action: Object.toJSON({action: 'CliCommand', command: command})
+				}
+			});
+		}
+	},
+	cliResponse: function (r)
+	{
+		r.response.each(function (line) {
+			$('cliResponse').value += '\r\n' + line;
+			$('cliResponse').scrollTop = $('cliResponse').scrollHeight - $('cliResponse').offsetHeight + 10;
+		});
+		$('cliResponse').value += '\r\n';
 	}
 };

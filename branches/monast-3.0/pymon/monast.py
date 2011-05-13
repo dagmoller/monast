@@ -407,6 +407,7 @@ class Monast():
 		}
 		
 		self.actionHandlers = {
+			'CliCommand' : self.clientAction_CliCommand,
 			'OriginateCall': self.clientAction_OriginateCall
 		}
 		
@@ -1360,7 +1361,7 @@ class Monast():
 	## Client Action Handler
 	##
 	def _processClientActions(self):
-		log.info("Processing Client Actions...")
+		log.debug("Processing Client Actions...")
 		while self.clientActions:
 			action  = self.clientActions.pop(0)
 			handler = self.actionHandlers.get(action['action'][0])
@@ -1374,7 +1375,21 @@ class Monast():
 		source      = action['source'][0]
 		destination = action['destination'][0] 
 		
-		log.debug("Server %s :: Executting OriginateCall from %s to %s..." % (source, destination, servername))
+		log.debug("Server %s :: Executting Client Action OriginateCall from %s to %s..." % (servername, source, destination))
+		
+	def clientAction_CliCommand(self, action):
+		servername  = action['server'][0]
+		command     = action['command'][0]
+		
+		server = self.servers.get(servername)
+		def _onResponse(response):
+			self.http._addUpdate(servername = servername, action = "CliResponse", response = response)
+			
+		server.ami.command(command) \
+			.addCallbacks(_onResponse, self._onAmiCommandFailure, \
+			errbackArgs = (servername, "Error Executting Client Action CLI Command '%s'" % command))
+		
+		log.info("Server %s :: Executting Client Action CLI Command: %s..." % (servername, command))
 	
 	##
 	## Event Handlers

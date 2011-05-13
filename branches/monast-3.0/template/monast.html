@@ -146,8 +146,8 @@
     <!-- START BLOCK : cli_tab_div -->
 	<div id="cliDiv">
 	  <textarea id="cliResponse" rows="40" cols="160" readonly="readonly"></textarea><br>
-	  <input id="cliCommand" type="text" size="60" onkeypress="sendCliCommandOnEnter(event)">
-	  &nbsp;<button onclick="sendCliCommand()">Send</button>&nbsp;<button onclick="$('cliResponse').value=''">Clear</button>
+	  <input id="cliCommand" type="text" size="60" onkeypress="Monast.onKeyPressCliCommand(event)">
+	  &nbsp;<button onclick="Monast.cliCommand()">Send</button>&nbsp;<button onclick="$('cliResponse').value=''">Clear</button>
 	</div>
 	<!-- END BLOCK : cli_tab_div -->
 
