@@ -30,7 +30,6 @@
 
 require_once 'lib/include.php';
 
-$json   = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
 $action = getValor('action');
 
 session_start();

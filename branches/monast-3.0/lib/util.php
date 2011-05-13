@@ -144,4 +144,29 @@ function doGet($path, $data = array())
 	return $body;
 }
 
+$json = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
+function monast_json_encode($object, $setJsonResponseHeader = false)
+{
+	global $json;
+	if (function_exists('json_encode'))
+	{
+		if ($setJsonResponseHeader)
+			header('Content-type: application/json');
+		return json_encode($object);
+	}
+	
+	if ($setJsonResponseHeader)
+		return $json->encode($object);
+	return $json->encodeUnsafe($object);
+}
+
+function monast_json_decode($string)
+{
+	global $json;
+	if (function_exists('json_decode'))
+		return json_decode($string, true);
+	
+	return $json->decode($string);
+}
+
 ?>

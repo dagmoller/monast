@@ -36,8 +36,6 @@ set_time_limit(0);
 
 require_once 'lib/include.php';
 
-$json = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
-
 session_start();
 $username = getValor('username', 'session');
 $server   = getValor('Server', 'session');
@@ -78,7 +76,7 @@ while (!$complete)
 			{
 			    foreach ($actions as $action)
 			    {
-			    	$action = $json->decode($action);
+			    	$action = monast_json_decode($action);
 			    	if ($action['action'] == "ChangeServer")
 			    	{
 			    		session_start();
@@ -108,14 +106,14 @@ while (!$complete)
 			break;
 			
 		default:
-			$updates  = $json->decode($response);
+			$updates  = monast_json_decode($response);
 			$complete = true;
 			break;
 	}
 	
 	if ($error)
 	{
-		echo $json->encode(array(array('action' => 'Error', 'message' => $error)));
+		echo monast_json_encode(array(array('action' => 'Error', 'message' => $error)), true);
 		die;
 	}
 	
@@ -125,7 +123,7 @@ while (!$complete)
 
 $events = array_merge($updates, $lastEvents);
 
-echo $json->encode($events);
+echo monast_json_encode($events, true);
 
 /*
 $sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
