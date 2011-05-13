@@ -42,7 +42,6 @@ setValor('Actions', array());
 setValor('Servers', array());
 session_write_close();
 
-$json     = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
 $template = new TemplatePower('template/index.html');
 
 if (!$login)

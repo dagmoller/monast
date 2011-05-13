@@ -269,7 +269,8 @@ class MonastHTTP(resource.Resource):
 			'queues': [],
 			'queueMembers': [],
 			'queueClients': [],
-			'queueCalls': []
+			'queueCalls': [],
+			'parkedCalls': []
 		}
 		## Peers
 		for tech, peerlist in server.status.peers.items():
@@ -287,19 +288,20 @@ class MonastHTTP(resource.Resource):
 		for meetmeroom, meetme in server.status.meetmes.items():
 			tmp[servername]['meetmes'].append(meetme.__dict__)
 		tmp[servername]['meetmes'].sort(lambda x, y: cmp(x.get('meetme'), y.get('meetme')))
+		## Parked Calls
+		for channel, parked in server.status.parkedCalls.items():
+			tmp[servername]['parkedCalls'].append(parked.__dict__)
+		tmp[servername]['parkedCalls'].sort(lambda x, y: cmp(x.get('channel'), y.get('channel')))
 		## Queues
 		for queuename, queue in server.status.queues.items():
 			tmp[servername]['queues'].append(queue.__dict__)
 		tmp[servername]['queues'].sort(lambda x, y: cmp(x.get('queue'), y.get('queue')))
-		
 		for (queuename, membername), member in server.status.queueMembers.items():
 			tmp[servername]['queueMembers'].append(member.__dict__)
 		tmp[servername]['queueMembers'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
-		
 		for (queuename, uniqueid), client in server.status.queueClients.items():
 			tmp[servername]['queueClients'].append(client.__dict__)
 		tmp[servername]['queueClients'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
-		
 		for uniqueid, call in server.status.queueCalls.items():
 			tmp[servername]['queueCalls'].append(call.__dict__)
 		#tmp[servername]['queueCalls'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
@@ -356,6 +358,8 @@ class Monast():
 	
 	clientActions = []
 	
+	isParkedCallStatus = False
+	
 	def __init__(self, configFile):
 		log.log(logging.NOTICE, "Initializing Monast AMI Interface...")
 		
@@ -379,10 +383,10 @@ class Monast():
 			'Bridge'              : self.handlerEventBridge,
 			'MeetmeJoin'          : self.handlerEventMeetmeJoin,
 			'MeetmeLeave'         : self.handlerEventMeetmeLeave,
-			#'ParkedCall'          : self.handlerParkedCall,
-			#'UnParkedCall'        : self.handlerUnParkedCall,
-			#'ParkedCallTimeOut'   : self.handlerParkedCallTimeOut,
-			#'ParkedCallGiveUp'    : self.handlerParkedCallGiveUp,
+			'ParkedCall'          : self.handlerEventParkedCall,
+			'UnParkedCall'        : self.handlerEventUnParkedCall,
+			'ParkedCallTimeOut'   : self.handlerEventParkedCallTimeOut,
+			'ParkedCallGiveUp'    : self.handlerEventParkedCallGiveUp,
 			#'ParkedCallsComplete' : self.handlerParkedCallsComplete,
 			#'Status'              : self.handlerStatus,
 			#'StatusComplete'      : self.handlerStatusComplete,
@@ -772,7 +776,58 @@ class Monast():
 				log.warning("Server %s :: Meetme does not exists: %s", servername, meetmeroom)
 		except:
 			log.exception("Server %s :: Unhandled exception removing meetme: %s", servername, meetmeroom)
+	
+	## Parked Calls
+	def _createParkedCall(self, servername, **kw):
+		server     = self.servers.get(servername)
+		channel    = kw.get('channel')
+		parked     = server.status.parkedCalls.get(channel)
+		_log       = kw.get('_log', '')
+		
+		if not parked:
+			parked = GenericObject('ParkedCall')
+			parked.channel      = channel
+			parked.parkedFrom   = kw.get('from')
+			parked.calleridname = kw.get('calleridname')
+			parked.calleridnum  = kw.get('calleridnum')
+			parked.exten        = kw.get('exten')
+			parked.timeout      = int(kw.get('timeout'))
 			
+			# locate "from" channel
+			fromChannel = None
+			for uniqueid, fromChannel in server.status.channels.items():
+				if parked.parkedFrom == fromChannel.channel:
+					parked.calleridnameFrom = fromChannel.calleridname
+					parked.calleridnumFrom = fromChannel.calleridnum
+					break
+			
+			log.debug("Server %s :: ParkedCall create: %s at %s %s", servername, parked.channel, parked.exten, _log)
+			server.status.parkedCalls[channel] = parked
+			self.http._addUpdate(servername = servername, **parked.__dict__.copy())
+			if logging.DUMPOBJECTS:
+				log.debug("Object Dump:%s", parked)
+		else:
+			if not self.isParkedCallStatus:
+				log.warning("Server %s :: ParkedCall already exists: %s at %s", servername, parked.channel, parked.exten)
+				
+	def _removeParkedCall(self, servername, **kw):
+		channel    = kw.get('channel')
+		_log       = kw.get('_log', '')
+		
+		try:
+			server = self.servers.get(servername)
+			parked = server.status.parkedCalls.get(channel)
+			if parked:
+				log.debug("Server %s :: ParkedCall remove: %s at %s %s", servername, parked.channel, parked.exten, _log)
+				del server.status.parkedCalls[parked.channel]
+				self.http._addUpdate(servername = servername, action = 'RemoveParkedCall', channel = parked.channel)
+				if logging.DUMPOBJECTS:
+					log.debug("Object Dump:%s", parked)
+			else:
+				log.warning("Server %s :: ParkedCall does not exists: %s", servername, channel)
+		except:
+			log.exception("Server %s :: Unhandled exception removing ParkedCall: %s", servername, channel)
+	
 	## Queues
 	def _createQueue(self, servername, **kw):
 		server    = self.servers.get(servername)
@@ -1031,6 +1086,7 @@ class Monast():
 			self.servers[servername].status.queueMembers = {}
 			self.servers[servername].status.queueClients = {}
 			self.servers[servername].status.queueCalls   = {}
+			self.servers[servername].status.parkedCalls  = {}
 			
 		## Peers
 		self.displayUsersDefault = config.get('peers', 'default') == 'show'
@@ -1187,10 +1243,10 @@ class Monast():
 						self._createQueue(servername, **event)
 					continue
 		
-		log.debug("Server %s :: Requesting Queue Status..." % servername)
+		log.debug("Server %s :: Requesting Queues..." % servername)
 		server.ami.collectDeferred({'Action': 'QueueStatus'}, 'QueueStatusComplete') \
 			.addCallbacks(onQueueStatus, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Queue Status"))
-			
+		
 		## Run Task Channels Status
 		reactor.callLater(2, self.taskCheckStatus, servername)
 	
@@ -1201,7 +1257,7 @@ class Monast():
 		log.info("Server %s :: Requesting asterisk status..." % servername)
 		server = self.servers.get(servername)
 		
-		# process results
+		## Channels Status
 		def onStatusComplete(events):
 			log.debug("Server %s :: Processing channels status..." % servername)
 			channelStatus = {}
@@ -1272,12 +1328,11 @@ class Monast():
 					
 			log.debug("Server %s :: End of channels status..." % servername)
 			
-		# request channels status	
 		server.ami.status().addCallbacks(onStatusComplete, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Channels Status"))
 		
-		# Queues
+		## Queues
 		def onQueueStatusComplete(events):
-			log.debug("Server %s :: Processing queues status..." % servername)
+			log.debug("Server %s :: Processing Queues Status..." % servername)
 			for event in events:
 				queuename = event.get('queue')
 				if (self.displayQueuesDefault and not server.displayQueues.has_key(queuename)) or (not self.displayQueuesDefault and server.displayQueues.has_key(queuename)):
@@ -1285,9 +1340,21 @@ class Monast():
 			for callid, call in server.status.queueCalls.items():
 				self.http._addUpdate(servername = servername, **call.__dict__.copy())
 		
+		log.debug("Server %s :: Requesting Queues Status..." % servername)
 		for queuename in server.status.queues.keys():
 			server.ami.collectDeferred({'Action': 'QueueStatus', 'Queue': queuename}, 'QueueStatusComplete') \
 				.addCallbacks(onQueueStatusComplete, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Queues Status"))
+				
+		## Parked Calls
+		def onParkedCalls(events):
+			log.debug("Server %s :: Processing Parked Calls..." % servername)
+			self.isParkedCallStatus = False
+			# Parked calls was processed by handlerEventParkedCall
+		
+		log.debug("Server %s :: Requesting Parked Calls..." % servername)
+		self.isParkedCallStatus = True
+		server.ami.collectDeferred({'Action': 'ParkedCalls'}, 'ParkedCallsComplete') \
+			.addCallbacks(onParkedCalls, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Parked Calls"))
 		
 	##
 	## Client Action Handler
@@ -1649,6 +1716,23 @@ class Monast():
 				'calleridname' : event.get("calleridname"),
 			}  
 		)
+		
+	# Parked Calls Events
+	def handlerEventParkedCall(self, ami, event):
+		#log.debug("Server %s :: Processing Event ParkedCall..." % ami.servername)
+		self._createParkedCall(ami.servername, **event)
+		
+	def handlerEventUnParkedCall(self, ami, event):
+		#log.debug("Server %s :: Processing Event UnParkedCall..." % ami.servername)
+		self._removeParkedCall(ami.servername, _log = "(Unparked)", **event)
+	
+	def handlerEventParkedCallTimeOut(self, ami, event):
+		#log.debug("Server %s :: Processing Event ParkedCallTimeOut..." % ami.servername)
+		self._removeParkedCall(ami.servername, _log = "(Timeout)", **event)
+	
+	def handlerEventParkedCallGiveUp(self, ami, event):
+		#log.debug("Server %s :: Processing Event ParkedCallGiveUp..." % ami.servername)
+		self._removeParkedCall(ami.servername, _log = "(Giveup)", **event)
 		
 	# Queue Events
 	def handlerEventQueueMemberAdded(self, ami, event):

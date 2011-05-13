@@ -330,6 +330,39 @@ var Monast = {
 		}
 	},
 	
+	// Parked Calls
+	parkedCalls: new Hash(),
+	processParkedCall: function (p)
+	{
+		p.id = md5("parkedCall-" + p.channel);
+		
+		if (Object.isUndefined(this.parkedCalls.get(p.id))) // ParkedCall does not exists
+		{
+			var div       = document.createElement('div');
+			div.id        = p.id;
+			div.className = 'parkedDiv';
+			div.innerHTML = new Template($("Template::ParkedCall").innerHTML).evaluate(p);
+			$('parkedsDiv').appendChild(div);
+		}
+		else
+		{
+			$(p.id).innerHTML = new Template($("Template::ParkedCall").innerHTML).evaluate(p);
+		}
+		
+		this.parkedCalls.set(p.id, p);
+		$("countParked").innerHTML = this.parkedCalls.keys().length;
+	},
+	removeParkedCall: function (p)
+	{
+		var id     = md5("parkedCall-" + p.channel);
+		var parked = this.parkedCalls.unset(id);
+		if (!Object.isUndefined(parked))
+		{
+			$('parkedsDiv').removeChild($(parked.id));
+		}
+		$("countParked").innerHTML = this.parkedCalls.keys().length;
+	},
+	
 	// Queues
 	queuesDual: [],
 	queues: new Hash(),
@@ -604,6 +637,10 @@ var Monast = {
 					this.processMeetme(event);
 					break;
 					
+				case "ParkedCall":
+					this.processParkedCall(event);
+					break;
+					
 				case "Queue":
 					this.processQueue(event);
 					break;
@@ -647,6 +684,10 @@ var Monast = {
 					
 				case "RemoveMeetme":
 					this.removeMeetme(event);
+					break;
+					
+				case "RemoveParkedCall":
+					this.removeParkedCall(event);
 					break;
 					
 				case "RemoveQueueMember":

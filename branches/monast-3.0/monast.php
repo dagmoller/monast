@@ -148,6 +148,13 @@ foreach ($status[$server]['meetmes'] as $meetme)
 	$template->assign('json', monast_json_encode($meetme));
 }
 
+// Parked Calls
+foreach ($status[$server]['parkedCalls'] as $parked)
+{
+	$template->newBlock('process');
+	$template->assign('json', monast_json_encode($parked));
+}
+
 // Queues
 foreach ($status[$server]['queues'] as $queue)
 {
