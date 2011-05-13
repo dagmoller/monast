@@ -425,13 +425,25 @@ class Monast():
 		server           = self.servers.get(servername)
 		server.connected = True
 		server.ami       = ami
-		for event, handler in self.eventHandlers.items():
-			log.debug("Server %s :: Registering EventHandler for %s" % (servername, event))
-			server.ami.registerEvent(event, handler)
-		log.debug("Server %s :: Starting Task Check Status..." % servername)
-		server.taskCheckStatus.start(TASK_CHECK_STATUS_INTERVAL, False)
-		self.__requestAsteriskConfig(servername)
-	
+		
+		## Request Server Version
+		def _onCoreShowVersion(result):
+			versions = [1.4, 1.6, 1.8]
+			log.info("Server %s :: %s" %(servername, result[0]))
+			for version in versions:
+				if "Asterisk %s" % version in result[0]:
+					server.version = version
+					break
+			for event, handler in self.eventHandlers.items():
+				log.debug("Server %s :: Registering EventHandler for %s" % (servername, event))
+				server.ami.registerEvent(event, handler)
+			log.debug("Server %s :: Starting Task Check Status..." % servername)
+			server.taskCheckStatus.start(TASK_CHECK_STATUS_INTERVAL, False)
+			self.__requestAsteriskConfig(servername)
+			
+		server.ami.command('core show version') \
+			.addCallbacks(_onCoreShowVersion, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Asterisk Version"))
+		
 	def __disconnected__(self, servername):
 		server = self.servers.get(servername)
 		if server.connected:
@@ -1209,7 +1221,7 @@ class Monast():
 							status      = 'Signal: %s' % gChannelGSM.group(2).strip()
 						)
 					elif gChannel:
-						board, chanid = gChannelGSM.group(1).split(',')
+						board, chanid = gChannel.group(1).split(',')
 						self._createPeer(
 							servername,
 							channeltype = 'Khomp',
