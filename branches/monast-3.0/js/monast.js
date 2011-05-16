@@ -156,11 +156,13 @@ var Monast = {
 	channels: new Hash(),
 	processChannel: function (c)
 	{
-		c.id         = c.uniqueid;
-		c.statecolor = this.getColor(c.state);
-		c.monitor    = c.monitor == "True" ? new Template($('Template::Channel::Monitor').innerHTML).evaluate(c) : "";
-		c._channel   = c.channel.replace('<', '&lt;').replace('>', '&gt;');
-		c.callerid   = new Template("#{calleridname} &lt;#{calleridnum}&gt;").evaluate(c);
+		c.id           = c.uniqueid;
+		c.statecolor   = this.getColor(c.state);
+		c.monitor      = c.monitor == "True" ? new Template($('Template::Channel::Monitor').innerHTML).evaluate(c) : "";
+		c.channel      = c.channel.replace('<', '&lt;').replace('>', '&gt;');
+		c.calleridname = c.calleridname != null ? c.calleridname.replace('<', '').replace('>', '') : "";
+		c.calleridnum  = c.calleridnum != null ? c.calleridnum.replace('<', '').replace('>', '') : "";
+		c.callerid     = new Template("#{calleridname} &lt;#{calleridnum}&gt;").evaluate(c);
 		
 		this.channels.set(c.id, c);
 		
@@ -234,8 +236,8 @@ var Monast = {
 	
 		b.id              = md5(b.uniqueid + "+++" + b.bridgeduniqueid);
 		b.statuscolor     = this.getColor(b.status);
-		b._channel        = b.channel.replace('<', '&lt;').replace('>', '&gt;');
-		b._bridgedchannel = b.bridgedchannel.replace('<', '&lt;').replace('>', '&gt;');
+		b.channel         = b.channel.replace('<', '&lt;').replace('>', '&gt;');
+		b.bridgedchannel  = b.bridgedchannel.replace('<', '&lt;').replace('>', '&gt;');
 		b.callerid        = new Template("#{calleridname} &lt;#{calleridnum}&gt;").evaluate(this.channels.get(b.uniqueid));
 		b.bridgedcallerid = new Template("#{calleridname} &lt;#{calleridnum}&gt;").evaluate(this.channels.get(b.bridgeduniqueid));
 		

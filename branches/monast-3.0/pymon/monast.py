@@ -1069,6 +1069,7 @@ class Monast():
 			
 			self.servers[servername] = GenericObject("Server")
 			self.servers[servername].servername       = servername
+			self.servers[servername].version          = None
 			self.servers[servername].hostname         = config.get(server, 'hostname')
 			self.servers[servername].hostport         = int(config.get(server, 'hostport'))
 			self.servers[servername].username         = config.get(server, 'username')
@@ -1174,19 +1175,30 @@ class Monast():
 		log.info("Server %s :: Requesting Asterisk Configuration..." % servername)
 		server = self.servers.get(servername)
 		
-		# Peers (SIP, IAX) :: Process results via handlerEventPeerEntry
+		## Peers (SIP, IAX) :: Process results via handlerEventPeerEntry
 		log.debug("Server %s :: Requesting SIP Peers..." % servername)
 		server.ami.sendDeferred({'action': 'sippeers'}) \
 			.addCallback(server.ami.errorUnlessResponse) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Requesting SIP Peers")
-		
-		log.debug("Server %s :: Requesting IAX Peers..." % servername)
-		server.ami.sendDeferred({'action': 'iaxpeers'}) \
-			.addCallback(server.ami.errorUnlessResponse) \
-			.addErrback(self._onAmiCommandFailure, servername, "Error Requesting IAX Peers")
+
+		## Peers IAX different behavior in asterisk 1.4
+		if server.version == 1.4:
+			def onIax2ShowPeers(result):
+				if len(result) > 2:
+					for line in result[1:][:-1]:
+						peername = line.split(' ', 1)[0].split('/', 1)[0]
+						self.handlerEventPeerEntry(server.ami, {'channeltype': 'IAX2', 'objectname': peername, 'status': 'Unknown'})
+			log.debug("Server %s :: Requesting IAX Peers (via iax2 show peers)..." % servername)
+			server.ami.command('iax2 show peers') \
+				.addCallbacks(onIax2ShowPeers, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting IAX Peers (via iax2 show peers)"))
+		else:		
+			log.debug("Server %s :: Requesting IAX Peers..." % servername)
+			server.ami.sendDeferred({'action': 'iaxpeers'}) \
+				.addCallback(server.ami.errorUnlessResponse) \
+				.addErrback(self._onAmiCommandFailure, servername, "Error Requesting IAX Peers")
 		
 		# DAHDI
-		def onDhadiShowChannels(events):
+		def onDahdiShowChannels(events):
 			log.debug("Server %s :: Processing DAHDI Channels..." % servername)
 			for event in events:
 				self._createPeer(
@@ -1198,10 +1210,13 @@ class Monast():
 					signalling  = event.get('signalling'),
 					dnd         = event.get('dnd')
 				)
+		def onDahdiShowChannelsFailure(reason, servername, message = None):
+			if not "unknown command" in reason.getErrorMessage():
+				self._onAmiCommandFailure(reason, servername, message)			
 
 		log.debug("Server %s :: Requesting DAHDI Channels..." % servername)
 		server.ami.collectDeferred({'action': 'dahdishowchannels'}, 'DAHDIShowChannelsComplete') \
-			.addCallbacks(onDhadiShowChannels, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting DAHDI Channels"))
+			.addCallbacks(onDahdiShowChannels, onDahdiShowChannelsFailure, errbackArgs = (servername, "Error Requesting DAHDI Channels"))
 		
 		# Khomp
 		def onKhompChannelsShow(result):
@@ -1519,11 +1534,11 @@ class Monast():
 		
 	def handlerEventNewstate(self, ami, event):
 		#log.debug("Server %s :: Processing Event Newstate..." % ami.servername)
-		server       = self.servers.get(ami.servername)
+		server       = self.servers.get(ami.servername)		
 		uniqueid     = event.get('uniqueid')
 		channel      = event.get('channel')
 		state        = event.get('channelstatedesc', event.get('state'))
-		calleridnum  = event.get('calleridnum')
+		calleridnum  = event.get('calleridnum', event.get('callerid'))
 		calleridname = event.get('calleridname')
 		
 		self._updateChannel(
@@ -1552,9 +1567,10 @@ class Monast():
 		
 	def handlerEventNewcallerid(self, ami, event):
 		#log.debug("Server %s :: Processing Event Newcallerid..." % ami.servername)
+		server       = self.servers.get(ami.servername)	
 		uniqueid     = event.get('uniqueid')
 		channel      = event.get('channel')
-		calleridnum  = event.get('calleridnum')
+		calleridnum  = event.get('calleridnum', event.get('callerid'))
 		calleridname = event.get('calleridname')
 		
 		self._updateChannel(
