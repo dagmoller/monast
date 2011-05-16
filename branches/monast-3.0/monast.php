@@ -32,6 +32,7 @@ require_once 'lib/include.php';
 
 session_start();
 setValor('Actions', array());
+setValor('LastReload', time());
 $servers   = array();
 $server    = getValor('Server', 'session');
 session_write_close();

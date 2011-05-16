@@ -68,7 +68,8 @@ while (!$complete)
 		
 		case "NO UPDATES":
 			session_start();
-			$actions = getValor('Actions', 'session');
+			$actions    = getValor('Actions', 'session');
+			$lastReload = getValor('LastReload', 'session');
 			session_write_close();
 			if (count($actions) > 0)
 			{
@@ -95,6 +96,13 @@ while (!$complete)
 			    session_start();
 			    setValor('Actions', array());
 			    session_write_close();
+			}
+			
+			if (time() - $lastReload >= MONAST_BROWSER_REFRESH)
+			{
+				$lastEvents[] = array('action' => 'Reload', 'time' => 100);
+				$complete     = true;
+				break;
 			}
 			
 			sleep(1);
