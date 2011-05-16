@@ -284,6 +284,7 @@ class MonastHTTP(resource.Resource):
 			tmp[servername]['channels'].append(channel.__dict__)
 		## Bridges
 		for uniqueid, bridge in server.status.bridges.items():
+			bridge.seconds = int(time.time()) - int(bridge.starttime)
 			tmp[servername]['bridges'].append(bridge.__dict__)
 		## Meetmes
 		for meetmeroom, meetme in server.status.meetmes.items():
@@ -298,12 +299,15 @@ class MonastHTTP(resource.Resource):
 			tmp[servername]['queues'].append(queue.__dict__)
 		tmp[servername]['queues'].sort(lambda x, y: cmp(x.get('queue'), y.get('queue')))
 		for (queuename, membername), member in server.status.queueMembers.items():
+			member.pausedur = int(time.time()) - int(member.pausedat)
 			tmp[servername]['queueMembers'].append(member.__dict__)
 		tmp[servername]['queueMembers'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
 		for (queuename, uniqueid), client in server.status.queueClients.items():
+			client.seconds = int(time.time()) - int(client.jointime)
 			tmp[servername]['queueClients'].append(client.__dict__)
 		tmp[servername]['queueClients'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
 		for uniqueid, call in server.status.queueCalls.items():
+			call.seconds = int(time.time()) - int(call.starttime)  
 			tmp[servername]['queueCalls'].append(call.__dict__)
 		#tmp[servername]['queueCalls'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
 					 
@@ -647,6 +651,7 @@ class Monast:
 			bridge.bridgedchannel  = bridgedchannel
 			bridge.status          = kw.get('status', 'Link')
 			bridge.starttime       = kw.get('starttime', time.time())
+			bridge.seconds         = kw.get('seconds', 0)
 			
 			log.debug("Server %s :: Bridge create: %s (%s) with %s (%s) %s", servername, uniqueid, channel, bridgeduniqueid, bridgedchannel, _log)
 			server.status.bridges[bridgekey] = bridge
@@ -913,6 +918,7 @@ class Monast:
 						member.paused     = kw.get('paused')
 						#member.pausedat   = time.time() if member.paused == '1' else 0
 						member.pausedat   = [0, time.time()][member.paused == '1']
+						member.pausedur   = int(time.time() - member.pausedat)
 						member.penalty    = kw.get('penalty')
 						member.status     = kw.get('status')
 						member.statustext = AST_DEVICE_STATES.get(member.status, 'Unknown')
@@ -927,6 +933,7 @@ class Monast:
 						member.paused     = kw.get('paused')
 						#member.pausedat   = time.time() if event == "QueueMemberPaused" and member.paused == '1' else 0
 						member.pausedat   = [0, time.time()][event == "QueueMemberPaused" and member.paused == '1']
+						member.pausedur   = int(time.time() - member.pausedat)
 						member.penalty    = kw.get('penalty')
 						member.status     = kw.get('status')
 						member.statustext = AST_DEVICE_STATES.get(member.status, 'Unknown')
@@ -971,6 +978,7 @@ class Monast:
 						client.position     = kw.get('position')
 						client.abandonned   = False
 						client.jointime     = int(time.time() - int(kw.get('wait', 0)))
+						client.seconds      = int(time.time() - client.jointime)
 					else:
 						log.debug("Server %s :: Queue update, client updates: %s -> %s %s", servername, queuename, uniqueid, _log)
 						client.channel      = kw.get('channel')
@@ -978,6 +986,7 @@ class Monast:
 						client.calleridname = kw.get('calleridname')
 						client.calleridnum  = kw.get('calleridnum')
 						client.position     = kw.get('position')
+						client.seconds      = int(time.time() - client.jointime)
 					server.status.queueClients[clientid] = client
 					self.http._addUpdate(servername = servername, **client.__dict__.copy())
 					if event == "Join":
@@ -1025,6 +1034,7 @@ class Monast:
 							call.member    = None
 							call.link      = False
 							call.starttime = time.time()
+							call.seconds   = int(time.time() - int(call.starttime))
 							server.status.queueCalls[client.uniqueid] = call
 						
 						log.debug("Server %s :: Queue update, client removed: %s -> %s %s", servername, queuename, uniqueid, _log)
@@ -1324,6 +1334,7 @@ class Monast:
 								bridgedchannel  = bridgedchannel,
 								status          = 'Link',
 								starttime       = time.time() - seconds,
+								seconds         = seconds,
 								_log            = "-- By Status Request"
 							)
 							break
@@ -1338,7 +1349,8 @@ class Monast:
 								if duration < seconds - 10 or duration > seconds + 10:
 									self._updateBridge(
 										servername, 
-										starttime = time.time() - seconds, 
+										starttime = time.time() - seconds,
+										seconds   = seconds,
 										_bridge   = bridge, 
 										_log      = "-- Update call duration"
 									)

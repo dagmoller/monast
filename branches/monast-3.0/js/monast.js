@@ -256,7 +256,8 @@ var Monast = {
 			if (b.status == "Link")
 			{
 				this.stopChrono(b.id);
-				this.startChrono(b.id, (new Date().getTime() / 1000) - b.starttime);
+				//this.startChrono(b.id, (new Date().getTime() / 1000) - b.starttime);
+				this.startChrono(b.id, parseInt(b.seconds));
 			}
 			return;
 		}
@@ -270,7 +271,8 @@ var Monast = {
 		if (b.status == "Link")
 		{
 			this.stopChrono(b.id);
-			this.startChrono(b.id, (new Date().getTime() / 1000) - b.starttime);
+			//this.startChrono(b.id, (new Date().getTime() / 1000) - b.starttime);
+			this.startChrono(b.id, parseInt(b.seconds));
 		}
 		
 		$('countCalls').innerHTML = this.bridges.keys().length;
@@ -452,7 +454,8 @@ var Monast = {
 			if (m.paused == '1')
 			{
 				this.stopChrono(m.id);
-				this.startChrono(m.id, (new Date().getTime() / 1000) - parseInt(m.pausedat));
+				//this.startChrono(m.id, (new Date().getTime() / 1000) - parseInt(m.pausedat));
+				this.startChrono(m.id, m.pausedur);
 			}
 			return;
 		}
@@ -475,7 +478,8 @@ var Monast = {
 		if (m.paused == '1')
 		{
 			this.stopChrono(m.id);
-			this.startChrono(m.id, (new Date().getTime() / 1000) - parseInt(m.pausedat));
+			//this.startChrono(m.id, (new Date().getTime() / 1000) - parseInt(m.pausedat));
+			this.startChrono(m.id, m.pausedur);
 		}
 	},
 	removeQueueMember: function (m)
@@ -538,7 +542,8 @@ var Monast = {
 		$('queueClients-' + c.queueid).appendChild(div);
 		
 		this.stopChrono(c.id);
-		this.startChrono(c.id, (new Date().getTime() / 1000) - parseInt(c.jointime));
+		//this.startChrono(c.id, (new Date().getTime() / 1000) - parseInt(c.jointime));
+		this.startChrono(c.id, c.seconds);
 		
 		this.queues.get(c.queueid).clients.set(c.id, c);
 		$('queueClientsCount-' + c.queueid).innerHTML = this.queues.get(c.queueid).clients.keys().length;
@@ -599,7 +604,8 @@ var Monast = {
 			$(c.memberid).innerHTML += div.innerHTML;
 			
 			this.stopChrono(c.id);
-			this.startChrono(c.id, (new Date().getTime() / 1000) - parseInt(c.starttime));
+			//this.startChrono(c.id, (new Date().getTime() / 1000) - parseInt(c.starttime));
+			this.startChrono(c.id, c.seconds);
 		}
 		this.queues.get(c.queueid).calls.set(c.id, c);
 	},
