@@ -528,6 +528,17 @@ var Monast = {
 		if (c.calleridname)
 			c.callerid = c.calleridname + " &lt;" + c.calleridnum + "&gt;";
 		
+		if (!Object.isUndefined(c.subaction) && c.subaction == "Update")
+		{
+			Object.keys(c).each(function (key) {
+				if ($(c.id + "-" + key))
+					$(c.id + "-" + key).innerHTML = c[key];
+			});
+			this.stopChrono(c.id);
+			this.startChrono(c.id, c.seconds);
+			return;
+		}
+		
 		var div       = document.createElement('div');
 		div.id        = c.id;
 		div.className = 'queueClientsDiv';

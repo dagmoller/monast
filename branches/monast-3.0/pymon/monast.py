@@ -679,6 +679,7 @@ class Monast:
 							bridge.__dict__[k] = v
 						else:
 							log.warning("Server %s :: Bridge %s (%s) with %s (%s) does not have attribute %s", servername, uniqueid, bridge.channel, bridgeduniqueid, bridge.bridgedchannel, k)
+				bridge.seconds = int(time.time()) - int(bridge.starttime)
 				self.http._addUpdate(servername = servername, subaction = 'Update', **bridge.__dict__.copy())
 				if logging.DUMPOBJECTS:
 					log.debug("Object Dump:%s", bridge)
@@ -979,6 +980,7 @@ class Monast:
 						client.abandonned   = False
 						client.jointime     = int(time.time() - int(kw.get('wait', 0)))
 						client.seconds      = int(time.time() - client.jointime)
+						self.http._addUpdate(servername = servername, **client.__dict__.copy())
 					else:
 						log.debug("Server %s :: Queue update, client updates: %s -> %s %s", servername, queuename, uniqueid, _log)
 						client.channel      = kw.get('channel')
@@ -987,8 +989,8 @@ class Monast:
 						client.calleridnum  = kw.get('calleridnum')
 						client.position     = kw.get('position')
 						client.seconds      = int(time.time() - client.jointime)
+						self.http._addUpdate(servername = servername, subaction = 'Update', **client.__dict__.copy())
 					server.status.queueClients[clientid] = client
-					self.http._addUpdate(servername = servername, **client.__dict__.copy())
 					if event == "Join":
 						queue.calls += 1
 						self.http._addUpdate(servername = servername, subaction = 'Update', **queue.__dict__.copy())
@@ -1034,7 +1036,7 @@ class Monast:
 							call.member    = None
 							call.link      = False
 							call.starttime = time.time()
-							call.seconds   = int(time.time() - int(call.starttime))
+							call.seconds   = int(time.time()) - int(call.starttime)
 							server.status.queueCalls[client.uniqueid] = call
 						
 						log.debug("Server %s :: Queue update, client removed: %s -> %s %s", servername, queuename, uniqueid, _log)
@@ -1703,8 +1705,9 @@ class Monast:
 			member    = server.status.queueMembers.get((queuename, location))
 			if member:
 				log.debug("Server %s :: Queue update, client -> member call link: %s -> %s -> %s", ami.servername, queuename, uniqueid, location)
-				queueCall.member = member.__dict__
-				queueCall.link   = True
+				queueCall.member  = member.__dict__
+				queueCall.link    = True
+				queueCall.seconds = int(time.time()) - int(queueCall.starttime) 
 				self.http._addUpdate(servername = ami.servername, **queueCall.__dict__.copy())
 				if logging.DUMPOBJECTS:
 					log.debug("Object Dump:%s", queueCall)
