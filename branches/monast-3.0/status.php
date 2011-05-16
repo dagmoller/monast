@@ -28,8 +28,6 @@
 * OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-header('Content-Type: application/json;');
-
 ini_set('error_reporting', 'E_ALL & ~E_NOTICE & ~E_WARNING');
 
 set_time_limit(0);

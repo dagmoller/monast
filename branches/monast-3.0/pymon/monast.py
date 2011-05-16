@@ -111,7 +111,8 @@ class ColorFormatter(logging.Formatter):
 		record.module    = self.color(record.levelno, record.module)
 		record.msg       = self.color(record.levelno, record.msg)
 		record.levelname = self.color(record.levelno, record.levelname)
-		record.funcName  = self.color(record.levelno, record.funcName)
+		if hasattr(record, 'funcName'):
+			record.funcName  = self.color(record.levelno, record.funcName)
 			
 		if record.exc_info:
 			record.exc_text = self.color(record.levelno, '>> %s' % self.formatException(record.exc_info).replace('\n', '\n>> '))
@@ -348,7 +349,7 @@ class MonastAMIFactory(manager.AMIFactory):
 		self.amiWorker.__disconnected__(self.servername)
 		reactor.callLater(AMI_RECONNECT_INTERVAL, self.amiWorker.connect, self.servername)
 		
-class Monast():
+class Monast:
 
 	configFile = None
 	
@@ -910,7 +911,8 @@ class Monast():
 						member.lastcall   = kw.get('lastcall', 0)
 						member.membership = kw.get('membership')
 						member.paused     = kw.get('paused')
-						member.pausedat   = time.time() if member.paused == '1' else 0
+						#member.pausedat   = time.time() if member.paused == '1' else 0
+						member.pausedat   = [0, time.time()][member.paused == '1']
 						member.penalty    = kw.get('penalty')
 						member.status     = kw.get('status')
 						member.statustext = AST_DEVICE_STATES.get(member.status, 'Unknown')
@@ -923,7 +925,8 @@ class Monast():
 						member.lastcall   = kw.get('lastcall', 0)
 						member.membership = kw.get('membership')
 						member.paused     = kw.get('paused')
-						member.pausedat   = time.time() if event == "QueueMemberPaused" and member.paused == '1' else 0
+						#member.pausedat   = time.time() if event == "QueueMemberPaused" and member.paused == '1' else 0
+						member.pausedat   = [0, time.time()][event == "QueueMemberPaused" and member.paused == '1']
 						member.penalty    = kw.get('penalty')
 						member.status     = kw.get('status')
 						member.statustext = AST_DEVICE_STATES.get(member.status, 'Unknown')
