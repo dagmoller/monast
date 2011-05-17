@@ -657,7 +657,8 @@ class Monast:
 			bridge.bridgedchannel  = bridgedchannel
 			bridge.status          = kw.get('status', 'Link')
 			bridge.starttime       = kw.get('starttime', time.time())
-			bridge.seconds         = kw.get('seconds', 0)
+			#bridge.seconds         = kw.get('seconds', 0)
+			bridge.seconds         = int(time.time()) - bridge.starttime
 			
 			log.debug("Server %s :: Bridge create: %s (%s) with %s (%s) %s", servername, uniqueid, channel, bridgeduniqueid, bridgedchannel, _log)
 			server.status.bridges[bridgekey] = bridge
@@ -1341,7 +1342,7 @@ class Monast:
 								channel         = channel,
 								bridgedchannel  = bridgedchannel,
 								status          = 'Link',
-								starttime       = time.time() - seconds,
+								starttime       = int(time.time()) - seconds,
 								seconds         = seconds,
 								_log            = "-- By Status Request"
 							)
@@ -1357,7 +1358,7 @@ class Monast:
 								if duration < seconds - 10 or duration > seconds + 10:
 									self._updateBridge(
 										servername, 
-										starttime = time.time() - seconds,
+										starttime = int(time.time()) - seconds,
 										seconds   = seconds,
 										_bridge   = bridge, 
 										_log      = "-- Update call duration"
@@ -1675,7 +1676,6 @@ class Monast:
 				queueCall.link = False
 				if queueCall.member:
 					log.debug("Server %s :: Queue update, client -> member call unlink: %s -> %s -> %s", ami.servername, queueCall.client.get('queue'), uniqueid, queueCall.member.get('location'))
-					#self.http._addUpdate(servername = ami.servername,  **queueCall.__dict__.copy())
 					self.http._addUpdate(servername = ami.servername, action = "RemoveQueueCall", uniqueid = uniqueid, queue = queueCall.client.get('queue'), location = queueCall.member.get('location'))
 					if logging.DUMPOBJECTS:
 						log.debug("Object Dump:%s", queueCall)
