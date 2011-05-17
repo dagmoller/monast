@@ -28,7 +28,7 @@
 */
 
 // Global Functions
-String.prototype.trim = function() { return this.replace(/^\s*/, "").replace(/\s*$/, ""); }
+String.prototype.trim = function() { return this.replace(/^\s*/, "").replace(/\s*$/, ""); };
 
 // Monast
 var Monast = {
@@ -146,6 +146,22 @@ var Monast = {
 				{text: "View User/Peer Info", onclick: {fn: viewUserpeerInfo, obj: u}}
 			]
 		];
+		
+		switch (u.channeltype)
+		{
+			case 'SIP':
+				m[0].push({text: "Execute 'sip show peer " + u.peername + "'", onclick: {fn: Monast.requestInfo, obj: "sip show peer " + u.peername}});
+				break;
+				
+			case 'IAX2':
+				m[0].push({text: "Execute 'iax2 show peer " + u.peername + "'", onclick: {fn: Monast.requestInfo, obj: "iax2 show peer " + u.peername}});
+				break;
+				
+			case 'DAHDI':
+				m[0].push({text: "Execute 'dahdi show channel " + u.peername + "'", onclick: {fn: Monast.requestInfo, obj: "dahdi show channel " + u.peername}});
+				break;
+		}
+		
 		this._contextMenu.addItems(m);
 		this._contextMenu.setItemGroupTitle("User/Peer: " + u.channel, 0);
 		this._contextMenu.render(document.body);
@@ -215,7 +231,8 @@ var Monast = {
 				{text: "Start Monitor", disabled: c.monitor},
 				{text: "Stop Monitor", disabled: !c.monitor},
 				{text: "Hangup"},
-				{text: "View Channel Info", onclick: {fn: viewChannelInfo, obj: c}}
+				{text: "View Channel Info", onclick: {fn: viewChannelInfo, obj: c}},
+				{text: "Execute 'core show channel " + c.channel + "'", onclick: {fn: Monast.requestInfo, obj: "core show channel " + c.channel}}
 			]
 		];
 		this._contextMenu.addItems(m);
@@ -724,6 +741,10 @@ var Monast = {
 				case "CliResponse":
 					this.cliResponse(event);
 					break;
+					
+				case "RequestInfoResponse":
+					this.requestInfoResponse(event);
+					break;
 			}
 		}
 	},
@@ -787,6 +808,8 @@ var Monast = {
 		_alert.setHeader('Information');
 		_alert.setBody(message);
 		_alert.cfg.setProperty("icon", YAHOO.widget.SimpleDialog.ICON_INFO);
+		_alert.cfg.setProperty("fixedcenter", true);
+		_alert.cfg.setProperty("constraintoviewport", true);
 		_alert.render();
 		_alert.show();
 	},
@@ -795,6 +818,8 @@ var Monast = {
 		_alert.setHeader('Error');
 		_alert.setBody(message);
 		_alert.cfg.setProperty("icon", YAHOO.widget.SimpleDialog.ICON_BLOCK);
+		_alert.cfg.setProperty("fixedcenter", true);
+		_alert.cfg.setProperty("constraintoviewport", true);
 		_alert.render();
 		_alert.show();
 	},
@@ -803,13 +828,15 @@ var Monast = {
 		_alert.setHeader('Warning');
 		_alert.setBody(message);
 		_alert.cfg.setProperty("icon", YAHOO.widget.SimpleDialog.ICON_WARN);
+		_alert.cfg.setProperty("fixedcenter", true);
+		_alert.cfg.setProperty("constraintoviewport", true);
 		_alert.render();
 		_alert.show();
 	},
 	doConfirm: function (message, handleYes, handleNo)
 	{
 		if (!handleNo)
-			handleNo = function () { }
+			handleNo = function () { };
 	
 		var buttons = [
 			{text: "Yes", handler: function () { this.hide(); handleYes(); }},
@@ -974,7 +1001,7 @@ var Monast = {
 		if (e.pageX || e.pageY) 
 		{
 			posx = e.pageX;
-			posy = e.pageY
+			posy = e.pageY;
 		}
 		else if (e.clientX || e.clientY) 
 		{
@@ -1030,5 +1057,24 @@ var Monast = {
 			$('cliResponse').scrollTop = $('cliResponse').scrollHeight - $('cliResponse').offsetHeight + 10;
 		});
 		$('cliResponse').value += '\r\n';
+	},
+	
+	requestInfo: function (p_sType, p_aArgs, p_oValue)
+	{
+		var command = p_oValue;
+		new Ajax.Request('action.php', 
+		{
+			method: 'get',
+			parameters: {
+				reqTime: new Date().getTime(),
+				action: Object.toJSON({action: 'RequestInfo', command: command})
+			}
+		});
+	},
+	requestInfoResponse: function (r)
+	{
+		this.doAlert("<table><tr><td><pre>" + r.response.join("\n") + "</pre></td></tr></table>");
+		_alert.cfg.setProperty("fixedcenter", false);
+		_alert.cfg.setProperty("constraintoviewport", false);
 	}
 };
