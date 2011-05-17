@@ -32,6 +32,11 @@ BODY {
 	font-family: verdana,arial,helvetica,sans-serif;
 }
 
+.requestInfo pre {
+	font-family: 'courier new'; 
+	font-size: 0.8em;
+}
+
 .monast-logo {
 	height: 45px;
 }

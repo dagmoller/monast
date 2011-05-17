@@ -181,8 +181,12 @@ class MonastHTTP(resource.Resource):
 			del self.sessions[sessid]
 	
 	def _addUpdate(self, **kw):
-		for sessid, session in self.sessions.items():
-			session.updates.append(kw) 
+		session = self.sessions.get(kw.get('sessid'))
+		if session:
+			session.updates.append(kw)
+		else:
+			for sessid, session in self.sessions.items():
+				session.updates.append(kw) 
 	
 	def render_GET(self, request):
 		session = request.getSession()
@@ -327,7 +331,8 @@ class MonastHTTP(resource.Resource):
 		return json.dumps(self.monast.servers.keys())
 	
 	def doAction(self, request):
-		self.monast.clientActions.append(request.args)
+		session = request.getSession()
+		self.monast.clientActions.append((session, request.args))
 		reactor.callWhenRunning(self.monast._processClientActions)
 		return 'OK'
 
@@ -1408,40 +1413,40 @@ class Monast:
 	def _processClientActions(self):
 		log.debug("Processing Client Actions...")
 		while self.clientActions:
-			action  = self.clientActions.pop(0)
+			session, action = self.clientActions.pop(0)
 			handler = self.actionHandlers.get(action['action'][0])
 			if handler:
-				reactor.callWhenRunning(handler, action)
+				reactor.callWhenRunning(handler, session, action)
 			else:
 				log.error("ClientActionHandler for action %s does not exixts..." % action['action'][0]) 
 			
-	def clientAction_OriginateCall(self, action):
+	def clientAction_OriginateCall(self, session, action):
 		servername  = action['server'][0]
 		source      = action['source'][0]
 		destination = action['destination'][0] 
 		
 		log.debug("Server %s :: Executting Client Action OriginateCall from %s to %s..." % (servername, source, destination))
 		
-	def clientAction_CliCommand(self, action):
+	def clientAction_CliCommand(self, session, action):
 		servername  = action['server'][0]
 		command     = action['command'][0]
 		
 		server = self.servers.get(servername)
 		def _onResponse(response):
-			self.http._addUpdate(servername = servername, action = "CliResponse", response = response)
+			self.http._addUpdate(servername = servername, sessid = session.uid, action = "CliResponse", response = response)
 		
 		log.info("Server %s :: Executting Client Action CLI Command: %s..." % (servername, command))
 		server.ami.command(command) \
 			.addCallbacks(_onResponse, self._onAmiCommandFailure, \
 			errbackArgs = (servername, "Error Executting Client Action CLI Command '%s'" % command))
 		
-	def clientAction_RequestInfo(self, action):
+	def clientAction_RequestInfo(self, session, action):
 		servername  = action['server'][0]
 		command     = action['command'][0]
 		
 		server = self.servers.get(servername)
 		def _onResponse(response):
-			self.http._addUpdate(servername = servername, action = "RequestInfoResponse", response = response)
+			self.http._addUpdate(servername = servername, sessid = session.uid, action = "RequestInfoResponse", response = response)
 			
 		log.info("Server %s :: Executting Client Action Request Info: %s..." % (servername, command))
 		server.ami.command(command) \

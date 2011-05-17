@@ -99,13 +99,7 @@ var Monast = {
 			div.id            = u.id;
 			div.className     = 'peerTable';
 			div.innerHTML     = new Template($('Template::Userpeer').innerHTML).evaluate(u);
-			div.oncontextmenu = function () { return false; };
-			div.onmouseup     = function (event)
-			{
-				var e = event ? event : window.event;
-				if (e.button == 2)
-					Monast.showUserpeerContextMenu(u.id);
-			};
+			div.oncontextmenu = function () { Monast.showUserpeerContextMenu(u.id); return false;	};
 			$('fieldset-' + u.channeltype).appendChild(div);
 		}
 		else
@@ -117,7 +111,7 @@ var Monast = {
 	showUserpeerContextMenu: function (id)
 	{
 		this._contextMenu.clearContent();
-		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition(event));
+		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition());
 	
 		var viewUserpeerInfo = function (p_sType, p_aArgs, p_oValue)
 		{
@@ -197,13 +191,7 @@ var Monast = {
 		div.id            = c.id;
 		div.className     = 'channelDiv';
 		div.innerHTML     = new Template($('Template::Channel').innerHTML).evaluate(c);
-		div.oncontextmenu = function () { return false; };
-		div.onmouseup     = function (event)
-		{
-			var e = event ? event : window.event;
-			if (e.button == 2)
-				Monast.showChannelContextMenu(c.id);
-		};
+		div.oncontextmenu = function () { Monast.showChannelContextMenu(c.id); return false; };
 		$('channelsDiv').appendChild(div);
 		$('countChannels').innerHTML = this.channels.keys().length; 
 	},
@@ -217,7 +205,7 @@ var Monast = {
 	showChannelContextMenu: function (id)
 	{
 		this._contextMenu.clearContent();
-		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition(event));
+		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition());
 	
 		var viewChannelInfo = function (p_sType, p_aArgs, p_oValue)
 		{
@@ -481,13 +469,7 @@ var Monast = {
 		div.id        = m.id;
 		div.className = 'queueMembersDiv';
 		div.innerHTML = new Template($("Template::Queue::Member").innerHTML).evaluate(m);
-		div.oncontextmenu = function () { return false; };
-		div.onmouseup     = function (event)
-		{
-			var e = event ? event : window.event;
-			if (e.button == 2)
-				Monast.showQueueMemberContextMenu(m.queueid, m.id);
-		};
+		div.oncontextmenu = function () { Monast.showQueueMemberContextMenu(m.queueid, m.id); return false; };
 		
 		$('queueMembers-' + m.queueid).appendChild(div);
 		$('queueMembersCount-' + m.queueid).innerHTML = this.queues.get(m.queueid).members.keys().length;
@@ -514,7 +496,7 @@ var Monast = {
 	showQueueMemberContextMenu: function (queueid, id)
 	{
 		this._contextMenu.clearContent();
-		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition(event));
+		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition());
 	
 		var viewMemberInfo = function (p_sType, p_aArgs, p_oValue)
 		{
@@ -560,13 +542,7 @@ var Monast = {
 		div.id        = c.id;
 		div.className = 'queueClientsDiv';
 		div.innerHTML = new Template($("Template::Queue::Client").innerHTML).evaluate(c);
-		div.oncontextmenu = function () { return false; };
-		div.onmouseup     = function (event)
-		{
-			var e = event ? event : window.event;
-			if (e.button == 2)
-				Monast.showQueueClientContextMenu(c.queueid, c.id);
-		};
+		div.oncontextmenu = function () { Monast.showQueueClientContextMenu(c.queueid, c.id); return false; };
 		$('queueClients-' + c.queueid).appendChild(div);
 		
 		this.stopChrono(c.id);
@@ -591,7 +567,7 @@ var Monast = {
 	showQueueClientContextMenu: function (queueid, id)
 	{
 		this._contextMenu.clearContent();
-		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition(event));
+		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition());
 	
 		var viewClientInfo = function (p_sType, p_aArgs, p_oValue)
 		{
@@ -915,6 +891,10 @@ var Monast = {
 		window._dTrash  = new YAHOO.util.DDTarget("trash");
 		window._dPark   = new YAHOO.util.DDTarget("park");
 		window._dRecord = new YAHOO.util.DDTarget("record");
+		
+		if (!Monast.IE)
+			document.captureEvents(Event.MOUSEMOVE);
+		document.onmousemove = Monast.followMousePos;
 	},
 	
 	showHidePannels: function (e)
@@ -991,24 +971,28 @@ var Monast = {
 	},
 	
 	// Extra Utils
-	getMousePosition: function (event)
+	IE: document.all ? true : false,
+	mouseX: 0,
+	mouseY: 0,
+	followMousePos: function (e)
 	{
-		var e    = event ? event : window.event;
-		var posx = 0;
-		var posy = 0;
-		
-		// Mozilla
-		if (e.pageX || e.pageY) 
+		if (Monast.IE)
 		{
-			posx = e.pageX;
-			posy = e.pageY;
+			Monast.mouseX = event.clientX + document.body.scrollLeft;
+			Monast.mouseY = event.clientY + document.body.scrollTop;
 		}
-		else if (e.clientX || e.clientY) 
+		else
 		{
-			posx = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
-			posy = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+			Monast.mouseX = e.pageX;
+			Monast.mouseY = e.pageY;
 		}
-		return [posx, posy];
+		if (Monast.mouseX < 0) {Monast.mouseX = 0;}
+		if (Monast.mouseY < 0) {Monast.mouseY = 0;}
+		return true;
+	},
+	getMousePosition: function ()
+	{
+		return [Monast.mouseX, Monast.mouseY];
 	},
 	
 	// User Actions
@@ -1073,7 +1057,7 @@ var Monast = {
 	},
 	requestInfoResponse: function (r)
 	{
-		this.doAlert("<table><tr><td><pre>" + r.response.join("\n") + "</pre></td></tr></table>");
+		this.doAlert("<table class='requestInfo'><tr><td><pre>" + r.response.join("\n") + "</pre></td></tr></table>");
 		_alert.cfg.setProperty("fixedcenter", false);
 		_alert.cfg.setProperty("constraintoviewport", false);
 	}
