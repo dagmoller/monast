@@ -1042,7 +1042,7 @@ var Monast = {
 	cliResponse: function (r)
 	{
 		r.response.each(function (line) {
-			$('cliResponse').value += '\r\n' + line;
+			$('cliResponse').value += '\r\n' + line.replace(/\</g, '&lt;').replace(/\>/g, '&gt;');
 			$('cliResponse').scrollTop = $('cliResponse').scrollHeight - $('cliResponse').offsetHeight + 10;
 		});
 		$('cliResponse').value += '\r\n';
@@ -1062,7 +1062,7 @@ var Monast = {
 	},
 	requestInfoResponse: function (r)
 	{
-		this.doAlert("<table class='requestInfo'><tr><td><pre>" + r.response.join("\n") + "</pre></td></tr></table>");
+		this.doAlert("<table class='requestInfo'><tr><td><pre>" + r.response.join("\n").replace(/\</g, '&lt;').replace(/\>/g, '&gt;') + "</pre></td></tr></table>");
 		_alert.cfg.setProperty("fixedcenter", false);
 		_alert.cfg.setProperty("constraintoviewport", false);
 	}
