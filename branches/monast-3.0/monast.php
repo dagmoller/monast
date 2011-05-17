@@ -91,6 +91,7 @@ switch ($response)
 $template->prepare();
 $template->assign("templates", file_get_contents("template/templates.html"));
 $template->assign('MONAST_CALL_TIME', MONAST_CALL_TIME ? 'true' : 'false');
+$template->assign('MONAST_BLINK_ONCHANGE', MONAST_BLINK_ONCHANGE ? 'true' : 'false');
 
 if (MONAST_CLI_TAB)
 {

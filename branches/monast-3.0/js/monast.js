@@ -84,6 +84,20 @@ var Monast = {
 	    }
 		return '#dddddd';
 	},
+	blink: function (id, color)
+	{
+		if (!MONAST_BLINK_ONCHANGE)
+			return;
+		
+		var t = 0;
+		for (i = 0; i < 5; i++)
+		{
+			$A(["#FFFFFF", color]).each(function (c) {
+				t += 200;
+				setTimeout("if ($('" + id + "')) { $('" + id + "').style.backgroundColor = '" + c + "'; }", t);
+			});
+		}
+	},
 	
 	// Users/Peers
 	userspeers: new Hash(),
@@ -105,6 +119,11 @@ var Monast = {
 		else
 		{
 			$(u.id).innerHTML = new Template($('Template::Userpeer').innerHTML).evaluate(u);
+			var old = this.userspeers.get(u.id);
+			if (old.status != u.status)
+				Monast.blink(u.id + '-statuscolor', u.statuscolor);
+			if (old.calls != u.calls)
+				Monast.blink(u.id + '-callscolor', u.callscolor);
 		}
 		this.userspeers.set(u.id, u);
 	},
@@ -187,7 +206,10 @@ var Monast = {
 				if ($(c.id + "-" + key))
 					$(c.id + "-" + key).innerHTML = c[key];
 				if (key == "state")
+				{
 					$(c.id + "-" + key).style.backgroundColor = c.statecolor;
+					Monast.blink(c.id + "-" + key, c.statecolor);
+				}
 			});
 			return;
 		}
@@ -262,11 +284,13 @@ var Monast = {
 				}
 			});
 			if ($(b.id + "-statuscolor-fake"))
+			{
 				$(b.id + "-statuscolor-fake").style.backgroundColor = b.statuscolor;
+				Monast.blink(b.id + "-statuscolor-fake", b.statuscolor);
+			}
 			if (b.status == "Link")
 			{
 				this.stopChrono(b.id);
-				//this.startChrono(b.id, (new Date().getTime() / 1000) - b.starttime);
 				this.startChrono(b.id, parseInt(b.seconds));
 			}
 			return;
@@ -449,6 +473,7 @@ var Monast = {
 		m.statustext  = m.paused == '1' ? 'Paused<br><span style="font-family: monospace;" id="chrono-' + m.id + '">00:00:00</span>' : m.statustext;
 		m.statuscolor = this.getColor(m.statustext); 
 		
+		var old = this.queues.get(m.queueid).members.get(m.id);
 		this.queues.get(m.queueid).members.set(m.id, m);
 		
 		if (!Object.isUndefined(m.subaction) && m.subaction == "Update")
@@ -458,13 +483,16 @@ var Monast = {
 				{
 					$(m.id + "-" + key).innerHTML = m[key];
 					if (key == 'statustext')
+					{
 						$(m.id + "-" + key).style.backgroundColor = m.statuscolor;
+						if (old[key] != m[key])
+							Monast.blink(m.id + "-" + key, m.statuscolor);
+					}
 				}
 			});
 			if (m.paused == '1')
 			{
 				this.stopChrono(m.id);
-				//this.startChrono(m.id, (new Date().getTime() / 1000) - parseInt(m.pausedat));
 				this.startChrono(m.id, m.pausedur);
 			}
 			return;
