@@ -154,6 +154,11 @@ var Monast = {
 			case 'DAHDI':
 				m[0].push({text: "Execute 'dahdi show channel " + u.peername + "'", onclick: {fn: Monast.requestInfo, obj: "dahdi show channel " + u.peername}});
 				break;
+				
+			case 'Khomp':
+				var bc = u.peername.replace('B', '').replace('C', ' ');
+				m[0].push({text: "Execute 'khomp channels show " + bc + "'", onclick: {fn: Monast.requestInfo, obj: "khomp channels show " + bc}});
+				break;
 		}
 		
 		this._contextMenu.addItems(m);
