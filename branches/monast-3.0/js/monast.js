@@ -1070,7 +1070,7 @@ var Monast = {
 	cliResponse: function (r)
 	{
 		r.response.each(function (line) {
-			$('cliResponse').value += '\r\n' + line.replace(/\</g, '&lt;').replace(/\>/g, '&gt;');
+			$('cliResponse').value += '\r\n' + line;
 			$('cliResponse').scrollTop = $('cliResponse').scrollHeight - $('cliResponse').offsetHeight + 10;
 		});
 		$('cliResponse').value += '\r\n';
