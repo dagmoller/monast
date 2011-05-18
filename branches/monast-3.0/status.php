@@ -56,7 +56,6 @@ while (!$complete)
 		case "ERROR :: Request Not Found":
 			$error  = "<font size='3'><b>Monast Error</b></font>\n<p>Could not connect to " . HOSTNAME . ":" . HOSTPORT . " ($response).<br>\n";
 			$error .= "Make sure monast.py is running so the panel can connect to its port properly.</p>";
-			
 			break;
 		
 		case "ERROR: Authentication Required":
@@ -64,6 +63,7 @@ while (!$complete)
 			setValor('login', false);
 			setValor('username', '');
 			session_write_close();
+			$lastEvents[] = array('action' => 'Reload', 'time' => 100);
 			break;
 		
 		case "NO UPDATES":
@@ -83,6 +83,13 @@ while (!$complete)
 			    		session_write_close();
 			    		$lastEvents[] = array('action' => 'Reload', 'time' => 100);
 			    		$complete = true;
+			    		break;
+			    	}
+			    	elseif ($action['action'] == "Logout")
+			    	{
+			    		$tmp          = doGet('doLogout');
+			    		$lastEvents[] = array('action' => 'Reload', 'time' => 100);
+			    		$complete     = true;
 			    		break;
 			    	}
 			    	else

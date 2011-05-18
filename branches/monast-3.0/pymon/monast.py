@@ -168,6 +168,8 @@ class MonastHTTP(resource.Resource):
 		log.info('Initializing Monast HTTP Server at %s:%s...' % (host, port))
 		self.handlers = {
 			'/isAuthenticated' : self.isAuthenticated,
+			'/doAuthentication': self.doAuthentication,
+			'/doLogout'        : self.doLogout,
 			'/getStatus'       : self.getStatus,
 			'/listServers'     : self.listServers,
 			'/getUpdates'      : self.getUpdates,
@@ -199,9 +201,13 @@ class MonastHTTP(resource.Resource):
 			session.sessionTimeout = HTTP_SESSION_TIMEOUT
 			session.startCheckingExpiration()
 			session.notifyOnExpire(self._expireSession)
-			session.updates = []
+			session.updates            = []
+			session.isAuthenticated    = not self.monast.authRequired
 			self.sessions[session.uid] = session
-			
+		
+		if not session.isAuthenticated and request.path != "/doAuthentication":
+			return "ERROR :: Authentication Required"
+		
 		handler = self.handlers.get(request.path)
 		if handler:
 			return handler(request)
@@ -209,58 +215,38 @@ class MonastHTTP(resource.Resource):
 		return "ERROR :: Request Not Found"
 	
 	def isAuthenticated(self, request):
-		return "OK"
-		#return "ERROR :: Authentication Required"
+		return ["ERROR :: Authentication Required", "OK"][request.getSession().isAuthenticated]
 	
-	"""
-	def getStatus(self, request):
-		tmp = {}
-		for servername, server in self.monast.servers.items():
-			tmp[servername] = {
-				'peers': {},
-				'channels': [],
-				'bridges': [],
-				'meetmes': [],
-				'queues': [],
-				'queueMembers': [],
-				'queueClients': [],
-				'queueCalls': []
-			}
-			## Peers
-			for tech, peerlist in server.status.peers.items():
-				tmp[servername]['peers'][tech] = []
-				for peername, peer in peerlist.items():
-					tmp[servername]['peers'][tech].append(peer.__dict__)
-				tmp[servername]['peers'][tech].sort(lambda x, y: cmp(x.get('callerid'), y.get('callerid')))
-			## Channels
-			for uniqueid, channel in server.status.channels.items():
-				tmp[servername]['channels'].append(channel.__dict__)
-			## Bridges
-			for uniqueid, bridge in server.status.bridges.items():
-				tmp[servername]['bridges'].append(bridge.__dict__)
-			## Meetmes
-			for meetmeroom, meetme in server.status.meetmes.items():
-				tmp[servername]['meetmes'].append(meetme.__dict__)
-			tmp[servername]['meetmes'].sort(lambda x, y: cmp(x.get('meetme'), y.get('meetme')))
-			## Queues
-			for queuename, queue in server.status.queues.items():
-				tmp[servername]['queues'].append(queue.__dict__)
-			tmp[servername]['queues'].sort(lambda x, y: cmp(x.get('queue'), y.get('queue')))
+	def doAuthentication(self, request):
+		session  = request.getSession()
+		username = request.args.get('username', [None])[0]
+		secret   = request.args.get('secret', [None])[0]
+		success  = False
+		
+		if username != None and secret != None:
+			authUser = self.monast.authUsers.get(username)
+			if authUser:
+				if authUser.secret == secret:
+					session.isAuthenticated = True
+					success = True
+				else:
+					success = False
+			else:
+				success = False
+		else:
+			success = False
 			
-			for (queuename, membername), member in server.status.queueMembers.items():
-				tmp[servername]['queueMembers'].append(member.__dict__)
-			tmp[servername]['queueMembers'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
-			
-			for (queuename, uniqueid), client in server.status.queueClients.items():
-				tmp[servername]['queueClients'].append(client.__dict__)
-			tmp[servername]['queueClients'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
-			
-			for uniqueid, call in server.status.queueCalls.items():
-				tmp[servername]['queueCalls'].append(call.__dict__)
-			#tmp[servername]['queueCalls'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
-					 
-		return json.dumps(tmp)
-	"""
+		if success:
+			log.log(logging.NOTICE, "User \"%s\" Successful Authenticated with Session \"%s\"" % (username, session.uid))
+			return "OK :: Authentication Success"
+		
+		log.error("User \"%s\" Failed to Authenticate with session \"%s\"" % (username, session.uid))
+		return "ERROR :: Invalid Username/Secret"
+	
+	def doLogout(self, request):
+		request.getSession().isAuthenticated = False
+		return "OK"
+	
 	def getStatus(self, request):
 		tmp        = {}
 		servername = request.args.get('servername', [None])[0]
@@ -360,14 +346,11 @@ class MonastAMIFactory(manager.AMIFactory):
 		
 class Monast:
 
-	configFile = None
-	
-	servers = {}
-	
-	sortby = 'callerid'
-	
-	clientActions = []
-	
+	configFile         = None
+	servers            = {}
+	sortby             = 'callerid'
+	clientActions      = []
+	authRequired       = False
 	isParkedCallStatus = False
 	
 	def __init__(self, configFile):
@@ -1072,6 +1055,8 @@ class Monast:
 		config = MyConfigParser()
 		config.read(self.configFile)
 		
+		self.authRequired = config.get('global', 'auth_required') == 'true'
+		
 		## HTTP Server
 		self.bindHost    = config.get('global', 'bind_host')
 		self.bindPort    = int(config.get('global', 'bind_port'))
@@ -1181,7 +1166,19 @@ class Monast:
 			
 			if (self.displayQueuesDefault and display == 'hide') or (not self.displayQueuesDefault and display == 'show'):
 				server.displayQueues[queue] = True
-				
+		
+		## User Roles
+		self.authUsers = {}
+		users = [s for s in config.sections() if s.startswith('user:')]
+		for user in users:
+			try:
+				username = user.replace('user:', '').strip()
+				self.authUsers[username]         = GenericObject("Monast User")
+				self.authUsers[username].secret  = config.get(user, 'secret')
+				self.authUsers[username].servers = {}
+			except:
+				log.error("Username %s has errors in config file!" % user)
+			
 		## Start all server factory
 		self.__start()
 	

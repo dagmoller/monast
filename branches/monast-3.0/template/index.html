@@ -87,7 +87,7 @@
   <span><input type="button" id="buttonLogout" value="Logout"></span>
   <script language="javascript">
   var _buttonLogout = new YAHOO.widget.Button("buttonLogout");
-      _buttonLogout.on("click", doLogout);
+      _buttonLogout.on("click", Monast.doLogout);
   </script>
   <!-- END BLOCK : buttonLogout -->
 </div>
@@ -104,7 +104,7 @@ $('_reqStatus').innerHTML = 'Authentication Required';
   <div class="yui-content">
     <div id="authentication">
       <p>&nbsp;</p>
-      <form onsubmit="return doLogin()">
+      <form onsubmit="return false">
       <table border="0" cellpadding="2px" cellspacing="2px" align="center">
         <tr>
           <td align="right">User:</td>
@@ -132,7 +132,7 @@ $('_reqStatus').innerHTML = 'Authentication Required';
 </div>
 <script language="javascript">
 var _buttonLogin  = new YAHOO.widget.Button("buttonLogin");
-    _buttonLogin.on("click", doLogin);
+    _buttonLogin.on("click", Monast.doLogin);
 var _buttonClear  = new YAHOO.widget.Button("buttonClear");
 </script>
 <!-- END BLOCK : login -->

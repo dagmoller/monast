@@ -1029,6 +1029,58 @@ var Monast = {
 	},
 	
 	// User Actions
+	doLogin: function ()
+	{
+		var username = $('_username').value;
+		var secret   = $('_secret').value;
+		
+		if (!username)
+		{
+			Monast.doAlert('You must define an user.');
+			$('_reqStatus').innerHTML = "<font color='red'>User not defined!</font>";
+		}
+		else
+		{
+			new Ajax.Request('login.php', {
+				method: 'post',
+				parameters: {
+					reqTime: new Date().getTime(),
+					username: username,
+					secret: secret
+				},
+				onCreate: function () {
+					$('_reqStatus').innerHTML = 'Authenticating, please wait...';
+				},
+				onSuccess: function (r) {
+					var json = r.responseJSON;
+					if (json['error'])
+					{
+						$('_reqStatus').innerHTML = "<font color='red'>Monast Error!</font>";;
+						Monast.doError(json['error']);
+					}
+					if (json['success'])
+					{
+						$('_reqStatus').innerHTML = "Authenticated, reloading...";
+						setTimeout("location.href = 'index.php'", 1000);
+					}
+				}
+			});
+		}
+		return false;
+	},
+	doLogout: function ()
+	{
+		$('_reqStatus').innerHTML = "Logging out, please wait...";
+		new Ajax.Request('action.php', 
+		{
+			method: 'get',
+			parameters: {
+				reqTime: new Date().getTime(),
+				action: Object.toJSON({action: 'Logout'})
+			}
+		});
+	},
+	
 	changeServer: function (server)
 	{
 		$('_reqStatus').innerHTML = "Changing Server...";
