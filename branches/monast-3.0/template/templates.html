@@ -9,7 +9,7 @@
     </tr>
     <tr>
       <td id="#{id}-statuscolor" bgcolor="#{statuscolor}" width="115px" title="#{time} ms">#{status}</td>
-      <td id="#{id}-callscolor" bgcolor="#{callscolor}" width="60px">#{calls} call(s)</td>
+      <td id="#{id}-callscolor" bgcolor="#{callscolor}" width="60px"><span id="#{id}-calls">#{calls}</span> call(s)</td>
     </tr>
   </table>
 </div>
@@ -65,7 +65,7 @@
       <td bgcolor='#{statecolor}' class='status' width='70' id="#{id}-state">#{state}</td>
     </tr> 
   </table>
-</div>
+</div> 
 
 <!-- Channel Information -->
 <div style="display: none" id="Template::Channel::Info">
@@ -100,13 +100,14 @@
 <!-- Bridge -->
 <div style="display: none" id="Template::Bridge">
   <table width='570'>
+  <!-- <table width='570' height="64"> -->
     <tr>
       <td class='status' width='250'><span id="#{id}-channel">#{channel}</span><br><span id="#{id}-callerid">#{callerid}</span></td>
       <td class='status' width='70' bgcolor='#{statuscolor}' id="#{id}-statuscolor-fake"><span id="#{id}-status">#{status}</span><br><span style='font-family: monospace;' id='chrono-#{id}'></span></td>
       <td class='status' width='250'><span id="#{id}-bridgedchannel">#{bridgedchannel}</span><br><span id="#{id}-bridgedcallerid">#{bridgedcallerid}</span></td>
     </tr>
   </table>
-</div>
+</div> 
 
 <!-- Meetme -->
 <div style="display: none" id="Template::Meetme">
