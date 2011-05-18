@@ -1220,15 +1220,17 @@ class Monast:
 		def onDahdiShowChannels(events):
 			log.debug("Server %s :: Processing DAHDI Channels..." % servername)
 			for event in events:
-				self._createPeer(
-					servername,
-					channeltype = 'DAHDI',
-					peername    = event.get('dahdichannel'),
-					context     = event.get('context'),
-					alarm       = event.get('alarm'),
-					signalling  = event.get('signalling'),
-					dnd         = event.get('dnd')
-				)
+				user = "DAHDI/%s" % event.get('dahdichannel')
+				if (self.displayUsersDefault and not server.displayUsers.has_key(user)) or (not self.displayUsersDefault and server.displayUsers.has_key(user)):
+					self._createPeer(
+						servername,
+						channeltype = 'DAHDI',
+						peername    = event.get('dahdichannel'),
+						context     = event.get('context'),
+						alarm       = event.get('alarm'),
+						signalling  = event.get('signalling'),
+						dnd         = event.get('dnd')
+					)
 		def onDahdiShowChannelsFailure(reason, servername, message = None):
 			if not "unknown command" in reason.getErrorMessage():
 				self._onAmiCommandFailure(reason, servername, message)			
@@ -1248,19 +1250,23 @@ class Monast:
 					gChannel    = reChannel.search(line)
 					if gChannelGSM:
 						board, chanid = gChannelGSM.group(1).split(',')
-						self._createPeer(
-							servername,
-							channeltype = 'Khomp',
-							peername    = 'B%dC%d' % (int(board), int(chanid)),
-							status      = 'Signal: %s' % gChannelGSM.group(2).strip()
-						)
+						user = "Khomp/B%dC%d" % (int(board), int(chanid))
+						if (self.displayUsersDefault and not server.displayUsers.has_key(user)) or (not self.displayUsersDefault and server.displayUsers.has_key(user)):
+							self._createPeer(
+								servername,
+								channeltype = 'Khomp',
+								peername    = 'B%dC%d' % (int(board), int(chanid)),
+								status      = 'Signal: %s' % gChannelGSM.group(2).strip()
+							)
 					elif gChannel:
 						board, chanid = gChannel.group(1).split(',')
-						self._createPeer(
-							servername,
-							channeltype = 'Khomp',
-							peername    = 'B%dC%d' % (int(board), int(chanid))
-						)
+						user = "Khomp/B%dC%d" % (int(board), int(chanid))
+						if (self.displayUsersDefault and not server.displayUsers.has_key(user)) or (not self.displayUsersDefault and server.displayUsers.has_key(user)):
+							self._createPeer(
+								servername,
+								channeltype = 'Khomp',
+								peername    = 'B%dC%d' % (int(board), int(chanid))
+							)
 			
 		log.debug("Server %s :: Requesting Khomp Channels..." % servername)
 		server.ami.command('khomp channels show') \
