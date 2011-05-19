@@ -940,6 +940,23 @@ var Monast = {
 		YAHOO.util.Cookie.set('_state', Object.toJSON(_state));
 	},
 	
+	hideTab: function (tabName)
+	{
+		var tabs = {
+			"Mixed Pannels"  : "Tab0",
+			"Peers/Users"    : "Tab1",
+			"Meetme Rooms"   : "Tab2",
+			"Channels/Calls" : "Tab3",
+			"Parked Calls"   : "Tab4",
+			"Queues"         : "Tab5"
+		};
+		if (!Object.isUndefined(tabs[tabName]))
+		{
+			$("li" + tabs[tabName]).hide();
+			setTimeout("$('checkBox" + tabs[tabName] + "').hide()", 1000);
+		}
+	},
+	
 	// Chrono
 	_chrono: new Hash(),
 	startChrono: function (id, seconds, hideSeconds)
