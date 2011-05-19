@@ -123,8 +123,20 @@ switch ($response)
 		break;
 }
 
+$templateFile = "template/template_" . MONAST_TEMPLATE . ".html";
+if (!file_exists($templateFile))
+{
+	$error  = "Monast template file not found: $templateFile<br>";
+	$error .= "Make sure this file exists so the pannel can work properly.";
+	session_start();
+	setValor('error', $error);
+	session_write_close();
+	header("Location: index.php");
+	die;
+}
+
 $template->prepare();
-$template->assign("templates", file_get_contents("template/templates.html"));
+$template->assign("templates", file_get_contents($templateFile));
 $template->assign('MONAST_CALL_TIME', MONAST_CALL_TIME ? 'true' : 'false');
 $template->assign('MONAST_BLINK_ONCHANGE', MONAST_BLINK_ONCHANGE ? 'true' : 'false');
 $template->assign('MONAST_BLINK_COUNT', MONAST_BLINK_COUNT);

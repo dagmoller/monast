@@ -948,12 +948,18 @@ var Monast = {
 			"Meetme Rooms"   : "Tab2",
 			"Channels/Calls" : "Tab3",
 			"Parked Calls"   : "Tab4",
-			"Queues"         : "Tab5"
+			"Queues"         : "Tab5",
+			"Asterisk CLI"   : "Tab6",
+			"Debug"          : "Tab7"
 		};
 		if (!Object.isUndefined(tabs[tabName]))
 		{
-			$("li" + tabs[tabName]).hide();
-			setTimeout("$('checkBox" + tabs[tabName] + "').hide()", 1000);
+			if ($("li" + tabs[tabName]))
+			{
+				$("li" + tabs[tabName]).hide();
+				if ($('checkBox' + tabs[tabName]))
+					setTimeout("$('checkBox" + tabs[tabName] + "').hide()", 1000);
+			}
 		}
 	},
 	
