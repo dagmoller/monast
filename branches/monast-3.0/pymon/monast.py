@@ -289,7 +289,8 @@ class MonastHTTP(resource.Resource):
 			tmp[servername]['channels'].append(channel.__dict__)
 		## Bridges
 		for uniqueid, bridge in server.status.bridges.items():
-			bridge.seconds = int(time.time()) - int(bridge.starttime)
+			#bridge.seconds = int(time.time()) - int(bridge.starttime)
+			bridge.seconds = int(time.time()) - bridge.linktime
 			tmp[servername]['bridges'].append(bridge.__dict__)
 		## Meetmes
 		for meetmeroom, meetme in server.status.meetmes.items():
@@ -660,9 +661,12 @@ class Monast:
 			bridge.channel         = channel
 			bridge.bridgedchannel  = bridgedchannel
 			bridge.status          = kw.get('status', 'Link')
-			bridge.starttime       = kw.get('starttime', time.time())
+			#bridge.starttime       = kw.get('starttime', time.time())
 			#bridge.seconds         = kw.get('seconds', 0)
-			bridge.seconds         = int(time.time()) - bridge.starttime
+			bridge.dialtime        = kw.get('dialtime', int(time.time()))
+			bridge.linktime        = kw.get('linktime', 0)
+			#bridge.seconds         = int(time.time()) - bridge.starttime
+			bridge.seconds         = int(time.time()) - bridge.linktime
 			
 			log.debug("Server %s :: Bridge create: %s (%s) with %s (%s) %s", servername, uniqueid, channel, bridgeduniqueid, bridgedchannel, _log)
 			server.status.bridges[bridgekey] = bridge
@@ -690,7 +694,8 @@ class Monast:
 							bridge.__dict__[k] = v
 						else:
 							log.warning("Server %s :: Bridge %s (%s) with %s (%s) does not have attribute %s", servername, uniqueid, bridge.channel, bridgeduniqueid, bridge.bridgedchannel, k)
-				bridge.seconds = int(time.time()) - int(bridge.starttime)
+				#bridge.seconds = int(time.time()) - int(bridge.starttime)
+				bridge.seconds = int(time.time()) - bridge.linktime
 				self.http._addUpdate(servername = servername, subaction = 'Update', **bridge.__dict__.copy())
 				if logging.DUMPOBJECTS:
 					log.debug("Object Dump:%s", bridge)
@@ -1366,14 +1371,17 @@ class Monast:
 								channel         = channel,
 								bridgedchannel  = bridgedchannel,
 								status          = 'Link',
-								starttime       = int(time.time()) - seconds,
+								#starttime       = int(time.time()) - seconds,
+								#seconds         = seconds,
+								dialtime        = int(time.time()) - seconds,
+								linktime        = int(time.time()) - seconds,
 								seconds         = seconds,
 								_log            = "-- By Status Request"
 							)
 							break
 						
 				## Update Call Duration
-				if not channelCreated and seconds > 0 and bridgedchannel:
+				"""if not channelCreated and seconds > 0 and bridgedchannel:
 					for bridgeduniqueid, chan in server.status.channels.items():
 						if chan.channel == bridgedchannel:
 							bridge = server.status.bridges.get((uniqueid, bridgeduniqueid))
@@ -1387,7 +1395,7 @@ class Monast:
 										_bridge   = bridge, 
 										_log      = "-- Update call duration"
 									)
-								break
+								break"""
 							
 			## Search for lost channels
 			lostChannels = [(k, v.channel) for k, v in server.status.channels.items() if not channelStatus.has_key(k)]
@@ -1684,7 +1692,9 @@ class Monast:
 				bridgeduniqueid = event.get('destuniqueid'),
 				bridgedchannel  = event.get('destination'),
 				status          = 'Dial',
-				starttime       = 0,
+				dialtime        = int(time.time()),
+				#starttime       = 0,
+				linktime        = 0,
 				_log            = '-- Dial Begin'
 			)
 		elif subevent.lower() == 'end':
@@ -1718,13 +1728,15 @@ class Monast:
 		
 		bridgekey = self._locateBridge(ami.servername, uniqueid = uniqueid, bridgeduniqueid = bridgeduniqueid)
 		if bridgekey:
-			starttime = server.status.bridges.get(bridgekey).starttime
+			#starttime = server.status.bridges.get(bridgekey).starttime
+			linktime = server.status.bridges.get(bridgekey).linktime
 			self._updateBridge(
 				ami.servername,
 				uniqueid        = uniqueid, 
 				bridgeduniqueid = bridgeduniqueid,
 				status          = 'Link',
-				starttime       = [starttime, time.time()][starttime == 0],
+				#starttime       = [starttime, time.time()][starttime == 0],
+				linktime        = [linktime, time.time()][linktime == 0],
 				_log            = "-- Status changed to Link"
 			)
 		else:
@@ -1735,7 +1747,8 @@ class Monast:
 				channel         = channel,
 				bridgedchannel  = bridgedchannel,
 				status          = 'Link',
-				starttime       = time.time(),
+				#starttime       = time.time(),
+				linktime        = int(time.time()),
 				_log            = "-- Link"
 			)
 		

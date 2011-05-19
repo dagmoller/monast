@@ -127,6 +127,8 @@ $template->prepare();
 $template->assign("templates", file_get_contents("template/templates.html"));
 $template->assign('MONAST_CALL_TIME', MONAST_CALL_TIME ? 'true' : 'false');
 $template->assign('MONAST_BLINK_ONCHANGE', MONAST_BLINK_ONCHANGE ? 'true' : 'false');
+$template->assign('MONAST_BLINK_COUNT', MONAST_BLINK_COUNT);
+$template->assign('MONAST_BLINK_INTERVAL', MONAST_BLINK_INTERVAL);
 
 if (MONAST_CLI_TAB)
 {

@@ -90,10 +90,10 @@ var Monast = {
 			return;
 		
 		var t = 0;
-		for (i = 0; i < 5; i++)
+		for (i = 0; i < MONAST_BLINK_COUNT; i++)
 		{
 			$A(["#FFFFFF", color]).each(function (c) {
-				t += 200;
+				t += MONAST_BLINK_INTERVAL;
 				setTimeout("if ($('" + id + "')) { $('" + id + "').style.backgroundColor = '" + c + "'; }", t);
 			});
 		}
@@ -661,6 +661,9 @@ var Monast = {
 	// Process Events
 	processEvent: function (event)
 	{
+		if ($('debugMsg'))
+			$('debugMsg').innerHTML += Object.toJSON(event) + "<br>\r\n";
+		
 		if (!Object.isUndefined(event.objecttype))
 		{
 			//console.log("ObjectType:", event.objecttype, event);
