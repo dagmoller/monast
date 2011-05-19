@@ -50,10 +50,18 @@ if (!$login)
 	switch ($response)
 	{
 		case "ERROR :: Connection Refused":
-		case "ERROR :: Internal Server Error":
-		case "ERROR :: Request Not Found":
-			$error  = "Could not connect to " . HOSTNAME . ":" . HOSTPORT . " ($response).<br>";
+			$error  = "Could not connect to http://" . HOSTNAME . ":" . HOSTPORT . " ($response).<br>";
 			$error .= "Make sure monast.py is running so the panel can connect to its port properly.";
+			break;
+			
+		case "ERROR :: Request Not Found":
+			$error  = "The request to http://" . HOSTNAME . ":" . HOSTPORT . "/isAuthenticated was not found.<br>";
+			$error .= "Make sure monast.py is running so the panel can connect to its port properly.";
+			break;
+			
+		case "ERROR :: Internal Server Error":
+			$error  = "We got an \"Internal Server Error\" connecting to http://" . HOSTNAME . ":" . HOSTPORT . "/isAuthenticated.<br>";
+			$error .= "Please lookup log file and report errors at http://monast.sf.net";
 			break;
 		
 		case "ERROR: Authentication Required":
@@ -70,6 +78,14 @@ if (!$login)
 			session_write_close();
 			break;
 	}
+}
+
+if (!$error)
+{
+	session_start();
+	$error = getValor('error', 'session');
+	setValor('error', "");
+	session_write_close();
 }
 
 if ($error)

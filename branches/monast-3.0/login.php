@@ -42,9 +42,14 @@ switch ($response)
 		$saida['error'] .= "Make sure monast.py is running so the panel can connect to its port properly.";
 		break;
 		
-	case "ERROR :: Internal Server Error":
 	case "ERROR :: Request Not Found":
-		$saida['error'] = $response;
+		$saida['error']  = "The request to http://" . HOSTNAME . ":" . HOSTPORT . "/doAuthentication was not found.<br>";
+		$saida['error'] .= "Make sure monast.py is running so the panel can connect to its port properly.";
+		break;
+		
+	case "ERROR :: Internal Server Error":
+		$saida['error']  = "We got an \"Internal Server Error\" connecting to http://" . HOSTNAME . ":" . HOSTPORT . "/doAuthentication.<br>";
+		$saida['error'] .= "Please lookup log file and report errors at http://monast.sf.net";
 		break;
 		
 	case "ERROR :: Invalid Username/Secret":

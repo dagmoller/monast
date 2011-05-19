@@ -52,10 +52,18 @@ while (!$complete)
 	switch ($response)
 	{
 		case "ERROR :: Connection Refused":
-		case "ERROR :: Internal Server Error":
-		case "ERROR :: Request Not Found":
 			$error  = "<font size='3'><b>Monast Error</b></font>\n<p>Could not connect to " . HOSTNAME . ":" . HOSTPORT . " ($response).<br>\n";
 			$error .= "Make sure monast.py is running so the panel can connect to its port properly.</p>";
+			break;
+			
+		case "ERROR :: Request Not Found":
+			$error  = "The request to http://" . HOSTNAME . ":" . HOSTPORT . "/getUpdates was not found.<br>";
+			$error .= "Make sure monast.py is running so the panel can connect to its port properly.";
+			break;
+			
+		case "ERROR :: Internal Server Error":
+			$error  = "We got an \"Internal Server Error\" connecting to http://" . HOSTNAME . ":" . HOSTPORT . "/getUpdates.<br>";
+			$error .= "Please lookup log file and report errors at http://monast.sf.net";
 			break;
 		
 		case "ERROR: Authentication Required":

@@ -188,7 +188,15 @@ class MonastHTTP(resource.Resource):
 			session.updates.append(kw)
 		else:
 			for sessid, session in self.sessions.items():
-				session.updates.append(kw) 
+				session.updates.append(kw)
+				
+	def _onRequestFailure(self, reason, request):
+		session = request.getSession()
+		log.error("HTTP Request from %s:%s (%s) to %s failed: %s", request.client.host, request.client.port, session.uid, request.uri, reason.getErrorMessage())
+		log.exception("Unhandled Exception on HTTP Request to %s" % request.uri)
+		request.setResponseCode(500)
+		request.write("ERROR :: Internal Server Error");
+		request.finish()
 	
 	def render_GET(self, request):
 		session = request.getSession()
@@ -210,12 +218,16 @@ class MonastHTTP(resource.Resource):
 		
 		handler = self.handlers.get(request.path)
 		if handler:
-			return handler(request)
+			d = task.deferLater(reactor, 0.1, lambda: request)
+			d.addCallback(handler)
+			d.addErrback(self._onRequestFailure, request)
+			return TWebServer.NOT_DONE_YET
 		
 		return "ERROR :: Request Not Found"
 	
 	def isAuthenticated(self, request):
-		return ["ERROR :: Authentication Required", "OK"][request.getSession().isAuthenticated]
+		request.write(["ERROR :: Authentication Required", "OK"][request.getSession().isAuthenticated])
+		request.finish()
 	
 	def doAuthentication(self, request):
 		session  = request.getSession()
@@ -235,23 +247,26 @@ class MonastHTTP(resource.Resource):
 				success = False
 		else:
 			success = False
-			
+		
+		output = ""
 		if success:
 			log.log(logging.NOTICE, "User \"%s\" Successful Authenticated with Session \"%s\"" % (username, session.uid))
-			return "OK :: Authentication Success"
-		
-		log.error("User \"%s\" Failed to Authenticate with session \"%s\"" % (username, session.uid))
-		return "ERROR :: Invalid Username/Secret"
+			request.write("OK :: Authentication Success")
+		else:
+			log.error("User \"%s\" Failed to Authenticate with session \"%s\"" % (username, session.uid))
+			request.write("ERROR :: Invalid Username/Secret")
+		request.finish()
 	
 	def doLogout(self, request):
 		request.getSession().isAuthenticated = False
-		return "OK"
+		request.write("OK")
+		request.finish()
 	
 	def getStatus(self, request):
 		tmp        = {}
 		servername = request.args.get('servername', [None])[0]
 		server     = self.monast.servers.get(servername)
-
+		
 		tmp[servername] = {
 			'peers': {},
 			'channels': [],
@@ -301,26 +316,32 @@ class MonastHTTP(resource.Resource):
 			tmp[servername]['queueCalls'].append(call.__dict__)
 		#tmp[servername]['queueCalls'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
 					 
-		return json.dumps(tmp)
+		request.write(json.dumps(tmp))
+		request.finish()
 	
 	def getUpdates(self, request):
 		session    = request.getSession()
 		servername = request.args.get('servername', [None])[0]
+		updates    = []
 		if len(session.updates) > 0:
 			updates         = [u for u in session.updates if u.get('servername') == servername]
 			session.updates = []
-			if len(updates) > 0:
-				return json.dumps(updates)
-		return "NO UPDATES"
+		if len(updates) > 0:
+			request.write(json.dumps(updates))
+		else:
+			request.write("NO UPDATES")
+		request.finish()
 	
 	def listServers(self, request):
-		return json.dumps(self.monast.servers.keys())
+		request.write(json.dumps(self.monast.servers.keys()))
+		request.finish()
 	
 	def doAction(self, request):
 		session = request.getSession()
 		self.monast.clientActions.append((session, request.args))
 		reactor.callWhenRunning(self.monast._processClientActions)
-		return 'OK'
+		request.write("OK")
+		request.finish()
 
 ##
 ## Monast AMI

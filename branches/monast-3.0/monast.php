@@ -35,6 +35,7 @@ setValor('Actions', array());
 setValor('LastReload', time());
 $servers   = array();
 $server    = getValor('Server', 'session');
+$errors    = array();
 session_write_close();
 
 $template = new TemplatePower('template/monast.html');
@@ -43,13 +44,32 @@ $response = doGet("listServers");
 switch ($response)
 {
 	case "ERROR :: Connection Refused":
-	case "ERROR :: Internal Server Error":
 	case "ERROR :: Authentication Required":
-	case "ERROR :: Request Not Found":
 		session_start();
 		setValor('login', false);
 		session_write_close();
 		header("Location: index.php");
+		die;
+		break;
+
+	case "ERROR :: Request Not Found":
+		$error  = "The request to http://" . HOSTNAME . ":" . HOSTPORT . "/getUpdates was not found.<br>";
+		$error .= "Make sure monast.py is running so the panel can connect to its port properly.";
+		session_start();
+		setValor('error', $error);
+		session_write_close();
+		header("Location: index.php");
+		die;
+		break;
+
+	case "ERROR :: Internal Server Error":
+		$error  = "We got \"Internal Server Error\" connecting to http://" . HOSTNAME . ":" . HOSTPORT . "/getUpdates.<br>";
+		$error .= "Please lookup log file and report errors at http://monast.sf.net";
+		session_start();
+		setValor('error', $error);
+		session_write_close();
+		header("Location: index.php");
+		die;
 		break;
 		
 	default:
@@ -70,23 +90,38 @@ $response = doGet("getStatus", array("servername" => $server));
 switch ($response)
 {
 	case "ERROR :: Connection Refused":
-	case "ERROR :: Internal Server Error":
 	case "ERROR :: Authentication Required":
-	case "ERROR :: Request Not Found":
 		session_start();
 		setValor('login', false);
 		session_write_close();
 		header("Location: index.php");
+		die;
 		break;
-		
+
+	case "ERROR :: Request Not Found":
+		$error  = "The request to http://" . HOSTNAME . ":" . HOSTPORT . "/getUpdates was not found.<br>";
+		$error .= "Make sure monast.py is running so the panel can connect to its port properly.";
+		session_start();
+		setValor('error', $error);
+		session_write_close();
+		header("Location: index.php");
+		die;
+		break;
+
+	case "ERROR :: Internal Server Error":
+		$error  = "We got an Internal Server Error connecting to http://" . HOSTNAME . ":" . HOSTPORT . "/getUpdates.<br>";
+		$error .= "Please lookup log file and report errors at http://monast.sf.net";
+		session_start();
+		setValor('error', $error);
+		session_write_close();
+		header("Location: index.php");
+		die;
+		break;
+
 	default:
 		$status = monast_json_decode($response);
 		break;
 }
-
-//print_pre($response);
-//print_pre($status);
-//die;
 
 $template->prepare();
 $template->assign("templates", file_get_contents("template/templates.html"));
