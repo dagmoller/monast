@@ -1474,7 +1474,7 @@ class Monast:
 		account     = None
 		application = None
 		data        = None
-		variable    = [None, dict([i.split('=', 1) for i in peer.variables])][len(peer.variables) > 0]
+		variable    = dict([i.split('=', 1) for i in peer.variables])
 
 		log.info("Server %s :: Executting Client Action Originate: from %s to %s..." % (servername, source, destination))
 		server = self.servers.get(servername)
