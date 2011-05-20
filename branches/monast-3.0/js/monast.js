@@ -192,7 +192,8 @@ var Monast = {
 	{
 		c.id           = c.uniqueid;
 		c.statecolor   = this.getColor(c.state);
-		c.monitor      = c.monitor == "True" ? new Template($('Template::Channel::Monitor').innerHTML).evaluate(c) : "";
+		c.monitoricon  = c.monitor ? new Template($('Template::Channel::Monitor').innerHTML).evaluate(c) : "";
+		c.monitortext  = c.monitor ? "Yes" : "No";
 		c.channel      = c.channel.replace('<', '&lt;').replace('>', '&gt;');
 		c.calleridname = c.calleridname != null ? c.calleridname.replace('<', '').replace('>', '') : "";
 		c.calleridnum  = c.calleridnum != null ? c.calleridnum.replace('<', '').replace('>', '') : "";
@@ -236,16 +237,47 @@ var Monast = {
 	
 		var viewChannelInfo = function (p_sType, p_aArgs, p_oValue)
 		{
-			p_oValue.monitortext = p_oValue.monitor ? "True" : "False";
 			Monast.doAlert(new Template($("Template::Channel::Info").innerHTML).evaluate(p_oValue));
+		};
+		var requestMonitor = function (p_sType, p_aArgs, p_oValue)
+		{
+			var action = p_oValue.monitor ? "Stop" : "Start";
+			Monast.doConfirm(
+				"<div style='text-align: center'>" + action + " Monitor to this Channel?</div><br>" + new Template($("Template::Channel::Info").innerHTML).evaluate(p_oValue),
+				function () {
+					new Ajax.Request('action.php', 
+					{
+						method: 'get',
+						parameters: {
+							reqTime: new Date().getTime(),
+							action: Object.toJSON({action: 'RequestMonitor' + action, channel: p_oValue.channel})
+						}
+					});
+				}
+			);
+		};
+		var requestHangup = function (p_sType, p_aArgs, p_oValue)
+		{
+			Monast.doConfirm(
+				"<div style='text-align: center'>Request Hangup to this Channel?</div><br>" + new Template($("Template::Channel::Info").innerHTML).evaluate(p_oValue),
+				function () {
+					new Ajax.Request('action.php', 
+					{
+						method: 'get',
+						parameters: {
+							reqTime: new Date().getTime(),
+							action: Object.toJSON({action: 'RequestHangup', channel: p_oValue.channel})
+						}
+					});
+				}
+			);
 		};
 	
 		var c = this.channels.get(id);
 		var m = [
 			[
-				{text: "Start Monitor", disabled: c.monitor},
-				{text: "Stop Monitor", disabled: !c.monitor},
-				{text: "Hangup"},
+				{text: c.monitor ? "Stop Monitor" : "Start Monitor", onclick: {fn: requestMonitor, obj: c}},
+				{text: "Hangup", onclick: {fn: requestHangup, obj: c}},
 				{text: "View Channel Info", onclick: {fn: viewChannelInfo, obj: c}},
 				{text: "Execute 'core show channel " + c.channel + "'", onclick: {fn: Monast.requestInfo, obj: "core show channel " + c.channel}}
 			]
@@ -305,7 +337,6 @@ var Monast = {
 		if (b.status == "Link")
 		{
 			this.stopChrono(b.id);
-			//this.startChrono(b.id, (new Date().getTime() / 1000) - b.starttime);
 			this.startChrono(b.id, parseInt(b.seconds));
 		}
 		
@@ -818,8 +849,7 @@ var Monast = {
 	doAlert: function (message)
 	{
 		_alert.setHeader('Information');
-		_alert.setBody(message);
-		_alert.cfg.setProperty("icon", YAHOO.widget.SimpleDialog.ICON_INFO);
+		_alert.setBody("<table><tr><td valign='top'><span class='yui-icon infoicon'></span></td><td>" + message + "</td></tr></table>");
 		_alert.cfg.setProperty("fixedcenter", true);
 		_alert.cfg.setProperty("constraintoviewport", true);
 		_alert.render();
@@ -828,8 +858,7 @@ var Monast = {
 	doError: function (message)
 	{
 		_alert.setHeader('Error');
-		_alert.setBody(message);
-		_alert.cfg.setProperty("icon", YAHOO.widget.SimpleDialog.ICON_BLOCK);
+		_alert.setBody("<table><tr><td valign='top'><span class='yui-icon blckicon'></span></td><td>" + message + "</td></tr></table>");
 		_alert.cfg.setProperty("fixedcenter", true);
 		_alert.cfg.setProperty("constraintoviewport", true);
 		_alert.render();
@@ -838,8 +867,7 @@ var Monast = {
 	doWarn: function (message)
 	{
 		_alert.setHeader('Warning');
-		_alert.setBody(message);
-		_alert.cfg.setProperty("icon", YAHOO.widget.SimpleDialog.ICON_WARN);
+		_alert.setBody("<table><tr><td valign='top'><span class='yui-icon warnicon'></span></td><td>" + message + "</td></tr></table>");
 		_alert.cfg.setProperty("fixedcenter", true);
 		_alert.cfg.setProperty("constraintoviewport", true);
 		_alert.render();
@@ -855,8 +883,7 @@ var Monast = {
 			{text: "No", handler: function () { this.hide(); handleNo(); }}
 		];
 		
-		_confirm.setBody(message);
-		_confirm.cfg.setProperty("icon", YAHOO.widget.SimpleDialog.ICON_HELP);
+		_confirm.setBody("<table><tr><td valign='top'><span class='yui-icon hlpicon'></span></td><td>" + message + "</td></tr></table>");
 		_confirm.cfg.setProperty("buttons", buttons); 
 		_confirm.render();
 		_confirm.show();

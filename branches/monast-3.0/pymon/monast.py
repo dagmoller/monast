@@ -416,15 +416,18 @@ class Monast:
 			'QueueMemberPaused'   : self.handlerEventQueueMemberPaused,
 			#'QueueEntry'          : self.handlerQueueEntry,
 			#'QueueStatusComplete' : self.handlerQueueStatusComplete,
-			#'MonitorStart'        : self.handlerMonitorStart,
-			#'MonitorStop'         : self.handlerMonitorStop,
+			'MonitorStart'        : self.handlerEventMonitorStart,
+			'MonitorStop'         : self.handlerEventMonitorStop,
 			'AntennaLevel'        : self.handlerEventAntennaLevel,
 		}
 		
 		self.actionHandlers = {
-			'CliCommand'   : self.clientAction_CliCommand,
-			'RequestInfo'  : self.clientAction_RequestInfo,
-			'OriginateCall': self.clientAction_OriginateCall
+			'CliCommand'          : self.clientAction_CliCommand,
+			'RequestInfo'         : self.clientAction_RequestInfo,
+			'OriginateCall'       : self.clientAction_OriginateCall,
+			'RequestHangup'       : self.clientAction_RequestHangup,
+			'RequestMonitorStart' : self.clientAction_RequestMonitorStart,
+			'RequestMonitorStop'  : self.clientAction_RequestMonitorStop,
 		}
 		
 		self.configFile = configFile
@@ -605,7 +608,7 @@ class Monast:
 				if logging.DUMPOBJECTS:
 					log.debug("Object Dump:%s", chan)
 			else:
-				log.warning("Server %s :: Channel not found: %s (%s)", servername, uniqueid, channel)
+				log.warning("Server %s :: Channel not found: %s (%s) %s", servername, uniqueid, channel, _log)
 		except:
 			log.exception("Server %s :: Unhandled exception updating channel: %s (%s)", servername, uniqueid, channel)
 			
@@ -1485,6 +1488,35 @@ class Monast:
 		server.ami.command(command) \
 			.addCallbacks(_onResponse, self._onAmiCommandFailure, \
 			errbackArgs = (servername, "Error Executting Client Action Request Info '%s'" % command))
+			
+	def clientAction_RequestHangup(self, session, action):
+		servername  = action['server'][0]
+		channel     = action['channel'][0]
+		
+		log.info("Server %s :: Executting Client Action Request Hangup: %s..." % (servername, channel))
+		server = self.servers.get(servername)
+		server.ami.hangup(channel) \
+			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Hangup on Channel: %s" % channel)
+			
+	def clientAction_RequestMonitorStart(self, session, action):
+		servername  = action['server'][0]
+		channel     = action['channel'][0]
+		
+		log.info("Server %s :: Executting Client Action Request Monitor Start: %s..." % (servername, channel))
+		server = self.servers.get(servername)
+		server.ami.monitor(channel, "", "", 1) \
+			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Monitor Start on Channel: %s" % channel)
+			
+	def clientAction_RequestMonitorStop(self, session, action):
+		servername  = action['server'][0]
+		channel     = action['channel'][0]
+		
+		log.info("Server %s :: Executting Client Action Request Monitor Stop: %s..." % (servername, channel))
+		server = self.servers.get(servername)
+		server.ami.sendDeferred({'action': 'StopMonitor', 'channel': channel}) \
+			.addCallback(server.ami.errorUnlessResponse) \
+			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Monitor Stop on Channel: %s" % channel)
+		
 	
 	##
 	## Event Handlers
@@ -1889,6 +1921,15 @@ class Monast:
 		event['status']     = member.status
 		
 		self._updateQueue(ami.servername, **event)
+	
+	## Monitor
+	def handlerEventMonitorStart(self, ami, event):
+		#log.debug("Server %s :: Processing Event MonitorStart..." % ami.servername)
+		self._updateChannel(ami.servername, uniqueid = event.get('uniqueid'), channel = event.get('channel'), monitor = True, _log = "-- Monitor Started")
+	
+	def handlerEventMonitorStop(self, ami, event):
+		#log.debug("Server %s :: Processing Event MonitorStop..." % ami.servername)
+		self._updateChannel(ami.servername, uniqueid = event.get('uniqueid'), channel = event.get('channel'), monitor = False, _log = "-- Monitor Stopped")
 	
 	# Khomp Events
 	def handlerEventAntennaLevel(self, ami, event):
