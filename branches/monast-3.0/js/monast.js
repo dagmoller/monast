@@ -154,7 +154,7 @@ var Monast = {
 		var addQueueMember = function (p_sType, p_aArgs, p_oValue)
 		{
 			Monast.doConfirm(
-				"<div style='text-align: center'>Add this user as Member to Queue \"" + p_oValue.queue + "\"?</div><br>" + new Template($("Template::Userpeer::Info").innerHTML).evaluate(p_oValue.peer),
+				"<div style='text-align: center'>Turn this User Member of Queue \"" + p_oValue.queue + "\"?</div><br>" + new Template($("Template::Userpeer::Info").innerHTML).evaluate(p_oValue.peer),
 				function () {
 					new Ajax.Request('action.php', 
 					{
