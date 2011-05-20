@@ -151,23 +151,41 @@ var Monast = {
 			Monast.doAlert(new Template($("Template::Userpeer::Info").innerHTML).evaluate(p_oValue));
 			$("Template::Userpeer::Info::Table").innerHTML = $("Template::Userpeer::Info::Table").innerHTML + p_oValue.channelVariables.join("\n");
 		};
+		var addQueueMember = function (p_sType, p_aArgs, p_oValue)
+		{
+			Monast.doConfirm(
+				"<div style='text-align: center'>Add this user as Member to Queue \"" + p_oValue.queue + "\"?</div><br>" + new Template($("Template::Userpeer::Info").innerHTML).evaluate(p_oValue.peer),
+				function () {
+					new Ajax.Request('action.php', 
+					{
+						method: 'get',
+						parameters: {
+							reqTime: new Date().getTime(),
+							action: Object.toJSON({action: 'QueueMemberAdd', queue: p_oValue.queue, location: p_oValue.peer.channeltype + '/' + p_oValue.peer.peername})
+						}
+					});
+				}
+			);
+		};
 		
 		var u = this.userspeers.get(id);
 		var m = [
 			[
 				{text: "Originate Call"},
 				{text: "View User/Peer Info", onclick: {fn: viewUserpeerInfo, obj: u}}
-			]
+			],
 		];
-		
+		var addQueue = false;
 		switch (u.channeltype)
 		{
 			case 'SIP':
 				m[0].push({text: "Execute 'sip show peer " + u.peername + "'", onclick: {fn: Monast.requestInfo, obj: "sip show peer " + u.peername}});
+				addQueue = true;
 				break;
 				
 			case 'IAX2':
 				m[0].push({text: "Execute 'iax2 show peer " + u.peername + "'", onclick: {fn: Monast.requestInfo, obj: "iax2 show peer " + u.peername}});
+				addQueue = true;
 				break;
 				
 			case 'DAHDI':
@@ -178,6 +196,22 @@ var Monast = {
 				var bc = u.peername.replace('B', '').replace('C', ' ');
 				m[0].push({text: "Execute 'khomp channels show " + bc + "'", onclick: {fn: Monast.requestInfo, obj: "khomp channels show " + bc}});
 				break;
+		}
+		
+		if (addQueue)
+		{
+			var optionList = [];
+			Monast.queues.keys().each(function (id) {
+				var q = Monast.queues.get(id);
+				var m = q.members.get(md5("queueMember-" + q.queue + '::' + u.channeltype + "/" + u.peername));
+				if (Object.isUndefined(m))
+					optionList.push({text: q.queue, onclick: {fn: addQueueMember, obj: {peer: u, queue: q.queue}}});
+			});
+			if (optionList.length > 0)
+			{
+				m.push([{text: "Add as Member to", url: "#teste", submenu: { id: "teste", itemdata: optionList}}]);
+				this._contextMenu.setItemGroupTitle("Queues", 1);
+			}
 		}
 		
 		this._contextMenu.addItems(m);
@@ -503,6 +537,7 @@ var Monast = {
 		m.queueid     = md5("queue-" + m.queue);
 		m.statustext_nochrono = m.paused == '1' ? 'Paused' : m.statustext;
 		m.statustext  = m.paused == '1' ? 'Paused<br><span style="font-family: monospace;" id="chrono-' + m.id + '">00:00:00</span>' : m.statustext;
+		m.pausedtext  = m.paused == "1" ? "Yes" : "No";
 		m.statuscolor = this.getColor(m.statustext); 
 		
 		var old = this.queues.get(m.queueid).members.get(m.id);
@@ -577,11 +612,22 @@ var Monast = {
 		};
 		var requestMemberRemove = function (p_sType, p_aArgs, p_oValue)
 		{
-			
+			Monast.doConfirm(
+				"<div style='text-align: center'>Remove this Queue Member?</div><br>" + new Template($("Template::Queue::Member::Info").innerHTML).evaluate(p_oValue),
+				function () {
+					new Ajax.Request('action.php', 
+					{
+						method: 'get',
+						parameters: {
+							reqTime: new Date().getTime(),
+							action: Object.toJSON({action: 'QueueMemberRemove', queue: p_oValue.queue, location: p_oValue.location})
+						}
+					});
+				}
+			);
 		};
 		var viewMemberInfo = function (p_sType, p_aArgs, p_oValue)
 		{
-			p_oValue.pausedtext   = p_oValue.paused == "1" ? "True" : "False";
 			p_oValue.lastcalltext = new Date(p_oValue.lastcall * 1000).toLocaleString();
 			Monast.doAlert(new Template($("Template::Queue::Member::Info").innerHTML).evaluate(p_oValue));
 		};
@@ -590,7 +636,7 @@ var Monast = {
 		var m = [
 			[
 				{text: qm.paused == "0" ? "Pause Member" : "Unpause Member", onclick: {fn: requestMemberPause, obj: qm}},
-				{text: "Remove Member"},
+				{text: "Remove Member", disabled: qm.membership == "static", onclick: {fn: requestMemberRemove, obj: qm}},
 				{text: "View Member Info", onclick: {fn: viewMemberInfo, obj: qm}}
 			]
 		];

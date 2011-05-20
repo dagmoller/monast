@@ -430,6 +430,8 @@ class Monast:
 			'MonitorStop'        : self.clientAction_MonitorStop,
 			'QueueMemberPause'   : self.clientAction_QueueMemberPause,
 			'QueueMemberUnpause' : self.clientAction_QueueMemberUnpause,
+			'QueueMemberAdd'     : self.clientAction_QueueMemberAdd,
+			'QueueMemberRemove'  : self.clientAction_QueueMemberRemove,
 		}
 		
 		self.configFile = configFile
@@ -1537,6 +1539,33 @@ class Monast:
 		server = self.servers.get(servername)
 		server.ami.queuePause(queue, location, False) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Queue Member Unpause: %s -> %s" % (queue, location))
+			
+	def clientAction_QueueMemberAdd(self, session, action):
+		servername = action['server'][0]
+		queue      = action['queue'][0]
+		location   = action['location'][0]
+		membername = location
+		
+		tech, peer = location.split('/')
+		peer       = self.servers.get(servername).status.peers.get(tech).get(peer)
+		if peer.callerid:
+			membername = peer.callerid
+		
+		log.info("Server %s :: Executting Client Action Queue Member Add: %s -> %s..." % (servername, queue, location))
+		server = self.servers.get(servername)
+		server.ami.sendDeferred({'action': 'QueueAdd', 'queue': queue, 'interface': location, 'membername': membername}) \
+			.addCallback(server.ami.errorUnlessResponse) \
+			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Queue Member Add: %s -> %s" % (queue, location))
+			
+	def clientAction_QueueMemberRemove(self, session, action):
+		servername = action['server'][0]
+		queue      = action['queue'][0]
+		location   = action['location'][0]
+		
+		log.info("Server %s :: Executting Client Action Queue Member Remove: %s -> %s..." % (servername, queue, location))
+		server = self.servers.get(servername)
+		server.ami.queueRemove(queue, location) \
+			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Queue Member Remove: %s -> %s" % (queue, location))
 		
 	
 	##
