@@ -209,7 +209,7 @@ var Monast = {
 			});
 			if (optionList.length > 0)
 			{
-				m.push([{text: "Add as Member to", url: "#teste", submenu: { id: "teste", itemdata: optionList}}]);
+				m.push([{text: "Turn Member of", url: "#teste", submenu: { id: "teste", itemdata: optionList}}]);
 				this._contextMenu.setItemGroupTitle("Queues", 1);
 			}
 		}
