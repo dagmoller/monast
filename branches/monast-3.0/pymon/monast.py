@@ -424,7 +424,7 @@ class Monast:
 		self.actionHandlers = {
 			'CliCommand'         : self.clientAction_CliCommand,
 			'RequestInfo'        : self.clientAction_RequestInfo,
-			'OriginateCall'      : self.clientAction_OriginateCall,
+			'Originate'          : self.clientAction_Originate,
 			'Hangup'       	     : self.clientAction_Hangup,
 			'MonitorStart'       : self.clientAction_MonitorStart,
 			'MonitorStop'        : self.clientAction_MonitorStop,
@@ -1069,9 +1069,6 @@ class Monast:
 						log.warning("Server %s :: Queue Client does not exists: %s -> %s", servername, queuename, uniqueid)
 					return
 				
-				import pprint
-				pprint.pprint(kw)
-					
 			else:
 				log.warning("Server %s :: Queue not found: %s", servername, queuename)
 		except:
@@ -1459,13 +1456,31 @@ class Monast:
 			else:
 				log.error("ClientActionHandler for action %s does not exixts..." % action['action'][0]) 
 			
-	def clientAction_OriginateCall(self, session, action):
+	def clientAction_Originate(self, session, action):
 		servername  = action['server'][0]
-		source      = action['source'][0]
-		destination = action['destination'][0] 
+		source      = action['from'][0]
+		destination = action['to'][0] 
+		type        = action['type'][0]
 		
-		log.debug("Server %s :: Executting Client Action OriginateCall from %s to %s..." % (servername, source, destination))
-		
+		tech, peer = source.split('/')
+		peer       = self.servers.get(servername).status.peers.get(tech).get(peer)
+
+		channel     = source
+		context     = peer.context
+		exten       = destination
+		priority    = 1
+		timeout     = None
+		callerid    = MONAST_CALLERID
+		account     = None
+		application = None
+		data        = None
+		variable    = [None, dict([i.split('=', 1) for i in peer.variables])][len(peer.variables) > 0]
+
+		log.info("Server %s :: Executting Client Action Originate: from %s to %s..." % (servername, source, destination))
+		server = self.servers.get(servername)
+		server.ami.originate(channel, context, exten, priority, timeout, callerid, account, application, data, variable) \
+			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Client Action Originate: from %s to %s" % (source, destination))
+
 	def clientAction_CliCommand(self, session, action):
 		servername  = action['server'][0]
 		command     = action['command'][0]
@@ -1579,9 +1594,6 @@ class Monast:
 		objectname  = event.get('objectname').split('/')[0]
 		time        = -1
 		
-		#import pprint
-		#pprint.pprint(event)
-		
 		reTime = re.compile("([0-9]+)\s+ms")
 		gTime  = reTime.search(status)
 		if gTime:
@@ -1615,9 +1627,6 @@ class Monast:
 				callerid  = None
 				context   = None
 				variables = []
-				
-				#import pprint
-				#pprint.pprint(response)
 				
 				try:
 					callerid = re.compile("['\"]").sub("", re.search('Callerid[\s]+:[\s](.*)\n', result).group(1))

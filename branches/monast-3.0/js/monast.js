@@ -132,6 +132,23 @@ var Monast = {
 		this._contextMenu.clearContent();
 		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition());
 	
+		var originateCall = function (p_sType, p_aArgs, p_oValue)
+		{
+			Monast.doConfirm(
+				new Template($("Template::Userpeer::Form::Originate").innerHTML).evaluate(p_oValue),
+				function () {
+					new Ajax.Request('action.php', 
+					{
+						method: 'get',
+						parameters: {
+							reqTime: new Date().getTime(),
+							action: Object.toJSON({action: 'Originate', from: p_oValue.channeltype + "/" + p_oValue.peername, to: $('Userpeer::Form::Originate::To').value, type: 'dial'})
+						}
+					});
+				}
+			);
+			_confirm.setHeader('Originate Call');
+		};
 		var viewUserpeerInfo = function (p_sType, p_aArgs, p_oValue)
 		{
 			p_oValue.latency          = p_oValue.time == -1 ? "--" : p_oValue.time + " ms";
@@ -171,7 +188,7 @@ var Monast = {
 		var u = this.userspeers.get(id);
 		var m = [
 			[
-				{text: "Originate Call"},
+				{text: "Originate Call", onclick: {fn: originateCall, obj: u}},
 				{text: "View User/Peer Info", onclick: {fn: viewUserpeerInfo, obj: u}}
 			],
 		];
@@ -946,6 +963,7 @@ var Monast = {
 			{text: "No", handler: function () { this.hide(); handleNo(); }}
 		];
 		
+		_confirm.setHeader('Confirmation');
 		_confirm.setBody("<table><tr><td valign='top'><span class='yui-icon hlpicon'></span></td><td>" + message + "</td></tr></table>");
 		_confirm.cfg.setProperty("buttons", buttons); 
 		_confirm.render();
