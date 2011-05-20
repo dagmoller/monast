@@ -690,7 +690,6 @@ var Monast = {
 		$('queueClients-' + c.queueid).appendChild(div);
 		
 		this.stopChrono(c.id);
-		//this.startChrono(c.id, (new Date().getTime() / 1000) - parseInt(c.jointime));
 		this.startChrono(c.id, c.seconds);
 		
 		this.queues.get(c.queueid).clients.set(c.id, c);
@@ -713,6 +712,22 @@ var Monast = {
 		this._contextMenu.clearContent();
 		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition());
 	
+		var requestHangup = function (p_sType, p_aArgs, p_oValue)
+		{
+			Monast.doConfirm(
+				"<div style='text-align: center'>Drop this Queue Client?</div><br>" + new Template($("Template::Queue::Client::Info").innerHTML).evaluate(p_oValue),
+				function () {
+					new Ajax.Request('action.php', 
+					{
+						method: 'get',
+						parameters: {
+							reqTime: new Date().getTime(),
+							action: Object.toJSON({action: 'Hangup', channel: p_oValue.channel})
+						}
+					});
+				}
+			);
+		};
 		var viewClientInfo = function (p_sType, p_aArgs, p_oValue)
 		{
 			p_oValue.pausedtext = p_oValue.paused == "1" ? "True" : "False";
@@ -723,7 +738,7 @@ var Monast = {
 		var qc = this.queues.get(queueid).clients.get(id);
 		var c = [
 			[
-				{text: "Drop Client"},
+				{text: "Drop Client (Hangup)", onclick: {fn: requestHangup, obj: qc}},
 				{text: "View Client Info", onclick: {fn: viewClientInfo, obj: qc}}
 			]
 		];
@@ -752,7 +767,6 @@ var Monast = {
 			$(c.memberid).innerHTML += div.innerHTML;
 			
 			this.stopChrono(c.id);
-			//this.startChrono(c.id, (new Date().getTime() / 1000) - parseInt(c.starttime));
 			this.startChrono(c.id, c.seconds);
 		}
 		this.queues.get(c.queueid).calls.set(c.id, c);
