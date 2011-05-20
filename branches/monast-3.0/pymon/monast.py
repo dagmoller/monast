@@ -422,12 +422,14 @@ class Monast:
 		}
 		
 		self.actionHandlers = {
-			'CliCommand'          : self.clientAction_CliCommand,
-			'RequestInfo'         : self.clientAction_RequestInfo,
-			'OriginateCall'       : self.clientAction_OriginateCall,
-			'RequestHangup'       : self.clientAction_RequestHangup,
-			'RequestMonitorStart' : self.clientAction_RequestMonitorStart,
-			'RequestMonitorStop'  : self.clientAction_RequestMonitorStop,
+			'CliCommand'         : self.clientAction_CliCommand,
+			'RequestInfo'        : self.clientAction_RequestInfo,
+			'OriginateCall'      : self.clientAction_OriginateCall,
+			'Hangup'       	     : self.clientAction_Hangup,
+			'MonitorStart'       : self.clientAction_MonitorStart,
+			'MonitorStop'        : self.clientAction_MonitorStop,
+			'QueueMemberPause'   : self.clientAction_QueueMemberPause,
+			'QueueMemberUnpause' : self.clientAction_QueueMemberUnpause,
 		}
 		
 		self.configFile = configFile
@@ -936,7 +938,6 @@ class Monast:
 						member.lastcall   = kw.get('lastcall', 0)
 						member.membership = kw.get('membership')
 						member.paused     = kw.get('paused')
-						#member.pausedat   = time.time() if member.paused == '1' else 0
 						member.pausedat   = [0, time.time()][member.paused == '1']
 						member.pausedur   = int(time.time() - member.pausedat)
 						member.penalty    = kw.get('penalty')
@@ -951,9 +952,8 @@ class Monast:
 						member.lastcall   = kw.get('lastcall', 0)
 						member.membership = kw.get('membership')
 						member.paused     = kw.get('paused')
-						#member.pausedat   = time.time() if event == "QueueMemberPaused" and member.paused == '1' else 0
-						member.pausedat   = [0, time.time()][event == "QueueMemberPaused" and member.paused == '1']
-						member.pausedur   = int(time.time() - member.pausedat)
+						member.pausedat   = [member.pausedat, time.time()][event == "QueueMemberPaused" and member.paused == '1']
+						member.pausedur   = int(time.time()) - int(member.pausedat)
 						member.penalty    = kw.get('penalty')
 						member.status     = kw.get('status')
 						member.statustext = AST_DEVICE_STATES.get(member.status, 'Unknown')
@@ -1155,12 +1155,13 @@ class Monast:
 			if not server:
 				continue
 			
-			if user.startswith('SIP') or user.startswith('IAX2'): 
+			tech, peer = user.split('/')
+			
+			if tech in server.status.peers.keys(): 
 				if (self.displayUsersDefault and display == 'hide') or (not self.displayUsersDefault and display == 'show'):
 					server.displayUsers[user] = True
 					
 			if display.startswith('force'):
-				tech, peer = user.split('/')
 				status = '--'
 				if AST_TECH_STATES.has_key(tech):
 					status = AST_TECH_STATES[tech]
@@ -1489,33 +1490,53 @@ class Monast:
 			.addCallbacks(_onResponse, self._onAmiCommandFailure, \
 			errbackArgs = (servername, "Error Executting Client Action Request Info '%s'" % command))
 			
-	def clientAction_RequestHangup(self, session, action):
+	def clientAction_Hangup(self, session, action):
 		servername  = action['server'][0]
 		channel     = action['channel'][0]
 		
-		log.info("Server %s :: Executting Client Action Request Hangup: %s..." % (servername, channel))
+		log.info("Server %s :: Executting Client Action Hangup: %s..." % (servername, channel))
 		server = self.servers.get(servername)
 		server.ami.hangup(channel) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Hangup on Channel: %s" % channel)
 			
-	def clientAction_RequestMonitorStart(self, session, action):
+	def clientAction_MonitorStart(self, session, action):
 		servername  = action['server'][0]
 		channel     = action['channel'][0]
 		
-		log.info("Server %s :: Executting Client Action Request Monitor Start: %s..." % (servername, channel))
+		log.info("Server %s :: Executting Client Action Monitor Start: %s..." % (servername, channel))
 		server = self.servers.get(servername)
 		server.ami.monitor(channel, "", "", 1) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Monitor Start on Channel: %s" % channel)
 			
-	def clientAction_RequestMonitorStop(self, session, action):
+	def clientAction_MonitorStop(self, session, action):
 		servername  = action['server'][0]
 		channel     = action['channel'][0]
 		
-		log.info("Server %s :: Executting Client Action Request Monitor Stop: %s..." % (servername, channel))
+		log.info("Server %s :: Executting Client Action Monitor Stop: %s..." % (servername, channel))
 		server = self.servers.get(servername)
 		server.ami.sendDeferred({'action': 'StopMonitor', 'channel': channel}) \
 			.addCallback(server.ami.errorUnlessResponse) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Monitor Stop on Channel: %s" % channel)
+			
+	def clientAction_QueueMemberPause(self, session, action):
+		servername = action['server'][0]
+		queue      = action['queue'][0]
+		location   = action['location'][0]
+		
+		log.info("Server %s :: Executting Client Action Queue Member Pause: %s -> %s..." % (servername, queue, location))
+		server = self.servers.get(servername)
+		server.ami.queuePause(queue, location, True) \
+			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Queue Member Pause: %s -> %s" % (queue, location))
+			
+	def clientAction_QueueMemberUnpause(self, session, action):
+		servername = action['server'][0]
+		queue      = action['queue'][0]
+		location   = action['location'][0]
+		
+		log.info("Server %s :: Executting Client Action Queue Member Unpause: %s -> %s..." % (servername, queue, location))
+		server = self.servers.get(servername)
+		server.ami.queuePause(queue, location, False) \
+			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Queue Member Unpause: %s -> %s" % (queue, location))
 		
 	
 	##

@@ -250,7 +250,7 @@ var Monast = {
 						method: 'get',
 						parameters: {
 							reqTime: new Date().getTime(),
-							action: Object.toJSON({action: 'RequestMonitor' + action, channel: p_oValue.channel})
+							action: Object.toJSON({action: 'Monitor' + action, channel: p_oValue.channel})
 						}
 					});
 				}
@@ -266,7 +266,7 @@ var Monast = {
 						method: 'get',
 						parameters: {
 							reqTime: new Date().getTime(),
-							action: Object.toJSON({action: 'RequestHangup', channel: p_oValue.channel})
+							action: Object.toJSON({action: 'Hangup', channel: p_oValue.channel})
 						}
 					});
 				}
@@ -501,6 +501,7 @@ var Monast = {
 	{
 		m.id          = md5("queueMember-" + m.queue + '::' + m.location);
 		m.queueid     = md5("queue-" + m.queue);
+		m.statustext_nochrono = m.paused == '1' ? 'Paused' : m.statustext;
 		m.statustext  = m.paused == '1' ? 'Paused<br><span style="font-family: monospace;" id="chrono-' + m.id + '">00:00:00</span>' : m.statustext;
 		m.statuscolor = this.getColor(m.statustext); 
 		
@@ -521,11 +522,9 @@ var Monast = {
 					}
 				}
 			});
+			this.stopChrono(m.id);
 			if (m.paused == '1')
-			{
-				this.stopChrono(m.id);
 				this.startChrono(m.id, m.pausedur);
-			}
 			return;
 		}
 		
@@ -538,12 +537,9 @@ var Monast = {
 		$('queueMembers-' + m.queueid).appendChild(div);
 		$('queueMembersCount-' + m.queueid).innerHTML = this.queues.get(m.queueid).members.keys().length;
 		
+		this.stopChrono(m.id);
 		if (m.paused == '1')
-		{
-			this.stopChrono(m.id);
-			//this.startChrono(m.id, (new Date().getTime() / 1000) - parseInt(m.pausedat));
 			this.startChrono(m.id, m.pausedur);
-		}
 	},
 	removeQueueMember: function (m)
 	{
@@ -562,6 +558,27 @@ var Monast = {
 		this._contextMenu.clearContent();
 		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition());
 	
+		var requestMemberPause = function (p_sType, p_aArgs, p_oValue)
+		{
+			var action = p_oValue.paused == "0" ? "Pause" : "Unpause";
+			Monast.doConfirm(
+				"<div style='text-align: center'>" + action + " this Queue Member?</div><br>" + new Template($("Template::Queue::Member::Info").innerHTML).evaluate(p_oValue),
+				function () {
+					new Ajax.Request('action.php', 
+					{
+						method: 'get',
+						parameters: {
+							reqTime: new Date().getTime(),
+							action: Object.toJSON({action: 'QueueMember' + action, queue: p_oValue.queue, location: p_oValue.location})
+						}
+					});
+				}
+			);
+		};
+		var requestMemberRemove = function (p_sType, p_aArgs, p_oValue)
+		{
+			
+		};
 		var viewMemberInfo = function (p_sType, p_aArgs, p_oValue)
 		{
 			p_oValue.pausedtext   = p_oValue.paused == "1" ? "True" : "False";
@@ -572,7 +589,7 @@ var Monast = {
 		var qm = this.queues.get(queueid).members.get(id);
 		var m = [
 			[
-				{text: qm.paused == "0" ? "Pause Member" : "Unpause Member"},
+				{text: qm.paused == "0" ? "Pause Member" : "Unpause Member", onclick: {fn: requestMemberPause, obj: qm}},
 				{text: "Remove Member"},
 				{text: "View Member Info", onclick: {fn: viewMemberInfo, obj: qm}}
 			]
