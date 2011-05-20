@@ -126,7 +126,7 @@
 <!-- Meetme -->
 <div style="display: none" id="Template::Meetme">
   <div class='meetmeDiv'>
-    <table width='250'>
+    <table width='250' oncontextmenu="Monast.showMeetmeContextMenu('#{id}'); return false;">
       <tr>
         <td align='center' class='statusHeader'>Meetme "#{meetme}" (<span id='countMeetme-#{id}'>0</span>)</td>
       </tr>
@@ -139,6 +139,46 @@
   <table width='250'>
     <tr>
       <td class='status'>#{userinfo}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- MeetmeUser Information -->
+<div style="display: none" id="Template::Meetme::User::Info">
+  <table class="tableInfo">
+    <tr>
+      <td class="key">Uniqueid:</td>
+      <td>#{uniqueid}</td>
+    </tr>
+    <tr>
+      <td class="key">Channel Name:</td>
+      <td>#{channel}</td>
+    </tr>
+    <tr>
+      <td class="key">Callerid Name:</td>
+      <td>#{calleridname}</td>
+    </tr>
+    <tr>
+      <td class="key">Callerid Number:</td>
+      <td>#{calleridnum}</td>
+    </tr>
+    <tr>
+      <td class="key">User Number:</td>
+      <td>#{usernum}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Meetme Form Invite Numbers -->
+<div style="display: none" id="Template::Meetme::Form::InviteNumbers">
+  <table class="tableInfo">
+    <tr>
+      <td class="key">Meetme:</td>
+      <td>#{meetme}</td>
+    </tr>
+    <tr>
+      <td class="key" valign="top">Numbers:<br>(one per line)</td>
+      <td><textarea id="Meetme::Form::InviteNumbers::To" cols="20" rows="5"></textarea></td>
     </tr>
   </table>
 </div>

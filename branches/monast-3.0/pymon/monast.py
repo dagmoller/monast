@@ -432,6 +432,7 @@ class Monast:
 			'QueueMemberUnpause' : self.clientAction_QueueMemberUnpause,
 			'QueueMemberAdd'     : self.clientAction_QueueMemberAdd,
 			'QueueMemberRemove'  : self.clientAction_QueueMemberRemove,
+			'MeetmeKick'         : self.clientAction_MeetmeKick,
 		}
 		
 		self.configFile = configFile
@@ -1461,25 +1462,48 @@ class Monast:
 		source      = action['from'][0]
 		destination = action['to'][0] 
 		type        = action['type'][0]
+		server      = self.servers.get(servername)
 		
-		tech, peer = source.split('/')
-		peer       = self.servers.get(servername).status.peers.get(tech).get(peer)
-
 		channel     = source
-		context     = peer.context
-		exten       = destination
-		priority    = 1
+		context     = server.default_context
+		exten       = None
+		priority    = None
 		timeout     = None
 		callerid    = MONAST_CALLERID
 		account     = None
 		application = None
 		data        = None
-		variable    = dict([i.split('=', 1) for i in peer.variables])
+		variable    = {}
+		async       = True
 
-		log.info("Server %s :: Executting Client Action Originate: from %s to %s..." % (servername, source, destination))
-		server = self.servers.get(servername)
-		server.ami.originate(channel, context, exten, priority, timeout, callerid, account, application, data, variable) \
-			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Client Action Originate: from %s to %s" % (source, destination))
+		originates  = []
+		logs        = []
+
+		if type == "dial":
+			tech, peer = source.split('/')
+			peer       = server.status.peers.get(tech).get(peer)
+			context    = peer.context
+			exten      = destination
+			priority   = 1
+			variable   = dict([i.split('=', 1) for i in peer.variables])
+			originates.append((channel, context, exten, priority, timeout, callerid, account, application, data, variable, async))
+			logs.append("from %s to %s@%s" % (channel, exten, context))
+
+		if type == "meetmeInviteNumbers":
+			application = "Meetme"
+			data        = source 
+			numbers     = destination.replace('\r', '').split('\n')
+			for number in numbers:
+				channel     = "Local/%s@%s" % (number, context)
+				callerid    = "MonAst Invited <%s>" % (number)
+				originates.append((channel, context, exten, priority, timeout, callerid, account, application, data, variable, async))
+				logs.append("Invite from %s to %s(%s)" % (channel, application, data))
+
+		for idx, originate in enumerate(originates):
+			channel, context, exten, priority, timeout, callerid, account, application, data, variable, async = originate
+			log.info("Server %s :: Executting Client Action Originate: %s..." % (servername, logs[idx]))
+			server.ami.originate(*originate) \
+				.addErrback(self._onAmiCommandFailure, servername, "Error Executting Client Action Originate: %s" % (logs[idx]))
 
 	def clientAction_CliCommand(self, session, action):
 		servername  = action['server'][0]
@@ -1581,6 +1605,16 @@ class Monast:
 		server = self.servers.get(servername)
 		server.ami.queueRemove(queue, location) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Queue Member Remove: %s -> %s" % (queue, location))
+			
+	def clientAction_MeetmeKick(self, session, action):
+		servername = action['server'][0]
+		meetme     = action['meetme'][0]
+		usernum    = action['usernum'][0]
+		
+		log.info("Server %s :: Executting Client Action Meetme Kick: %s -> %s..." % (servername, meetme, usernum))
+		server = self.servers.get(servername)
+		server.ami.command("meetme kick %s %s" % (meetme, usernum)) \
+			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Client Action Meetme Kick: %s -> %s..." % (meetme, usernum))
 		
 	
 	##

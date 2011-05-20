@@ -433,6 +433,7 @@ var Monast = {
 				var divUser       = document.createElement("div");
 				divUser.className = 'meetmeDiv';
 				divUser.innerHTML = new Template($("Template::Meetme::User").innerHTML).evaluate(user);
+				divUser.oncontextmenu = function () { Monast.showMeetmeUserContextMenu(m.id, user); return false; };
 				$(m.id).appendChild(divUser);
 			});
 			$("countMeetme-" + m.id).innerHTML = keys.length;
@@ -448,6 +449,78 @@ var Monast = {
 		{
 			$('meetmeDivWrapper').removeChild($(meetme.id));
 		}
+	},
+	showMeetmeContextMenu: function (id)
+	{
+		this._contextMenu.clearContent();
+		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition());
+		
+		var inviteNumbers = function (p_sType, p_aArgs, p_oValue)
+		{
+			Monast.doConfirm(
+				new Template($("Template::Meetme::Form::InviteNumbers").innerHTML).evaluate(p_oValue),
+				function () {
+					new Ajax.Request('action.php', 
+					{
+						method: 'get',
+						parameters: {
+							reqTime: new Date().getTime(),
+							action: Object.toJSON({action: 'Originate', from: p_oValue.meetme, to: $('Meetme::Form::InviteNumbers::To').value, type: 'meetmeInviteNumbers'})
+						}
+					});
+				}
+			);
+			_confirm.setHeader('Invite Numbers to Meetme');
+		};
+		
+		var meetme = this.meetmes.get(id);
+		var m = [
+			[
+				{text: "Invite Numbers", onclick: {fn: inviteNumbers, obj: meetme}},
+			]
+		];
+		this._contextMenu.addItems(m);
+		this._contextMenu.setItemGroupTitle("Meetme:  " + meetme.meetme, 0);
+		this._contextMenu.render(document.body);
+		this._contextMenu.show();
+	},
+	showMeetmeUserContextMenu: function (id, user)
+	{
+		this._contextMenu.clearContent();
+		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition());
+		
+		var viewUserInfo = function (p_sType, p_aArgs, p_oValue)
+		{
+			Monast.doAlert(new Template($("Template::Meetme::User::Info").innerHTML).evaluate(p_oValue));
+		};
+		var kickUser = function (p_sType, p_aArgs, p_oValue)
+		{
+			Monast.doConfirm(
+				"<div style='text-align: center'>Request Kick to this User from Meetme \"" + p_oValue.meetme + "\"?</div><br>" + new Template($("Template::Meetme::User::Info").innerHTML).evaluate(p_oValue.user),
+				function () {
+					new Ajax.Request('action.php', 
+					{
+						method: 'get',
+						parameters: {
+							reqTime: new Date().getTime(),
+							action: Object.toJSON({action: 'MeetmeKick', meetme: p_oValue.meetme, usernum: p_oValue.user.usernum})
+						}
+					});
+				}
+			);
+		};
+		
+		var meetme = this.meetmes.get(id);
+		var m = [
+			[
+				{text: "Kick User", onclick: {fn: kickUser, obj: {meetme: meetme.meetme, user: user}}},
+				{text: "View User Info", onclick: {fn: viewUserInfo, obj: user}}
+			]
+		];
+		this._contextMenu.addItems(m);
+		this._contextMenu.setItemGroupTitle("Meetme User:  " + user.userinfo, 0);
+		this._contextMenu.render(document.body);
+		this._contextMenu.show();
 	},
 	
 	// Parked Calls
