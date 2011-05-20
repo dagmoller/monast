@@ -613,7 +613,7 @@ var Monast = {
 		var requestMemberRemove = function (p_sType, p_aArgs, p_oValue)
 		{
 			Monast.doConfirm(
-				"<div style='text-align: center'>Remove this Queue Member?</div><br>" + new Template($("Template::Queue::Member::Info").innerHTML).evaluate(p_oValue),
+				"<div style='text-align: center'>Remove this Member from Queue \"" + p_oValue.queue + "\"?</div><br>" + new Template($("Template::Queue::Member::Info").innerHTML).evaluate(p_oValue),
 				function () {
 					new Ajax.Request('action.php', 
 					{
