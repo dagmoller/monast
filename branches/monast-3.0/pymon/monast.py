@@ -1472,7 +1472,7 @@ class Monast:
 		exten       = None
 		priority    = None
 		timeout     = None
-		callerid    = MONAST_CALLERID
+		callerid    = action.get('callerid', [MONAST_CALLERID])[0]
 		account     = None
 		application = None
 		data        = None
@@ -1497,12 +1497,18 @@ class Monast:
 			variable   = dict([i.split('=', 1) for i in peer.variables])
 			originates.append((channel, context, exten, priority, timeout, callerid, account, application, data, variable, async))
 			logs.append("from %s to %s@%s" % (channel, exten, context))
-			
-		if type == "meetmeInviteNumbers":
-			dynamic     = not server.status.meetmes.has_key(source)
+		
+		if type == "meetmeInviteUser":
 			application = "Meetme"
-			data        = [source, "%s,d" % source][dynamic]
-			numbers     = destination.replace('\r', '').split('\n')
+			data        = destination
+			originates.append((channel, context, exten, priority, timeout, callerid, account, application, data, variable, async))
+			logs.append("Invite from %s to %s(%s)" % (channel, application, data))
+		
+		if type == "meetmeInviteNumbers":
+			dynamic     = not server.status.meetmes.has_key(destination)
+			application = "Meetme"
+			data        = [destination, "%s,d" % destination][dynamic]
+			numbers     = source.replace('\r', '').split('\n')
 			for number in [i.strip() for i in numbers if i.strip()]:
 				channel     = "Local/%s@%s" % (number, context)
 				callerid    = "MonAst Invited <%s>" % (number)

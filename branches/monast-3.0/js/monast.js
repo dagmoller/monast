@@ -154,7 +154,7 @@ var Monast = {
 							method: 'get',
 							parameters: {
 								reqTime: new Date().getTime(),
-								action: Object.toJSON({action: 'Originate', from: obj.fromchannel, to: obj.tochannel, type: 'internalCall'})
+								action: Object.toJSON({action: 'Originate', from: obj.fromchannel, to: obj.tochannel, callerid: obj.fromcallerid, type: 'internalCall'})
 							}
 						});
 					}
@@ -179,7 +179,7 @@ var Monast = {
 						method: 'get',
 						parameters: {
 							reqTime: new Date().getTime(),
-							action: Object.toJSON({action: 'Originate', from: p_oValue.channeltype + "/" + p_oValue.peername, to: $('Userpeer::Form::Originate::Dial::To').value, type: 'dial'})
+							action: Object.toJSON({action: 'Originate', from: p_oValue.channeltype + "/" + p_oValue.peername, to: $('Userpeer::Form::Originate::Dial::To').value, callerid: p_oValue.callerid, type: 'dial'})
 						}
 					});
 				}
@@ -264,8 +264,37 @@ var Monast = {
 			if (optionList.length > 0)
 			{
 				m.push([{text: "Turn Member of", url: "#teste", submenu: { id: "teste", itemdata: optionList}}]);
-				this._contextMenu.setItemGroupTitle("Queues", 1);
+				this._contextMenu.setItemGroupTitle("Queues", m.length);
 			}
+		}
+		
+		var inviteMeetme = function (p_sType, p_aArgs, p_oValue)
+		{
+			Monast.doConfirm(
+				"<div style='text-align: center'>Invite this User/Peer to Meetme \"" + p_oValue.meetme + "\"?</div><br>" + new Template($("Template::Userpeer::Info").innerHTML).evaluate(p_oValue.peer),
+				function () {
+					new Ajax.Request('action.php', 
+					{
+						method: 'get',
+						parameters: {
+							reqTime: new Date().getTime(),
+							action: Object.toJSON({action: 'Originate', from: p_oValue.peer.channeltype + "/" + p_oValue.peer.peername, to: p_oValue.meetme, callerid: p_oValue.peer.callerid, type: 'meetmeInviteUser'})
+						}
+					});
+				}
+			);
+			_confirm.setHeader('Meetme Invite');
+		};
+		var meetmeList = [];
+		Monast.meetmes.keys().each(function (id) {
+			var m = Monast.meetmes.get(id);
+			if (/\d+/.match(m.meetme))
+				meetmeList.push({text: m.meetme, onclick: {fn: inviteMeetme, obj: {peer: u, meetme: m.meetme}}});
+		});
+		if (meetmeList.length > 0)
+		{
+			m.push([{text: "Invite to", url: "#meetme", submenu: { id: "meetme", itemdata: meetmeList}}]);
+			this._contextMenu.setItemGroupTitle("Meetme", m.length);
 		}
 		
 		this._contextMenu.addItems(m);
@@ -646,7 +675,7 @@ var Monast = {
 					method: 'get',
 					parameters: {
 						reqTime: new Date().getTime(),
-						action: Object.toJSON({action: 'Originate', from: $('Meetme::Form::InviteNumbers::Meetme').value, to: $('Meetme::Form::InviteNumbers::To').value, type: 'meetmeInviteNumbers'})
+						action: Object.toJSON({action: 'Originate', from: $('Meetme::Form::InviteNumbers::Numbers').value, to: $('Meetme::Form::InviteNumbers::Meetme').value, type: 'meetmeInviteNumbers'})
 					}
 				});
 			}
