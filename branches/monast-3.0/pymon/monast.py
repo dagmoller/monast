@@ -389,6 +389,7 @@ class Monast:
 			'Newchannel'          : self.handlerEventNewchannel,
 			'Newstate'            : self.handlerEventNewstate,
 			'Rename'              : self.handlerEventRename,
+			'Masquerade'          : self.handlerEventMasquerade,
 			'Newcallerid'         : self.handlerEventNewcallerid,
 			'NewCallerid'         : self.handlerEventNewcallerid,
 			'Hangup'              : self.handlerEventHangup,
@@ -425,6 +426,8 @@ class Monast:
 			'CliCommand'         : self.clientAction_CliCommand,
 			'RequestInfo'        : self.clientAction_RequestInfo,
 			'Originate'          : self.clientAction_Originate,
+			'Transfer'           : self.clientAction_Transfer,
+			'Park'               : self.clientAction_Park,
 			'Hangup'       	     : self.clientAction_Hangup,
 			'MonitorStart'       : self.clientAction_MonitorStart,
 			'MonitorStop'        : self.clientAction_MonitorStop,
@@ -1479,6 +1482,12 @@ class Monast:
 		originates  = []
 		logs        = []
 
+		if type == "internalCall":
+			application = "Dial"
+			data        = "%s,30,rTt" % destination
+			originates.append((channel, context, exten, priority, timeout, callerid, account, application, data, variable, async))
+			logs.append("from %s to %s" % (channel, destination))
+
 		if type == "dial":
 			tech, peer = source.split('/')
 			peer       = server.status.peers.get(tech).get(peer)
@@ -1488,7 +1497,7 @@ class Monast:
 			variable   = dict([i.split('=', 1) for i in peer.variables])
 			originates.append((channel, context, exten, priority, timeout, callerid, account, application, data, variable, async))
 			logs.append("from %s to %s@%s" % (channel, exten, context))
-
+			
 		if type == "meetmeInviteNumbers":
 			dynamic     = not server.status.meetmes.has_key(source)
 			application = "Meetme"
@@ -1505,6 +1514,38 @@ class Monast:
 			log.info("Server %s :: Executting Client Action Originate: %s..." % (servername, logs[idx]))
 			server.ami.originate(*originate) \
 				.addErrback(self._onAmiCommandFailure, servername, "Error Executting Client Action Originate: %s" % (logs[idx]))
+				
+	def clientAction_Transfer(self, session, action):
+		servername  = action['server'][0]
+		source      = action['from'][0]
+		destination = action['to'][0] 
+		type        = action['type'][0]
+		server      = self.servers.get(servername)
+		
+		channel      = source
+		context      = server.default_context
+		exten        = destination
+		priority     = 1
+		extraChannel = None
+		
+		if type == "meetme":
+			extraChannel = action['extrachannel'][0]
+			exten        = "%s%s" % (server.meetme_prefix, exten)
+			context      = server.meetme_context
+		
+		log.info("Server %s :: Executting Client Action Transfer: %s -> %s@%s..." % (servername, channel, exten, context))
+		server.ami.redirect(channel, context, exten, priority, extraChannel) \
+			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Client Action Transfer: %s -> %s@%s" % (channel, exten, context))
+
+	def clientAction_Park(self, session, action):
+		servername  = action['server'][0]
+		channel     = action['channel'][0]
+		announce    = action['announce'][0]
+		server      = self.servers.get(servername)
+		
+		log.info("Server %s :: Executting Client Action Park: %s from %s..." % (servername, channel, announce))
+		server.ami.park(channel, announce, "") \
+			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Client Action Transfer: %s from %s" % (channel, announce))
 
 	def clientAction_CliCommand(self, session, action):
 		servername  = action['server'][0]
@@ -1758,6 +1799,22 @@ class Monast:
 				self._updateBridge(ami.servername, uniqueid = bridgekey[0], bridgeduniqueid = bridgekey[1], channel = newname, _log = "Channel %s renamed to %s" % (channel, newname))
 			else:
 				self._updateBridge(ami.servername, uniqueid = bridgekey[0], bridgeduniqueid = bridgekey[1], bridgedchannel = newname, _log = "Channel %s renamed to %s" % (channel, newname))
+				
+	def handlerEventMasquerade(self, ami, event):
+		#log.debug("Server %s :: Processing Event Masquerade..." % ami.servername)
+		server        = self.servers.get(ami.servername)	
+		cloneUniqueid = event.get('cloneuniqueid')
+		
+		clone = server.status.channels.get(cloneUniqueid)
+		self._createChannel(
+			ami.servername,
+			uniqueid     = event.get('originaluniqueid'),
+			channel      = event.get('original'),
+			state        = event.get('originalstate'),
+			calleridnum  = clone.calleridnum,
+			calleridname = clone.calleridname,
+			_log         = "-- Newchannel (Masquerade)"
+		)
 		
 	def handlerEventNewcallerid(self, ami, event):
 		#log.debug("Server %s :: Processing Event Newcallerid..." % ami.servername)

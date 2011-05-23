@@ -125,7 +125,44 @@ var Monast = {
 			if (old.calls != u.calls)
 				Monast.blink(u.id + '-callscolor', u.callscolor);
 		}
+		
+		// Drag & Drop
+		var dd = new YAHOO.util.DD(u.id);
+		dd.onMouseDown   = this.dd_setStartPosition;
+		dd.onDragDrop    = this.dd_userPeerDrop;
+		dd.onInvalidDrop = this.dd_invalidDrop;
+		dd.onDragOver    = this.dd_dragOver;
+		dd.onDragOut     = this.dd_dragOut;
+		dd.validDrop     = ['peerTable'];
+		this.dd.set(u.id, dd);
+		
 		this.userspeers.set(u.id, u);
+	},
+	dd_userPeerDrop: function (e, id)
+	{
+		var peer = Monast.userspeers.get(this.id);
+		switch ($(id).className)
+		{
+			case "peerTable":
+				var dst = Monast.userspeers.get(id);
+				var obj = {fromcallerid: peer.callerid, fromchannel: peer.channeltype + "/" + peer.peername, tocallerid: dst.callerid, tochannel: dst.channeltype + "/" + dst.peername};
+				Monast.doConfirm(
+					new Template($("Template::Userpeer::Form::Originate::InternalCall").innerHTML).evaluate(obj),
+					function () {
+						new Ajax.Request('action.php', 
+						{
+							method: 'get',
+							parameters: {
+								reqTime: new Date().getTime(),
+								action: Object.toJSON({action: 'Originate', from: obj.fromchannel, to: obj.tochannel, type: 'internalCall'})
+							}
+						});
+					}
+				);
+				_confirm.setHeader('Originate Call');
+				break;
+		}
+		Monast.dd_backToStartPosition(this.id);
 	},
 	showUserpeerContextMenu: function (id)
 	{
@@ -135,14 +172,14 @@ var Monast = {
 		var originateCall = function (p_sType, p_aArgs, p_oValue)
 		{
 			Monast.doConfirm(
-				new Template($("Template::Userpeer::Form::Originate").innerHTML).evaluate(p_oValue),
+				new Template($("Template::Userpeer::Form::Originate::Dial").innerHTML).evaluate(p_oValue),
 				function () {
 					new Ajax.Request('action.php', 
 					{
 						method: 'get',
 						parameters: {
 							reqTime: new Date().getTime(),
-							action: Object.toJSON({action: 'Originate', from: p_oValue.channeltype + "/" + p_oValue.peername, to: $('Userpeer::Form::Originate::To').value, type: 'dial'})
+							action: Object.toJSON({action: 'Originate', from: p_oValue.channeltype + "/" + p_oValue.peername, to: $('Userpeer::Form::Originate::Dial::To').value, type: 'dial'})
 						}
 					});
 				}
@@ -396,7 +433,53 @@ var Monast = {
 			this.startChrono(b.id, parseInt(b.seconds));
 		}
 		
+		// Drag & Drop
+		var dd = new YAHOO.util.DD(div.id);
+		dd.onMouseDown   = this.dd_setStartPosition;
+		dd.onDragDrop    = this.dd_bridgeDrop;
+		dd.onInvalidDrop = this.dd_invalidDrop;
+		dd.onDragOver    = this.dd_dragOver;
+		dd.onDragOut     = this.dd_dragOut;
+		dd.validDrop     = ['peerTable'];
+		this.dd.set(div.id, dd);
+		
 		$('countCalls').innerHTML = this.bridges.keys().length;
+	},
+	dd_bridgeDrop: function (e, id)
+	{
+		var bridge = Monast.bridges.get(this.id);
+		switch ($(id).className)
+		{
+			case "peerTable":
+				var peer = Monast.userspeers.get(id);
+				var to   = /\<(\d+)\>/.exec(peer.callerid);
+				if (to == null)
+				{
+					Monast.doWarn("This User/Peer does not have a valid callerid number to transfer to.");
+					break;
+				}
+				var obj  = bridge;
+				obj.tocallerid = peer.callerid;
+				obj.tochannel  = peer.channeltype + "/" + peer.peername;
+				obj.toexten    = to[1];
+				Monast.doConfirm(
+					"<div style='text-align: center'>Select Channel to Transfer?</div><br>" + new Template($("Template::Bridge::Form::Transfer::Internal").innerHTML).evaluate(obj),
+					function () {
+						new Ajax.Request('action.php', 
+						{
+							method: 'get',
+							parameters: {
+								reqTime: new Date().getTime(),
+								action: Object.toJSON({action: 'Transfer', from: $$("input[name=Template::Bridge::Form::Transfer::Internal::From]:checked")[0].value, to: obj.toexten, type: 'normal'})
+							}
+						});
+					}
+				);
+				_confirm.setHeader('Transfer Call');
+				break;
+		}
+		
+		Monast.dd_backToStartPosition(this.id);
 	},
 	removeBridge: function (b)
 	{
@@ -407,6 +490,7 @@ var Monast = {
 			$('callsDiv').removeChild($(bridge.id));
 			this.stopChrono(id);
 		}
+		this.dd.unset(id);
 		$('countCalls').innerHTML = this.bridges.keys().length;
 	},
 	showBridgeContextMenu: function (id)
@@ -414,6 +498,24 @@ var Monast = {
 		this._contextMenu.clearContent();
 		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition());
 		
+		var requestPark = function (p_sType, p_aArgs, p_oValue)
+		{
+			Monast.doConfirm(
+				"<div style='text-align: center'>Select Channel to Park?</div><br>" + new Template($("Template::Bridge::Form::Park").innerHTML).evaluate(p_oValue),
+				function () {
+					var channel  = $$("input[name=Template::Bridge::Form::Park::Channel]:checked")[0].value;
+					var announce = p_oValue.channel == channel ? p_oValue.bridgedchannel : p_oValue.channel;
+					new Ajax.Request('action.php', 
+					{
+						method: 'get',
+						parameters: {
+							reqTime: new Date().getTime(),
+							action: Object.toJSON({action: 'Park', channel: channel, announce: announce})
+						}
+					});
+				}
+			);
+		};
 		var requestHangup = function (p_sType, p_aArgs, p_oValue)
 		{
 			Monast.doConfirm(
@@ -432,20 +534,51 @@ var Monast = {
 		};
 		var viewCallInfo = function (p_sType, p_aArgs, p_oValue)
 		{
+			if (p_oValue.status == "Link")
+				p_oValue._duration = $("chrono-" + p_oValue.id).innerHTML;
 			Monast.doAlert(new Template($("Template::Bridge::Info").innerHTML).evaluate(p_oValue));
 		};
 		
 		var b = this.bridges.get(id);
 		var m = [
 			[
-			 	{text: "Park"},
-			 	{text: "Invite to Meemte"},
+			 	{text: "Park", onclick: {fn: requestPark, obj: b}},
 				{text: "Hangup", onclick: {fn: requestHangup, obj: b}},
 				{text: "Source Channel", url: "#SourceChannel", submenu: {id: "SourceChannel", itemdata: Monast.showChannelContextMenu(b.uniqueid, true)}},
 				{text: "Destination Channel", url: "#DestinationChannel", submenu: {id: "DestinationChannel", itemdata: Monast.showChannelContextMenu(b.bridgeduniqueid, true)}},
 				{text: "View Call Info", onclick: {fn: viewCallInfo, obj: b}},
 			]
 		];
+		
+		var inviteMeetme = function (p_sType, p_aArgs, p_oValue)
+		{
+			p_oValue.bridge._duration = $('chrono-' + p_oValue.bridge.id).innerHTML;
+			Monast.doConfirm(
+				"<div style='text-align: center'>Invite this Call to Meetme \"" + p_oValue.meetme + "\"?</div><br>" + new Template($("Template::Bridge::Info").innerHTML).evaluate(p_oValue.bridge),
+				function () {
+					new Ajax.Request('action.php', 
+					{
+						method: 'get',
+						parameters: {
+							reqTime: new Date().getTime(),
+							action: Object.toJSON({action: 'Transfer', from: p_oValue.bridge.channel, extrachannel: p_oValue.bridge.bridgedchannel, to: p_oValue.meetme, type: 'meetme'})
+						}
+					});
+				}
+			);
+			_confirm.setHeader('Meetme Invite');
+		};
+		var meetmeList = [];
+		Monast.meetmes.keys().each(function (id) {
+			var m = Monast.meetmes.get(id);
+			if (/\d+/.match(m.meetme))
+				meetmeList.push({text: m.meetme, onclick: {fn: inviteMeetme, obj: {bridge: b, meetme: m.meetme}}});
+		});
+		if (meetmeList.length > 0)
+		{
+			m.push([{text: "Invite to", url: "#meetme", submenu: { id: "meetme", itemdata: meetmeList}}]);
+			this._contextMenu.setItemGroupTitle("Meetme", 1);
+		}
 		
 		this._contextMenu.addItems(m);
 		this._contextMenu.setItemGroupTitle("Call:  " + b.uniqueid + " -> " + b.bridgeduniqueid, 0);
@@ -1213,6 +1346,52 @@ var Monast = {
 					setTimeout("$('checkBox" + tabs[tabName] + "').hide()", 1000);
 			}
 		}
+	},
+	
+	// Drag&Drop
+	dd: new Hash(),
+	dd_setStartPosition: function (e)
+	{
+		var el          = $(this.id);
+		this.startPos   = YAHOO.util.Dom.getXY(YAHOO.util.Dom.get(this.id));
+		this.origZindex = el.getStyle('z-index') == null ? 1 : el.getStyle('z-index');
+		el.setStyle({'z-index': 50});
+	},
+	dd_backToStartPosition: function (id)
+	{
+		var dd = Monast.dd.get(id);
+		new YAHOO.util.Motion(  
+			id, {  
+				points: {
+					to: dd.startPos
+				}
+			},
+			0.3,
+			YAHOO.util.Easing.easeOut
+		).animate();
+
+		if (dd.origZindex)
+			$(id).setStyle({zIndex: dd.origZindex});
+
+		if (dd.lastOver)
+			$(dd.lastOver).setStyle({opacity: 1});
+	},
+	dd_invalidDrop: function (e)
+	{
+		Monast.dd_backToStartPosition(this.id);
+	},
+	dd_dragOver: function (e, id)
+	{
+		var dd = Monast.dd.get(this.id);
+		if (dd.validDrop.indexOf($(id).className) != -1)
+		{
+			$(id).setStyle({opacity: 0.5});
+			this.lastOver = id;
+		}
+	},
+	dd_dragOut: function (e, id)
+	{
+		$(id).setStyle({opacity: 1});
 	},
 	
 	// Chrono

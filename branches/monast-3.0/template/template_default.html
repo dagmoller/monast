@@ -48,8 +48,8 @@
   </table>
 </div>
 
-<!-- User/Peer Form Originate -->
-<div style="display: none" id="Template::Userpeer::Form::Originate">
+<!-- User/Peer Form Originate Dial -->
+<div style="display: none" id="Template::Userpeer::Form::Originate::Dial">
   <table class="tableInfo">
     <tr>
       <td class="key">From:</td>
@@ -57,7 +57,21 @@
     </tr>
     <tr>
       <td class="key">To:</td>
-      <td><input type="text" id="Userpeer::Form::Originate::To"></td>
+      <td><input type="text" id="Userpeer::Form::Originate::Dial::To"></td>
+    </tr>
+  </table>
+</div>
+
+<!-- User/Peer Form Originate Call -->
+<div style="display: none" id="Template::Userpeer::Form::Originate::InternalCall">
+  <table class="tableInfo">
+    <tr>
+      <td class="key">From:</td>
+      <td>#{fromcallerid}</td>
+    </tr>
+    <tr>
+      <td class="key">To:</td>
+      <td>#{tocallerid}</td>
     </tr>
   </table>
 </div>
@@ -153,6 +167,46 @@
     <tr>
       <td class="key">Call Status:</td>
       <td>#{status}</td>
+    </tr>
+    <tr>
+      <td class="key">Call Duration:</td>
+      <td>#{_duration}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Bridge Form Transfer Internal -->
+<div style="display: none" id="Template::Bridge::Form::Transfer::Internal">
+  <table class="tableInfo">
+    <tr>
+      <td class="key">Source Channel:</td>
+      <td><input type="radio" name="Template::Bridge::Form::Transfer::Internal::From" value="#{channel}" checked></td>
+      <td>#{channel}<br>#{callerid}</td>
+    </tr>
+    <tr>
+      <td class="key">Destination Channel:</td>
+      <td><input type="radio" name="Template::Bridge::Form::Transfer::Internal::From" value="#{bridgedchannel}"></td>
+      <td>#{bridgedchannel}<br>#{bridgedcallerid}</td>
+    </tr>
+    <tr>
+      <td class="key">Transfer Destination:</td>
+      <td colspan="2">#{tocallerid}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Bridge Form Park Internal -->
+<div style="display: none" id="Template::Bridge::Form::Park">
+  <table class="tableInfo">
+    <tr>
+      <td class="key">Source Channel:</td>
+      <td><input type="radio" name="Template::Bridge::Form::Park::Channel" value="#{channel}" checked></td>
+      <td>#{channel}<br>#{callerid}</td>
+    </tr>
+    <tr>
+      <td class="key">Destination Channel:</td>
+      <td><input type="radio" name="Template::Bridge::Form::Park::Channel" value="#{bridgedchannel}"></td>
+      <td>#{bridgedchannel}<br>#{bridgedcallerid}</td>
     </tr>
   </table>
 </div>
