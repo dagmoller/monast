@@ -75,7 +75,12 @@
     
     <div id="meetmesDiv">
     <fieldset>
-      <legend>Meetme Rooms</legend> 
+      <legend>Meetme Rooms</legend>
+        <span><input type="button" id="buttonMeemteCreate" value="Create Dynamic Meetme"></span>
+        <script language="javascript">
+        var _buttonLogout = new YAHOO.widget.Button("buttonMeemteCreate", {onclick: {fn: Monast._meetmeInviteNumbers, obj: null}});
+            //_buttonLogout.on("click", Monast._meetmeInviteNumbers);
+        </script>
       <div id="meetmeDivWrapper">
       </div>
     </fieldset>

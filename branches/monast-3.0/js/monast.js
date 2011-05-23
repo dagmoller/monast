@@ -450,6 +450,30 @@ var Monast = {
 			$('meetmeDivWrapper').removeChild($(meetme.id));
 		}
 	},
+	_meetmeInviteNumbers: function (foo, m)
+	{
+		var dynamic = false;
+		if (m == null)
+		{
+			dynamic = true;
+			var d   = new Date();
+			m       = {meetme: "Monast-" + parseInt(d.getTime() / 1000)};
+		}
+		Monast.doConfirm(
+			new Template($("Template::Meetme::Form::InviteNumbers").innerHTML).evaluate(m),
+			function () {
+				new Ajax.Request('action.php', 
+				{
+					method: 'get',
+					parameters: {
+						reqTime: new Date().getTime(),
+						action: Object.toJSON({action: 'Originate', from: $('Meetme::Form::InviteNumbers::Meetme').value, to: $('Meetme::Form::InviteNumbers::To').value, type: 'meetmeInviteNumbers', dynamic: dynamic})
+					}
+				});
+			}
+		);
+		_confirm.setHeader('Invite Numbers to Meetme');
+	},
 	showMeetmeContextMenu: function (id)
 	{
 		this._contextMenu.clearContent();
@@ -457,20 +481,7 @@ var Monast = {
 		
 		var inviteNumbers = function (p_sType, p_aArgs, p_oValue)
 		{
-			Monast.doConfirm(
-				new Template($("Template::Meetme::Form::InviteNumbers").innerHTML).evaluate(p_oValue),
-				function () {
-					new Ajax.Request('action.php', 
-					{
-						method: 'get',
-						parameters: {
-							reqTime: new Date().getTime(),
-							action: Object.toJSON({action: 'Originate', from: p_oValue.meetme, to: $('Meetme::Form::InviteNumbers::To').value, type: 'meetmeInviteNumbers'})
-						}
-					});
-				}
-			);
-			_confirm.setHeader('Invite Numbers to Meetme');
+			Monast._meetmeInviteNumbers(null, p_oValue);
 		};
 		
 		var meetme = this.meetmes.get(id);

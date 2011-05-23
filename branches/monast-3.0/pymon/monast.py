@@ -1490,10 +1490,11 @@ class Monast:
 			logs.append("from %s to %s@%s" % (channel, exten, context))
 
 		if type == "meetmeInviteNumbers":
+			dynamic     = action['dynamic'][0] 
 			application = "Meetme"
-			data        = source 
+			data        = [source, "%s,d" % source][dynamic == "1"]
 			numbers     = destination.replace('\r', '').split('\n')
-			for number in numbers:
+			for number in [i.strip() for i in numbers if i.strip()]:
 				channel     = "Local/%s@%s" % (number, context)
 				callerid    = "MonAst Invited <%s>" % (number)
 				originates.append((channel, context, exten, priority, timeout, callerid, account, application, data, variable, async))
