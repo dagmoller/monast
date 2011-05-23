@@ -34,9 +34,6 @@ define("HOSTPORT", 5039); // monast.py port
 define("MONAST_SOCKET_DURATION", 20); // 20 seconds
 define("MONAST_BROWSER_REFRESH", 60 * 10); // 10 minutes
 
-define("MONAST_TEMPLATE", "default"); // Template file to use.. (See template/template_*.html)
-//define("MONAST_TEMPLATE", "mini");
-
 define("MONAST_CALL_TIME", true); // enable or disable call timer
 define("MONAST_BLINK_ONCHANGE", true); // enable or disable blinking status changes
 define("MONAST_BLINK_COUNT", 3); // Number of blinks
