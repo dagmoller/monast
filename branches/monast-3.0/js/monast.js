@@ -538,6 +538,7 @@ var Monast = {
 		};
 		var requestHangup = function (p_sType, p_aArgs, p_oValue)
 		{
+			p_oValue._duration = $('chrono-' + p_oValue.id).innerHTML;
 			Monast.doConfirm(
 				"<div style='text-align: center'>Request Hangup to this Call?</div><br>" + new Template($("Template::Bridge::Info").innerHTML).evaluate(p_oValue),
 				function () {
