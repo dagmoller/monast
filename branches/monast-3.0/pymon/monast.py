@@ -317,7 +317,7 @@ class MonastHTTP(resource.Resource):
 			tmp[servername]['queueCalls'].append(call.__dict__)
 		#tmp[servername]['queueCalls'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
 					 
-		request.write(json.dumps(tmp))
+		request.write(json.dumps(tmp, encoding = "ISO8859-1"))
 		request.finish()
 	
 	def getUpdates(self, request):
@@ -328,13 +328,13 @@ class MonastHTTP(resource.Resource):
 			updates         = [u for u in session.updates if u.get('servername') == servername]
 			session.updates = []
 		if len(updates) > 0:
-			request.write(json.dumps(updates))
+			request.write(json.dumps(updates, encoding = "ISO8859-1"))
 		else:
 			request.write("NO UPDATES")
 		request.finish()
 	
 	def listServers(self, request):
-		request.write(json.dumps(self.monast.servers.keys()))
+		request.write(json.dumps(self.monast.servers.keys(), encoding = "ISO8859-1"))
 		request.finish()
 	
 	def doAction(self, request):
