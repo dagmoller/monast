@@ -281,7 +281,7 @@ var Monast = {
 			$('channelsDiv').removeChild($(channel.id));
 		$('countChannels').innerHTML = this.channels.keys().length;
 	},
-	showChannelContextMenu: function (id)
+	showChannelContextMenu: function (id, returnOnly)
 	{
 		this._contextMenu.clearContent();
 		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition());
@@ -333,6 +333,10 @@ var Monast = {
 				{text: "Execute 'core show channel " + c.channel + "'", onclick: {fn: Monast.requestInfo, obj: "core show channel " + c.channel}}
 			]
 		];
+		
+		if (!Object.isUndefined(returnOnly) && returnOnly)
+			return m;
+		
 		this._contextMenu.addItems(m);
 		this._contextMenu.setItemGroupTitle("Uniqueid:  " + c.uniqueid, 0);
 		this._contextMenu.render(document.body);
@@ -379,10 +383,11 @@ var Monast = {
 			return;
 		}
 		
-		var div       = document.createElement('div');
-		div.id        = b.id;
-		div.className = 'callDiv';
-		div.innerHTML = new Template($("Template::Bridge").innerHTML).evaluate(b);
+		var div           = document.createElement('div');
+		div.id            = b.id;
+		div.className     = 'callDiv';
+		div.innerHTML     = new Template($("Template::Bridge").innerHTML).evaluate(b);
+		div.oncontextmenu = function () { Monast.showBridgeContextMenu(b.id); return false; };
 		$('callsDiv').appendChild(div);
 		
 		if (b.status == "Link")
@@ -403,6 +408,49 @@ var Monast = {
 			this.stopChrono(id);
 		}
 		$('countCalls').innerHTML = this.bridges.keys().length;
+	},
+	showBridgeContextMenu: function (id)
+	{
+		this._contextMenu.clearContent();
+		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition());
+		
+		var requestHangup = function (p_sType, p_aArgs, p_oValue)
+		{
+			Monast.doConfirm(
+				"<div style='text-align: center'>Request Hangup to this Call?</div><br>" + new Template($("Template::Bridge::Info").innerHTML).evaluate(p_oValue),
+				function () {
+					new Ajax.Request('action.php', 
+					{
+						method: 'get',
+						parameters: {
+							reqTime: new Date().getTime(),
+							action: Object.toJSON({action: 'Hangup', channel: p_oValue.channel})
+						}
+					});
+				}
+			);
+		};
+		var viewCallInfo = function (p_sType, p_aArgs, p_oValue)
+		{
+			Monast.doAlert(new Template($("Template::Bridge::Info").innerHTML).evaluate(p_oValue));
+		};
+		
+		var b = this.bridges.get(id);
+		var m = [
+			[
+			 	{text: "Park"},
+			 	{text: "Invite to Meemte"},
+				{text: "Hangup", onclick: {fn: requestHangup, obj: b}},
+				{text: "Source Channel", url: "#SourceChannel", submenu: {id: "SourceChannel", itemdata: Monast.showChannelContextMenu(b.uniqueid, true)}},
+				{text: "Destination Channel", url: "#DestinationChannel", submenu: {id: "DestinationChannel", itemdata: Monast.showChannelContextMenu(b.bridgeduniqueid, true)}},
+				{text: "View Call Info", onclick: {fn: viewCallInfo, obj: b}},
+			]
+		];
+		
+		this._contextMenu.addItems(m);
+		this._contextMenu.setItemGroupTitle("Call:  " + b.uniqueid + " -> " + b.bridgeduniqueid, 0);
+		this._contextMenu.render(document.body);
+		this._contextMenu.show();
 	},
 	
 	// Meetmes
