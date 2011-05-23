@@ -256,7 +256,7 @@ var Monast = {
 			});
 			if (queueList.length > 0)
 			{
-				m.push([{text: "Turn Member of", url: "#teste", submenu: { id: "teste", itemdata: queueList}}]);
+				m.push([{text: "Turn Member of", url: "#addQueue", submenu: { id: "addQueue", itemdata: queueList}}]);
 				queueIdx = 1;
 			}
 		}
