@@ -252,19 +252,20 @@ var Monast = {
 				break;
 		}
 		
+		var queueIdx = 0;
 		if (addQueue)
 		{
-			var optionList = [];
+			var queueList = [];
 			Monast.queues.keys().each(function (id) {
 				var q = Monast.queues.get(id);
 				var m = q.members.get(md5("queueMember-" + q.queue + '::' + u.channeltype + "/" + u.peername));
 				if (Object.isUndefined(m))
-					optionList.push({text: q.queue, onclick: {fn: addQueueMember, obj: {peer: u, queue: q.queue}}});
+					queueList.push({text: q.queue, onclick: {fn: addQueueMember, obj: {peer: u, queue: q.queue}}});
 			});
-			if (optionList.length > 0)
+			if (queueList.length > 0)
 			{
-				m.push([{text: "Turn Member of", url: "#teste", submenu: { id: "teste", itemdata: optionList}}]);
-				this._contextMenu.setItemGroupTitle("Queues", m.length);
+				m.push([{text: "Turn Member of", url: "#teste", submenu: { id: "teste", itemdata: queueList}}]);
+				queueIdx = 1;
 			}
 		}
 		
@@ -285,6 +286,7 @@ var Monast = {
 			);
 			_confirm.setHeader('Meetme Invite');
 		};
+		var meetmeIdx  = 0;
 		var meetmeList = [];
 		Monast.meetmes.keys().each(function (id) {
 			var m = Monast.meetmes.get(id);
@@ -294,11 +296,17 @@ var Monast = {
 		if (meetmeList.length > 0)
 		{
 			m.push([{text: "Invite to", url: "#meetme", submenu: { id: "meetme", itemdata: meetmeList}}]);
-			this._contextMenu.setItemGroupTitle("Meetme", m.length);
+			meetmeIdx = queueIdx + 1;
 		}
 		
 		this._contextMenu.addItems(m);
 		this._contextMenu.setItemGroupTitle("User/Peer: " + u.channel, 0);
+		
+		if (queueIdx > 0)
+			this._contextMenu.setItemGroupTitle("Queues", queueIdx);
+		if (meetmeIdx > 0)
+			this._contextMenu.setItemGroupTitle("Meetme", meetmeIdx);
+		
 		this._contextMenu.render(document.body);
 		this._contextMenu.show();
 	},
