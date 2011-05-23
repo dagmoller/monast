@@ -485,7 +485,7 @@ var Monast = {
 				obj.tochannel  = peer.channeltype + "/" + peer.peername;
 				obj.toexten    = to[1];
 				Monast.doConfirm(
-					"<div style='text-align: center'>Select Channel to Transfer?</div><br>" + new Template($("Template::Bridge::Form::Transfer::Internal").innerHTML).evaluate(obj),
+					"<div style='text-align: center'>Select Channel to Transfer:</div><br>" + new Template($("Template::Bridge::Form::Transfer::Internal").innerHTML).evaluate(obj),
 					function () {
 						new Ajax.Request('action.php', 
 						{
@@ -521,7 +521,7 @@ var Monast = {
 		var requestPark = function (p_sType, p_aArgs, p_oValue)
 		{
 			Monast.doConfirm(
-				"<div style='text-align: center'>Select Channel to Park?</div><br>" + new Template($("Template::Bridge::Form::Park").innerHTML).evaluate(p_oValue),
+				"<div style='text-align: center'>Select Channel to Park:</div><br>" + new Template($("Template::Bridge::Form::Park").innerHTML).evaluate(p_oValue),
 				function () {
 					var channel  = $$("input[name=Template::Bridge::Form::Park::Channel]:checked")[0].value;
 					var announce = p_oValue.channel == channel ? p_oValue.bridgedchannel : p_oValue.channel;
