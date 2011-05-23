@@ -1490,9 +1490,9 @@ class Monast:
 			logs.append("from %s to %s@%s" % (channel, exten, context))
 
 		if type == "meetmeInviteNumbers":
-			dynamic     = action['dynamic'][0] 
+			dynamic     = not server.status.meetmes.has_key(source)
 			application = "Meetme"
-			data        = [source, "%s,d" % source][dynamic == "1"]
+			data        = [source, "%s,d" % source][dynamic]
 			numbers     = destination.replace('\r', '').split('\n')
 			for number in [i.strip() for i in numbers if i.strip()]:
 				channel     = "Local/%s@%s" % (number, context)

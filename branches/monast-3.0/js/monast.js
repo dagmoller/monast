@@ -452,12 +452,10 @@ var Monast = {
 	},
 	_meetmeInviteNumbers: function (foo, m)
 	{
-		var dynamic = false;
 		if (m == null)
 		{
-			dynamic = true;
-			var d   = new Date();
-			m       = {meetme: "Monast-" + parseInt(d.getTime() / 1000)};
+			var d = new Date();
+			m     = {meetme: "Monast-" + parseInt(d.getTime() / 1000)};
 		}
 		Monast.doConfirm(
 			new Template($("Template::Meetme::Form::InviteNumbers").innerHTML).evaluate(m),
@@ -467,7 +465,7 @@ var Monast = {
 					method: 'get',
 					parameters: {
 						reqTime: new Date().getTime(),
-						action: Object.toJSON({action: 'Originate', from: $('Meetme::Form::InviteNumbers::Meetme').value, to: $('Meetme::Form::InviteNumbers::To').value, type: 'meetmeInviteNumbers', dynamic: dynamic})
+						action: Object.toJSON({action: 'Originate', from: $('Meetme::Form::InviteNumbers::Meetme').value, to: $('Meetme::Form::InviteNumbers::To').value, type: 'meetmeInviteNumbers'})
 					}
 				});
 			}
