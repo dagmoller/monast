@@ -127,14 +127,7 @@ var Monast = {
 		}
 		
 		// Drag & Drop
-		var dd = new YAHOO.util.DD(u.id);
-		dd.onMouseDown   = this.dd_setStartPosition;
-		dd.onDragDrop    = this.dd_userPeerDrop;
-		dd.onInvalidDrop = this.dd_invalidDrop;
-		dd.onDragOver    = this.dd_dragOver;
-		dd.onDragOut     = this.dd_dragOut;
-		dd.validDrop     = ['peerTable'];
-		this.dd.set(u.id, dd);
+		this.createDragDrop(u.id, this.dd_userPeerDrop, ['peerTable']);
 		
 		this.userspeers.set(u.id, u);
 	},
@@ -162,7 +155,6 @@ var Monast = {
 				_confirm.setHeader('Originate Call');
 				break;
 		}
-		Monast.dd_backToStartPosition(this.id);
 	},
 	showUserpeerContextMenu: function (id)
 	{
@@ -471,14 +463,7 @@ var Monast = {
 		}
 		
 		// Drag & Drop
-		var dd = new YAHOO.util.DD(div.id);
-		dd.onMouseDown   = this.dd_setStartPosition;
-		dd.onDragDrop    = this.dd_bridgeDrop;
-		dd.onInvalidDrop = this.dd_invalidDrop;
-		dd.onDragOver    = this.dd_dragOver;
-		dd.onDragOut     = this.dd_dragOut;
-		dd.validDrop     = ['peerTable'];
-		this.dd.set(div.id, dd);
+		this.createDragDrop(b.id, this.dd_bridgeDrop, ['peerTable']);
 		
 		$('countCalls').innerHTML = this.bridges.keys().length;
 	},
@@ -515,8 +500,6 @@ var Monast = {
 				_confirm.setHeader('Transfer Call');
 				break;
 		}
-		
-		Monast.dd_backToStartPosition(this.id);
 	},
 	removeBridge: function (b)
 	{
@@ -527,7 +510,7 @@ var Monast = {
 			$('callsDiv').removeChild($(bridge.id));
 			this.stopChrono(id);
 		}
-		this.dd.unset(id);
+		this.removeDragDrop(id);
 		$('countCalls').innerHTML = this.bridges.keys().length;
 	},
 	showBridgeContextMenu: function (id)
@@ -1387,18 +1370,33 @@ var Monast = {
 	
 	// Drag&Drop
 	dd: new Hash(),
+	createDragDrop: function (id, onDragDrop, validTargets)
+	{
+		var dd = new YAHOO.util.DD(id);
+		dd.onMouseDown   = this.dd_setStartPosition;
+		dd.onMouseUp     = this.dd_backToStartPosition;
+		dd.onDragOver    = this.dd_dragOver;
+		dd.onDragOut     = this.dd_dragOut;
+		dd.onDragDrop    = onDragDrop;
+		dd.validTargets  = validTargets;
+		this.dd.set(id, dd);
+	},
+	removeDragDrop: function (id)
+	{
+		this.dd.unset(id);
+	},	
 	dd_setStartPosition: function (e)
 	{
 		var el          = $(this.id);
 		this.startPos   = YAHOO.util.Dom.getXY(YAHOO.util.Dom.get(this.id));
 		this.origZindex = el.getStyle('z-index') == null ? 1 : el.getStyle('z-index');
-		el.setStyle({'z-index': 50});
+		el.setStyle({'z-index': 2});
 	},
-	dd_backToStartPosition: function (id)
+	dd_backToStartPosition: function (e)
 	{
-		var dd = Monast.dd.get(id);
+		var dd = Monast.dd.get(this.id);
 		new YAHOO.util.Motion(  
-			id, {  
+				this.id, {  
 				points: {
 					to: dd.startPos
 				}
@@ -1408,19 +1406,15 @@ var Monast = {
 		).animate();
 
 		if (dd.origZindex)
-			$(id).setStyle({zIndex: dd.origZindex});
+			$(this.id).setStyle({zIndex: dd.origZindex});
 
 		if (dd.lastOver)
 			$(dd.lastOver).setStyle({opacity: 1});
 	},
-	dd_invalidDrop: function (e)
-	{
-		Monast.dd_backToStartPosition(this.id);
-	},
 	dd_dragOver: function (e, id)
 	{
 		var dd = Monast.dd.get(this.id);
-		if (dd.validDrop.indexOf($(id).className) != -1)
+		if (dd.validTargets.indexOf($(id).className) != -1)
 		{
 			$(id).setStyle({opacity: 0.5});
 			this.lastOver = id;
