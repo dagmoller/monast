@@ -1200,6 +1200,11 @@ var Monast = {
 					
 				case "Reload":
 					this._statusReload = true;
+					if (this._reloadTimeout != null)
+					{
+						clearTimeout(this._reloadTimeout);
+						this._reloadTimeout = null;
+					}
 					setTimeout("location.href = 'index.php'", event.time);
 					return;
 					
@@ -1646,8 +1651,10 @@ var Monast = {
 		});
 	},
 	
+	_reloadTimeout: null,
 	doReload: function ()
 	{
+		this._reloadTimeout = setTimeout("$('_reqStatus').innerHTML = 'Reloading, please wait...'; location.href = 'index.php';", 5000);
 		$('_reqStatus').innerHTML = "Reload requested, please wait...";
 		new Ajax.Request('action.php', 
 		{
