@@ -746,7 +746,11 @@ var Monast = {
 			div.id        = p.id;
 			div.className = 'parkedDiv';
 			div.innerHTML = new Template($("Template::ParkedCall").innerHTML).evaluate(p);
+			div.oncontextmenu = function () { Monast.showParkedCallContextMenu(p.id); return false; };
 			$('parkedsDiv').appendChild(div);
+			
+			// Drag & Drop
+			this.createDragDrop(p.id, this.dd_parkedCallDrop, ['peerTable']);
 		}
 		else
 		{
@@ -755,6 +759,36 @@ var Monast = {
 		
 		this.parkedCalls.set(p.id, p);
 		$("countParked").innerHTML = this.parkedCalls.keys().length;
+	},
+	dd_parkedCallDrop: function (e, id)
+	{
+		var parked = Monast.parkedCalls.get(this.id);
+		switch ($(id).className)
+		{
+			case "peerTable":
+				var peer = Monast.userspeers.get(id);
+				var to   = /\<(\d+)\>/.exec(peer.callerid);
+				if (to == null)
+				{
+					Monast.doWarn("This User/Peer does not have a valid callerid number to transfer to.");
+					break;
+				}
+				Monast.doConfirm(
+					"<div style='text-align: center'>Request Transfer this Parked Call to User/Peer \"" + peer.callerid + "\"?</div><br>" + new Template($("Template::ParkedCall::Info").innerHTML).evaluate(parked),
+					function () {
+						new Ajax.Request('action.php', 
+						{
+							method: 'get',
+							parameters: {
+								reqTime: new Date().getTime(),
+								action: Object.toJSON({action: 'Originate', from: peer.channeltype + "/" + peer.peername, to: parked.exten, type: 'dial'})
+							}
+						});
+					}
+				);
+				_confirm.setHeader('Transfer Parked Call');
+				break;
+		}
 	},
 	removeParkedCall: function (p)
 	{
@@ -765,6 +799,44 @@ var Monast = {
 			$('parkedsDiv').removeChild($(parked.id));
 		}
 		$("countParked").innerHTML = this.parkedCalls.keys().length;
+	},
+	showParkedCallContextMenu: function (id)
+	{
+		this._contextMenu.clearContent();
+		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition());
+		
+		var viewParkedCallInfo = function (p_sType, p_aArgs, p_oValue)
+		{
+			Monast.doAlert(new Template($("Template::ParkedCall::Info").innerHTML).evaluate(p_oValue));
+		};
+		var requestHangup = function (p_sType, p_aArgs, p_oValue)
+		{
+			Monast.doConfirm(
+				"<div style='text-align: center'>Request Hangup to this Parked Call?</div><br>" + new Template($("Template::ParkedCall::Info").innerHTML).evaluate(p_oValue),
+				function () {
+					new Ajax.Request('action.php', 
+					{
+						method: 'get',
+						parameters: {
+							reqTime: new Date().getTime(),
+							action: Object.toJSON({action: 'Hangup', channel: p_oValue.channel})
+						}
+					});
+				}
+			);
+		};
+		
+		var parked = this.parkedCalls.get(id);
+		var m = [
+			[
+				{text: "Hangup", onclick: {fn: requestHangup, obj: parked}},
+				{text: "View Parked Call Info", onclick: {fn: viewParkedCallInfo, obj: parked}}
+			]
+		];
+		this._contextMenu.addItems(m);
+		this._contextMenu.setItemGroupTitle("Parked Call:  " + parked.exten, 0);
+		this._contextMenu.render(document.body);
+		this._contextMenu.show();
 	},
 	
 	// Queues
