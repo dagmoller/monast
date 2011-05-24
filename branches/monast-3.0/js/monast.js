@@ -1646,6 +1646,18 @@ var Monast = {
 		});
 	},
 	
+	doReload: function ()
+	{
+		new Ajax.Request('action.php', 
+		{
+			method: 'get',
+			parameters: {
+				reqTime: new Date().getTime(),
+				action: Object.toJSON({action: 'Reload'})
+			}
+		});
+	},
+	
 	changeServer: function (server)
 	{
 		$('_reqStatus').innerHTML = "Changing Server...";

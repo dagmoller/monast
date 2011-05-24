@@ -100,6 +100,12 @@ while (!$complete)
 			    		$complete     = true;
 			    		break;
 			    	}
+			    	elseif ($action['action'] == "Reload")
+			    	{
+			    		$lastEvents[] = array('action' => 'Reload', 'time' => 100);
+			    		$complete     = true;
+			    		break;
+			    	}
 			    	else
 			    	{
 			    		$action['server'] = $server;

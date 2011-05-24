@@ -269,7 +269,11 @@ class MonastHTTP(resource.Resource):
 	def getStatus(self, request):
 		tmp        = {}
 		servername = request.args.get('servername', [None])[0]
+		session    = request.getSession()
 		server     = self.monast.servers.get(servername)
+		
+		## Clear Updates
+		session.updates = []
 		
 		tmp[servername] = {
 			'peers': {},

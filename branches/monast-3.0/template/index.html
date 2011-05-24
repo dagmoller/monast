@@ -74,7 +74,7 @@
     Server: {server}
     <!-- END BLOCK : singleServer -->
     <!-- START BLOCK : serverList -->
-    Server: 
+    Server:
     <select id="serverlist" onchange="Monast.changeServer(this.options[this.selectedIndex].value)">
       <!-- START BLOCK : optionServer -->
       <option value="{server}" {selected}>{server}</option>
@@ -83,6 +83,11 @@
     <!-- END BLOCK : serverList -->
   </span>
   <span class="monast-status" id="_reqStatus">Initializing...</span>
+  <span><input type="button" id="buttonReload" value="Reload"></span>
+  <script language="javascript">
+  var _buttonReload = new YAHOO.widget.Button("buttonReload");
+      _buttonReload.on("click", Monast.doReload);
+  </script>
   <!-- START BLOCK : buttonLogout -->
   <span><input type="button" id="buttonLogout" value="Logout"></span>
   <script language="javascript">
