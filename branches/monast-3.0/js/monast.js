@@ -1238,6 +1238,10 @@ var Monast = {
 				case "RequestInfoResponse":
 					this.requestInfoResponse(event);
 					break;
+					
+				case "RequestError":
+					this.doError(event.message);
+					break;
 			}
 		}
 	},
