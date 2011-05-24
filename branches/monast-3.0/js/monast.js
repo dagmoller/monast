@@ -1258,7 +1258,7 @@ var Monast = {
 		}
 		if (this._statusReload)
 		{
-			$('_reqStatus').innerHTML = "Reloading, please wait.";
+			$('_reqStatus').innerHTML = "Reloading, please wait...";
 			return;
 		}
 			
@@ -1648,6 +1648,7 @@ var Monast = {
 	
 	doReload: function ()
 	{
+		$('_reqStatus').innerHTML = "Reload requested, please wait...";
 		new Ajax.Request('action.php', 
 		{
 			method: 'get',
