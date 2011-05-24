@@ -1668,6 +1668,11 @@ var Monast = {
 	
 	changeServer: function (server)
 	{
+		if (this._statusError)
+		{
+			this.doError("Can not change server, Monast is offline...<br>Please reload...");
+			return;
+		}
 		$('_reqStatus').innerHTML = "Changing Server...";
 		new Ajax.Request('action.php', 
 		{
