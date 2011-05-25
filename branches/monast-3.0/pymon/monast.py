@@ -389,8 +389,8 @@ class Monast:
 		log.log(logging.NOTICE, "Initializing Monast AMI Interface...")
 		
 		self.eventHandlers = {
-			#'Reload'              : self.handlerReload,
-			#'ChannelReload'       : self.handlerChannelReload,
+			'Reload'              : self.handlerEventReload,
+			'ChannelReload'       : self.handlerEventChannelReload,
 			'PeerEntry'           : self.handlerEventPeerEntry,
 			'PeerStatus'          : self.handlerEventPeerStatus,
 			#'SkypeAccountStatus'  : self.handlerSkypeAccountStatus,
@@ -1108,6 +1108,7 @@ class Monast:
 			self.servers[servername] = GenericObject("Server")
 			self.servers[servername].servername       = servername
 			self.servers[servername].version          = None
+			self.servers[servername].lastReload       = 0
 			self.servers[servername].hostname         = config.get(server, 'hostname')
 			self.servers[servername].hostport         = int(config.get(server, 'hostport'))
 			self.servers[servername].username         = config.get(server, 'username')
@@ -1698,6 +1699,22 @@ class Monast:
 	##
 	## Event Handlers
 	##
+	def handlerEventReload(self, ami, event):
+		log.debug("Server %s :: Processing Event Reload..." % ami.servername)
+		
+		server = self.servers.get(ami.servername)
+		if time.time() - server.lastReload > 5:
+			server.lastReload = time.time()
+			self.__requestAsteriskConfig(ami.servername)
+		
+	def handlerEventChannelReload(self, ami, event):
+		log.debug("Server %s :: Processing Event ChannelReload..." % ami.servername)
+		
+		server = self.servers.get(ami.servername)
+		if time.time() - server.lastReload > 5:
+			server.lastReload = time.time()
+			self.__requestAsteriskConfig(ami.servername)
+		
 	def handlerEventPeerEntry(self, ami, event):
 		log.debug("Server %s :: Processing Event PeerEntry..." % ami.servername)
 		server      = self.servers.get(ami.servername)
