@@ -113,7 +113,7 @@ var Monast = {
 			div.id            = u.id;
 			div.className     = 'peerTable';
 			div.innerHTML     = new Template($('Template::Userpeer').innerHTML).evaluate(u);
-			div.oncontextmenu = function () { Monast.showUserpeerContextMenu(u.id); return false;	};
+			div.oncontextmenu = function () { Monast.showUserpeerContextMenu(u.id); return false; };
 			$('fieldset-' + u.channeltype).appendChild(div);
 		}
 		else
