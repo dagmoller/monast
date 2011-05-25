@@ -23,6 +23,7 @@ except ImportError:
 
 try:
 	from starpy import manager
+	from starpy.error import AMICommandFailure
 except ImportError:
 	print "Monast ERROR: Module starpy not found."
 	print "You need starpy to run Monast. Get it from http://www.vrplumber.com/programming/starpy/"
@@ -1242,7 +1243,12 @@ class Monast:
 	def _onAmiCommandFailure(self, reason, servername, message = None):
 		if not message:
 			message = "AMI Action Error"
-		log.error("Server %s :: %s, reason: %s" % (servername, message, reason.getErrorMessage()))
+		
+		errorMessage = reason.getErrorMessage()
+		if type(reason.value) == AMICommandFailure and type(reason.value.args[0]) == type(dict()) and reason.value.args[0].has_key('message'):
+			errorMessage = reason.value.args[0].get('message')
+		
+		log.error("Server %s :: %s, reason: %s" % (servername, message, errorMessage))
 		
 	def __requestAsteriskConfig(self, servername):
 		log.info("Server %s :: Requesting Asterisk Configuration..." % servername)
