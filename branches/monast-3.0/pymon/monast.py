@@ -1247,6 +1247,26 @@ class Monast:
 		log.info("Server %s :: Requesting Asterisk Configuration..." % servername)
 		server = self.servers.get(servername)
 		
+		## Request Browser Reload
+		self.http._addUpdate(servername = servername, action = "Reload", time = 5000)
+		
+		## Clear Server Status
+		server.status.meetmes.clear()
+		server.status.channels.clear()
+		server.status.bridges.clear()
+		server.status.queues.clear()
+		server.status.queueMembers.clear()
+		server.status.queueClients.clear()
+		server.status.queueCalls.clear()
+		server.status.parkedCalls.clear()
+		for channeltype, peers in server.status.peers.items():
+			toRemove = []
+			for peername, peer in peers.items():
+				if not peer.forced:
+					toRemove.append(peername)
+			for peername in toRemove:
+				del peers[peername]
+		
 		## Peers (SIP, IAX) :: Process results via handlerEventPeerEntry
 		log.debug("Server %s :: Requesting SIP Peers..." % servername)
 		server.ami.sendDeferred({'action': 'sippeers'}) \
