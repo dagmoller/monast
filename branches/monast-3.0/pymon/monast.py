@@ -1865,7 +1865,7 @@ class Monast:
 		cloneUniqueid = event.get('cloneuniqueid')
 		
 		if not cloneUniqueid:
-			log.warn("Server %s :: Detected Masquerade BUG on Asterisk. Event does not have cloneuniqueid and originaluniqueid properties. " % ami.servername \
+			log.warn("Server %s :: Detected BUG on Asterisk. Masquerade Event does not have cloneuniqueid and originaluniqueid properties. " % ami.servername \
 				+ "See https://issues.asterisk.org/view.php?id=16555 for more informations.")
 			return
 		
