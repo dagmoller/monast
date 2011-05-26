@@ -348,7 +348,7 @@ var Monast = {
 				{
 					case "statecolor":
 						$(elid).style.backgroundColor = c[key];
-						if (old && old.state != c.state)
+						if (c.subaction == "Update")
 							Monast.blink(elid, c.statecolor);
 						break;
 						
@@ -472,7 +472,8 @@ var Monast = {
 				{
 					case "statuscolor":
 						$(elid).style.backgroundColor = b[key];
-						Monast.blink(elid, b.statuscolor);
+						if (b.subaction == "Update")
+							Monast.blink(elid, b.statuscolor);
 						break;
 						
 					default:
@@ -996,7 +997,7 @@ var Monast = {
 				{
 					case "statuscolor":
 						$(elid).style.backgroundColor = m.statuscolor;
-						if (old && old[key] != m[key])
+						if (m.subaction == "Update")
 							Monast.blink(elid, m.statuscolor);
 						break;
 						
