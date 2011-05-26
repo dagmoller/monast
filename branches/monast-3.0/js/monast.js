@@ -637,7 +637,7 @@ var Monast = {
 		});
 		if (meetmeList.length > 0)
 		{
-			m.push([{text: "Invite to", url: "#meetme", submenu: { id: "meetme", itemdata: meetmeList}}]);
+			m.push([{text: "Invite to", url: "#meetme", submenu: {id: "meetme", itemdata: meetmeList}}]);
 			this._contextMenu.setItemGroupTitle("Meetme", 1);
 		}
 		
