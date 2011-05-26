@@ -134,6 +134,7 @@ var Monast = {
 						
 					case "callscolor":
 						$(elid).style.backgroundColor = u[key];
+						$(elid).title = u.calls + " call(s)";
 						if (old && old.calls != u.calls)
 							Monast.blink(elid, u.callscolor);
 						break;

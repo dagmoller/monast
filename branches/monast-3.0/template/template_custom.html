@@ -1,11 +1,11 @@
 
 <!-- User/Peer (Uncomment below to got small peer butons) -->
 <!-- 
-<div style="display: none" id="Template::Userpeer">
+<div class="hidden" id="Template::Userpeer">
   <table class="status" width="175px">
     <tr>
-      <td id="#{id}-statuscolor" bgcolor="#{statuscolor}" title="#{status} :: #{time} ms" nowrap><b>#{callerid}</b></td>
-      <td id="#{id}-callscolor" bgcolor="#{callscolor}" width="10px" title="call(s)"><span id="#{id}-calls">#{calls}</span></td>
+      <td nowrap="nowrap" monast="statuscolor"><b><span monast="callerid">&nbsp;</span></b></td>
+      <td monast="callscolor" width="10px"><span monast="calls">&nbsp;</span></td>
     </tr>
   </table>
 </div>
@@ -13,16 +13,19 @@
 
 <!-- Channel (Uncomment below to got small channel butons) -->
 <!-- 
-<div style="display: none" id="Template::Channel">
+<div class="hidden" id="Template::Channel">
   <table width='330'>
     <tr>
-      <td class='status' width='260' title="#{callerid}">
-        <span id="#{id}-monitoricon">#{monitoricon}</span><span id="#{id}-channel">#{channel}</span>
+      <td class='status' width='260'>
+        <span monast="monitor">
+          <img src='image/record.png' border='0' width='8' height='8' title="Channel Monitored">&nbsp;&nbsp;
+        </span>
+        <span monast="channel">&nbsp;</span>
       </td>
-      <td bgcolor='#{statecolor}' class='status' width='70' id="#{id}-state">#{state}</td>
+      <td monast="statecolor" class='status' width='70'><span monast="state">&nbsp;</span></td>
     </tr> 
   </table>
-</div>
+</div> 
 -->
 
 <!-- Hide some Tabs (Uncomment below to hide tabs) -->
