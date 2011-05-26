@@ -106,6 +106,7 @@ var Monast = {
 		u.id          = md5(u.channel);
 		u.statuscolor = this.getColor(u.status);
 		u.callscolor  = u.calls > 0 ? this.getColor('in use') : this.getColor('not in use');
+		u.latency     = u.time == -1 ? "--" : u.time + " ms";
 		
 		if (Object.isUndefined(this.userspeers.get(u.id)))
 		{
@@ -197,7 +198,6 @@ var Monast = {
 		};
 		var viewUserpeerInfo = function (p_sType, p_aArgs, p_oValue)
 		{
-			p_oValue.latency          = p_oValue.time == -1 ? "--" : p_oValue.time + " ms";
 			p_oValue.channelVariables = [];
 			
 			if (p_oValue.variables.length > 0)
