@@ -107,28 +107,44 @@ var Monast = {
 		u.statuscolor = this.getColor(u.status);
 		u.callscolor  = u.calls > 0 ? this.getColor('in use') : this.getColor('not in use');
 		
-		if (Object.isUndefined(this.userspeers.get(u.id))) // User does not exists
+		if (Object.isUndefined(this.userspeers.get(u.id)))
 		{
-			var div           = document.createElement('div');
-			div.id            = u.id;
-			div.className     = 'peerTable';
-			div.innerHTML     = new Template($('Template::Userpeer').innerHTML).evaluate(u);
-			div.oncontextmenu = function () { Monast.showUserpeerContextMenu(u.id); return false; };
-			$('fieldset-' + u.channeltype).appendChild(div);
+			var clone           = Monast.buildClone("Template::Userpeer", u.id);
+			clone.className     = "peerTable";
+			clone.oncontextmenu = function () { Monast.showUserpeerContextMenu(u.id); return false; };
+			$('fieldset-' + u.channeltype).appendChild(clone);
+			
+			// Drag & Drop
+			this.createDragDrop(u.id, this.dd_userPeerDrop, ['peerTable']);
 		}
-		else
-		{
-			$(u.id).innerHTML = new Template($('Template::Userpeer').innerHTML).evaluate(u);
-			var old = this.userspeers.get(u.id);
-			if (old.status != u.status)
-				Monast.blink(u.id + '-statuscolor', u.statuscolor);
-			if (old.calls != u.calls)
-				Monast.blink(u.id + '-callscolor', u.callscolor);
-		}
-		
-		// Drag & Drop
-		this.createDragDrop(u.id, this.dd_userPeerDrop, ['peerTable']);
-		
+
+		var old = this.userspeers.get(u.id);
+		Object.keys(u).each(function (key) {
+			var elid = u.id + '-' + key;
+			if ($(elid))
+			{
+				switch (key)
+				{
+					case "statuscolor":
+						$(elid).style.backgroundColor = u[key];
+						$(elid).title = "Status: " + u.status + " :: Latency: " + u.time + " ms";
+						if (old && old.status != u.status)
+							Monast.blink(elid, u.statuscolor);
+						break;
+						
+					case "callscolor":
+						$(elid).style.backgroundColor = u[key];
+						if (old && old.calls != u.calls)
+							Monast.blink(elid, u.callscolor);
+						break;
+	
+					default:
+						$(elid).innerHTML = u[key];
+						break;
+				}
+			}
+		});
+
 		this.userspeers.set(u.id, u);
 	},
 	dd_userPeerDrop: function (e, id)
@@ -309,36 +325,46 @@ var Monast = {
 	{
 		c.id           = c.uniqueid;
 		c.statecolor   = this.getColor(c.state);
-		c.monitoricon  = c.monitor ? new Template($('Template::Channel::Monitor').innerHTML).evaluate(c) : "";
 		c.monitortext  = c.monitor ? "Yes" : "No";
 		c.channel      = c.channel.replace('<', '&lt;').replace('>', '&gt;');
 		c.calleridname = c.calleridname != null ? c.calleridname.replace('<', '').replace('>', '') : "";
 		c.calleridnum  = c.calleridnum != null ? c.calleridnum.replace('<', '').replace('>', '') : "";
 		c.callerid     = new Template("#{calleridname} &lt;#{calleridnum}&gt;").evaluate(c);
 		
-		this.channels.set(c.id, c);
-		
-		if (!Object.isUndefined(c.subaction) && c.subaction == "Update")
+		if (Object.isUndefined(this.channels.get(c.id)))
 		{
-			Object.keys(c).each(function (key) {
-				if ($(c.id + "-" + key))
-					$(c.id + "-" + key).innerHTML = c[key];
-				if (key == "state")
-				{
-					$(c.id + "-" + key).style.backgroundColor = c.statecolor;
-					Monast.blink(c.id + "-" + key, c.statecolor);
-				}
-			});
-			return;
+			var clone           = Monast.buildClone("Template::Channel", c.id);
+			clone.className     = "channelDiv";
+			clone.oncontextmenu = function () { Monast.showChannelContextMenu(c.id); return false; };
+			$("channelsDiv").appendChild(clone);
 		}
-				
-		var div           = document.createElement('div');
-		div.id            = c.id;
-		div.className     = 'channelDiv';
-		div.innerHTML     = new Template($('Template::Channel').innerHTML).evaluate(c);
-		div.oncontextmenu = function () { Monast.showChannelContextMenu(c.id); return false; };
-		$('channelsDiv').appendChild(div);
-		$('countChannels').innerHTML = this.channels.keys().length; 
+
+		var old = this.channels.get(c.id);
+		Object.keys(c).each(function (key) {
+			var elid = c.id + '-' + key;
+			if ($(elid))
+			{
+				switch (key)
+				{
+					case "statecolor":
+						$(elid).style.backgroundColor = c[key];
+						if (old && old.state != c.state)
+							Monast.blink(elid, c.statecolor);
+						break;
+						
+					case "monitor":
+						if (c.monitor) { $(elid).show(); } else { $(elid).hide(); }
+						break;
+						
+					default:
+						$(elid).innerHTML = c[key];
+						break;
+				}
+			}
+		});
+		
+		this.channels.set(c.id, c);
+		$("countChannels").innerHTML = this.channels.keys().length;
 	},
 	removeChannel: function (c)
 	{
@@ -426,35 +452,35 @@ var Monast = {
 		b.callerid        = new Template("#{calleridname} &lt;#{calleridnum}&gt;").evaluate(this.channels.get(b.uniqueid));
 		b.bridgedcallerid = new Template("#{calleridname} &lt;#{calleridnum}&gt;").evaluate(this.channels.get(b.bridgeduniqueid));
 		
-		this.bridges.set(b.id, b);
-		
-		if (!Object.isUndefined(b.subaction) && b.subaction == "Update" && $(b.id))
+		if (Object.isUndefined(this.bridges.get(b.id)))
 		{
-			Object.keys(b).each(function (key) {
-				if ($(b.id + "-" + key))
-				{
-					$(b.id + "-" + key).innerHTML = b[key];
-				}
-			});
-			if ($(b.id + "-statuscolor-fake"))
-			{
-				$(b.id + "-statuscolor-fake").style.backgroundColor = b.statuscolor;
-				Monast.blink(b.id + "-statuscolor-fake", b.statuscolor);
-			}
-			if (b.status == "Link")
-			{
-				this.stopChrono(b.id);
-				this.startChrono(b.id, parseInt(b.seconds));
-			}
-			return;
+			var clone           = Monast.buildClone("Template::Bridge", b.id);
+			clone.className     = "callDiv";
+			clone.oncontextmenu = function () { Monast.showBridgeContextMenu(b.id); return false; };
+			$("callsDiv").appendChild(clone);
+			
+			// Drag & Drop
+			this.createDragDrop(b.id, this.dd_bridgeDrop, ['peerTable']);
 		}
-		
-		var div           = document.createElement('div');
-		div.id            = b.id;
-		div.className     = 'callDiv';
-		div.innerHTML     = new Template($("Template::Bridge").innerHTML).evaluate(b);
-		div.oncontextmenu = function () { Monast.showBridgeContextMenu(b.id); return false; };
-		$('callsDiv').appendChild(div);
+
+		var old = this.bridges.get(b.id);
+		Object.keys(b).each(function (key) {
+			var elid = b.id + '-' + key;
+			if ($(elid))
+			{
+				switch (key)
+				{
+					case "statuscolor":
+						$(elid).style.backgroundColor = b[key];
+						Monast.blink(elid, b.statuscolor);
+						break;
+						
+					default:
+						$(elid).innerHTML = b[key];
+						break;
+				}
+			}
+		});
 		
 		if (b.status == "Link")
 		{
@@ -462,10 +488,8 @@ var Monast = {
 			this.startChrono(b.id, parseInt(b.seconds));
 		}
 		
-		// Drag & Drop
-		this.createDragDrop(b.id, this.dd_bridgeDrop, ['peerTable']);
-		
-		$('countCalls').innerHTML = this.bridges.keys().length;
+		this.bridges.set(b.id, b);
+		$("countCalls").innerHTML = this.bridges.keys().length;
 	},
 	dd_bridgeDrop: function (e, id)
 	{
@@ -538,7 +562,7 @@ var Monast = {
 		};
 		var requestHangup = function (p_sType, p_aArgs, p_oValue)
 		{
-			p_oValue._duration = $('chrono-' + p_oValue.id).innerHTML;
+			p_oValue._duration = $(p_oValue.id + '-chrono').innerHTML;
 			Monast.doConfirm(
 				"<div style='text-align: center'>Request Hangup to this Call?</div><br>" + new Template($("Template::Bridge::Info").innerHTML).evaluate(p_oValue),
 				function () {
@@ -556,7 +580,7 @@ var Monast = {
 		var viewCallInfo = function (p_sType, p_aArgs, p_oValue)
 		{
 			if (p_oValue.status == "Link")
-				p_oValue._duration = $("chrono-" + p_oValue.id).innerHTML;
+				p_oValue._duration = $(p_oValue.id + "-chrono").innerHTML;
 			Monast.doAlert(new Template($("Template::Bridge::Info").innerHTML).evaluate(p_oValue));
 		};
 		
@@ -573,7 +597,7 @@ var Monast = {
 		
 		var inviteMeetme = function (p_sType, p_aArgs, p_oValue)
 		{
-			p_oValue.bridge._duration = $('chrono-' + p_oValue.bridge.id).innerHTML;
+			p_oValue.bridge._duration = $(p_oValue.bridge.id + '-chrono').innerHTML;
 			Monast.doConfirm(
 				"<div style='text-align: center'>Invite this Call to Meetme \"" + p_oValue.meetme + "\"?</div><br>" + new Template($("Template::Bridge::Info").innerHTML).evaluate(p_oValue.bridge),
 				function () {
@@ -611,34 +635,66 @@ var Monast = {
 	meetmes: new Hash(),
 	processMeetme: function (m)
 	{
-		m.id = md5("meetme-" + m.meetme);
+		m.id          = md5("meetme-" + m.meetme);
+		m.contextmenu = null; // FAKE
 		
 		if (Object.isUndefined(this.meetmes.get(m.id))) // Meetme does not exists
 		{
-			var div       = document.createElement('div');
-			div.id        = m.id;
-			div.className = 'meetmeDivWrap';
-			div.innerHTML = new Template($("Template::Meetme").innerHTML).evaluate(m);
-			$('meetmeDivWrapper').appendChild(div);
-		}
-		else
-		{
-			$(m.id).innerHTML = new Template($("Template::Meetme").innerHTML).evaluate(m);
+			var clone       = Monast.buildClone("Template::Meetme", m.id);
+			clone.className = 'meetmeDivWrap';
+			$('meetmeDivWrapper').appendChild(clone);
 		}
 	
+		// Clear meetme users
+		$(m.id).select('[class="meetmeUser"]').each(function (el) { el.remove(); });
+		
+		Object.keys(m).each(function (key) {
+			var elid = m.id + '-' + key;
+			if ($(elid))
+			{
+				switch (key)
+				{
+					case "contextmenu":
+						$(elid).oncontextmenu = function () { Monast.showMeetmeContextMenu(m.id); return false; };
+						break;
+						
+					default:
+						$(elid).innerHTML = m[key];
+						break;
+				}
+			}
+		});
+		
 		if (!Object.isArray(m.users))
 		{
 			var keys = Object.keys(m.users).sort();
 			keys.each(function (user) {
 				var user          = m.users[user];
+				user.id           = md5("meetmeUser-" + m.meetme + "::" + user.usernum);
 				user.userinfo     = (user.calleridnum && user.calleridname) ? new Template("#{calleridname} &lt;#{calleridnum}&gt;").evaluate(user) : user.channel;
-				var divUser       = document.createElement("div");
-				divUser.className = 'meetmeDiv';
-				divUser.innerHTML = new Template($("Template::Meetme::User").innerHTML).evaluate(user);
-				divUser.oncontextmenu = function () { Monast.showMeetmeUserContextMenu(m.id, user); return false; };
-				$(m.id).appendChild(divUser);
+				
+				if (!$(user.id))
+				{
+					var clone       = Monast.buildClone("Template::Meetme::User", user.id);
+					clone.className = "meetmeUser";
+					clone.oncontextmenu = function () { Monast.showMeetmeUserContextMenu(m.id, user); return false; };
+					$(m.id).appendChild(clone);
+				}
+				
+				Object.keys(user).each(function (key) {
+					var elid = user.id + '-' + key;
+					if ($(elid))
+					{
+						switch (key)
+						{
+							default:
+								$(elid).innerHTML = user[key];
+								break;
+						}
+					}
+				});
 			});
-			$("countMeetme-" + m.id).innerHTML = keys.length;
+			$(m.id + "-countMeetme").innerHTML = keys.length;
 		}
 
 		this.meetmes.set(m.id, m);
@@ -742,20 +798,27 @@ var Monast = {
 		
 		if (Object.isUndefined(this.parkedCalls.get(p.id))) // ParkedCall does not exists
 		{
-			var div       = document.createElement('div');
-			div.id        = p.id;
-			div.className = 'parkedDiv';
-			div.innerHTML = new Template($("Template::ParkedCall").innerHTML).evaluate(p);
-			div.oncontextmenu = function () { Monast.showParkedCallContextMenu(p.id); return false; };
-			$('parkedsDiv').appendChild(div);
+			var clone           = Monast.buildClone("Template::ParkedCall", p.id);
+			clone.className     = "parkedDiv";
+			clone.oncontextmenu = function () { Monast.showParkedCallContextMenu(p.id); return false; };
+			$("parkedsDiv").appendChild(clone);
 			
 			// Drag & Drop
 			this.createDragDrop(p.id, this.dd_parkedCallDrop, ['peerTable']);
 		}
-		else
-		{
-			$(p.id).innerHTML = new Template($("Template::ParkedCall").innerHTML).evaluate(p);
-		}
+		
+		Object.keys(p).each(function (key) {
+			var elid = p.id + '-' + key;
+			if ($(elid))
+			{
+				switch (key)
+				{
+					default:
+						$(elid).innerHTML = p[key];
+						break;
+				}
+			}
+		});
 		
 		this.parkedCalls.set(p.id, p);
 		$("countParked").innerHTML = this.parkedCalls.keys().length;
@@ -846,27 +909,16 @@ var Monast = {
 	{
 		q.id = md5("queue-" + q.queue);
 		
-		if (!Object.isUndefined(q.subaction) && q.subaction == "Update")
-		{
-			Object.keys(q).each(function (key) {
-				if ($(q.id + "-" + key))
-					$(q.id + "-" + key).innerHTML = q[key];
-			});
-			return;
-		}
-		
 		if (Object.isUndefined(this.queues.get(q.id))) // Queue does not exists
 		{
-			var div       = document.createElement('div');
-			div.id        = q.id;
-			div.className = "queueDiv";
-			div.innerHTML = new Template($("Template::Queue").innerHTML).evaluate(q);
+			var clone       = Monast.buildClone("Template::Queue", q.id);
+			clone.className = "queueDiv";
 			
 			// Lookup Dual Free
 			var dualid = null;
 			if (this.queuesDual.length == 0)
 			{
-				this.queuesDual.push([div.id]);
+				this.queuesDual.push([q.id]);
 				dualid = "dual::0";
 			}
 			else
@@ -874,12 +926,12 @@ var Monast = {
 				var l = this.queuesDual.length;
 				if (this.queuesDual[l - 1].length < 2)
 				{
-					this.queuesDual[l - 1].push(div.id);
+					this.queuesDual[l - 1].push(q.id);
 					dualid = "dual::" + (l - 1);
 				}
 				else
 				{
-					this.queuesDual.push([div.id]);
+					this.queuesDual.push([q.id]);
 					dualid = "dual::" + l;
 				}
 			}
@@ -892,16 +944,29 @@ var Monast = {
 				dual.className   = 'queueDualDiv';
 			}
 			
-			dual.appendChild(div);
+			dual.appendChild(clone);
 			$('fieldset-queuedual').appendChild(dual);
 		}
-		else
-		{
-			$(q.id).innerHTML = new Template($("Template::Queue").innerHTML).evaluate(q);
-		}
-		q.members = new Hash();
-		q.clients = new Hash();
-		q.calls   = new Hash();
+		
+		Object.keys(q).each(function (key) {
+			var elid = q.id + '-' + key;
+			if ($(elid))
+			{
+				switch (key)
+				{
+					default:
+						$(elid).innerHTML = q[key];
+						break;
+				}
+			}
+		});
+		
+		var old = this.queues.get(q.id);
+		
+		q.members = old ? old.members : new Hash();
+		q.clients = old ? old.clients : new Hash();
+		q.calls   = old ? old.calls : new Hash();
+		
 		this.queues.set(q.id, q);
 	},
 	processQueueMember: function (m)
@@ -909,45 +974,44 @@ var Monast = {
 		m.id          = md5("queueMember-" + m.queue + '::' + m.location);
 		m.queueid     = md5("queue-" + m.queue);
 		m.statustext_nochrono = m.paused == '1' ? 'Paused' : m.statustext;
-		m.statustext  = m.paused == '1' ? 'Paused<br><span style="font-family: monospace;" id="chrono-' + m.id + '">00:00:00</span>' : m.statustext;
+		m.statustext  = m.paused == '1' ? 'Paused<br><span style="font-family: monospace;" id="' + m.id + '-chrono">00:00:00</span>' : m.statustext;
 		m.pausedtext  = m.paused == "1" ? "Yes" : "No";
 		m.statuscolor = this.getColor(m.statustext); 
-		
-		var old = this.queues.get(m.queueid).members.get(m.id);
-		this.queues.get(m.queueid).members.set(m.id, m);
-		
-		if (!Object.isUndefined(m.subaction) && m.subaction == "Update")
+				
+		if (Object.isUndefined(this.queues.get(m.queueid).members.get(m.id))) // Queue Member does not exists
 		{
-			Object.keys(m).each(function (key) {
-				if ($(m.id + "-" + key))
-				{
-					$(m.id + "-" + key).innerHTML = m[key];
-					if (key == 'statustext')
-					{
-						$(m.id + "-" + key).style.backgroundColor = m.statuscolor;
-						if (old[key] != m[key])
-							Monast.blink(m.id + "-" + key, m.statuscolor);
-					}
-				}
-			});
-			this.stopChrono(m.id);
-			if (m.paused == '1')
-				this.startChrono(m.id, m.pausedur);
-			return;
+			var clone           = Monast.buildClone("Template::Queue::Member", m.id);
+			clone.className     = "queueMembersDiv";
+			clone.oncontextmenu = function () { Monast.showQueueMemberContextMenu(m.queueid, m.id); return false; };
+			$(m.queueid + '-queueMembers').appendChild(clone);
 		}
 		
-		var div       = document.createElement('div');
-		div.id        = m.id;
-		div.className = 'queueMembersDiv';
-		div.innerHTML = new Template($("Template::Queue::Member").innerHTML).evaluate(m);
-		div.oncontextmenu = function () { Monast.showQueueMemberContextMenu(m.queueid, m.id); return false; };
-		
-		$('queueMembers-' + m.queueid).appendChild(div);
-		$('queueMembersCount-' + m.queueid).innerHTML = this.queues.get(m.queueid).members.keys().length;
+		var old = this.queues.get(m.queueid).members.get(m.id);
+		Object.keys(m).each(function (key) {
+			var elid = m.id + '-' + key;
+			if ($(elid))
+			{
+				switch (key)
+				{
+					case "statuscolor":
+						$(elid).style.backgroundColor = m.statuscolor;
+						if (old && old[key] != m[key])
+							Monast.blink(elid, m.statuscolor);
+						break;
+						
+					default:
+						$(elid).innerHTML = m[key];
+						break;
+				}
+			}
+		});
 		
 		this.stopChrono(m.id);
 		if (m.paused == '1')
 			this.startChrono(m.id, m.pausedur);
+		
+		this.queues.get(m.queueid).members.set(m.id, m);
+		$(m.queueid + '-queueMembersCount').innerHTML = this.queues.get(m.queueid).members.keys().length;
 	},
 	removeQueueMember: function (m)
 	{
@@ -957,9 +1021,9 @@ var Monast = {
 		if (!Object.isUndefined(member))
 		{
 			this.stopChrono(member.id);
-			$('queueMembers-' + member.queueid).removeChild($(member.id));
+			$(member.queueid + '-queueMembers').removeChild($(member.id));
 		}
-		$('queueMembersCount-' + member.queueid).innerHTML = this.queues.get(member.queueid).members.keys().length;
+		$(member.queueid + '-queueMembersCount').innerHTML = this.queues.get(member.queueid).members.keys().length;
 	},
 	showQueueMemberContextMenu: function (queueid, id)
 	{
@@ -1027,29 +1091,32 @@ var Monast = {
 		if (c.calleridname)
 			c.callerid = c.calleridname + " &lt;" + c.calleridnum + "&gt;";
 		
-		if (!Object.isUndefined(c.subaction) && c.subaction == "Update")
+		if (Object.isUndefined(this.queues.get(c.queueid).clients.get(c.id))) // Queue Client does not exists
 		{
-			Object.keys(c).each(function (key) {
-				if ($(c.id + "-" + key))
-					$(c.id + "-" + key).innerHTML = c[key];
-			});
-			this.stopChrono(c.id);
-			this.startChrono(c.id, c.seconds);
-			return;
+			var clone           = Monast.buildClone("Template::Queue::Client", c.id);
+			clone.className     = "queueClientsDiv";
+			clone.oncontextmenu = function () { Monast.showQueueClientContextMenu(c.queueid, c.id); return false; };
+			$(c.queueid + '-queueClients').appendChild(clone);
 		}
 		
-		var div       = document.createElement('div');
-		div.id        = c.id;
-		div.className = 'queueClientsDiv';
-		div.innerHTML = new Template($("Template::Queue::Client").innerHTML).evaluate(c);
-		div.oncontextmenu = function () { Monast.showQueueClientContextMenu(c.queueid, c.id); return false; };
-		$('queueClients-' + c.queueid).appendChild(div);
+		Object.keys(c).each(function (key) {
+			var elid = c.id + '-' + key;
+			if ($(elid))
+			{
+				switch (key)
+				{
+					default:
+						$(elid).innerHTML = c[key];
+						break;
+				}
+			}
+		});
 		
 		this.stopChrono(c.id);
 		this.startChrono(c.id, c.seconds);
 		
 		this.queues.get(c.queueid).clients.set(c.id, c);
-		$('queueClientsCount-' + c.queueid).innerHTML = this.queues.get(c.queueid).clients.keys().length;
+		$(c.queueid + '-queueClientsCount').innerHTML = this.queues.get(c.queueid).clients.keys().length;
 	},
 	removeQueueClient: function (c)
 	{
@@ -1059,9 +1126,9 @@ var Monast = {
 		if (!Object.isUndefined(client))
 		{
 			this.stopChrono(client.id);
-			$('queueClients-' + client.queueid).removeChild($(client.id));
+			$(client.queueid + '-queueClients').removeChild($(client.id));
 		}
-		$('queueClientsCount-' + client.queueid).innerHTML = this.queues.get(client.queueid).clients.keys().length;
+		$(client.queueid + '-queueClientsCount').innerHTML = this.queues.get(client.queueid).clients.keys().length;
 	},
 	showQueueClientContextMenu: function (queueid, id)
 	{
@@ -1108,23 +1175,33 @@ var Monast = {
 		c.id       = md5("queueCall-" + c.client.uniqueid + "::" + c.member.location);
 		c.queueid  = md5("queue-" + c.client.queue);
 		c.memberid = md5("queueMember-" + c.member.queue + '::' + c.member.location); 
-		
 		c.callerid = c.client.channel;
 		
 		if (c.client.calleridname)
 			c.callerid = c.client.calleridname + " &lt;" + c.client.calleridnum + "&gt;";
 		
-		if (!$(c.id) && c.link)
+		if (Object.isUndefined(this.queues.get(c.queueid).calls.get(c.id))) // Queue Call does not exists
 		{
-			var div       = document.createElement('div');
-			div.id        = c.id;
-			div.innerHTML = new Template($("Template::Queue::Call").innerHTML).evaluate(c);
-			div.oncontextmenu = function () { return false; };
-			$(c.memberid).innerHTML += div.innerHTML;
-			
+			var clone           = Monast.buildClone("Template::Queue::Call", c.id);
+			clone.className     = "";
+			$(c.memberid).appendChild(clone);
 			this.stopChrono(c.id);
 			this.startChrono(c.id, c.seconds);
 		}
+		
+		Object.keys(c).each(function (key) {
+			var elid = c.id + '-' + key;
+			if ($(elid))
+			{
+				switch (key)
+				{
+					default:
+						$(elid).innerHTML = c[key];
+						break;
+				}
+			}
+		});
+		
 		this.queues.get(c.queueid).calls.set(c.id, c);
 	},
 	removeQueueCall: function (c)
@@ -1450,6 +1527,16 @@ var Monast = {
 		}
 	},
 	
+	buildClone: function (id, newid)
+	{
+		var clone = $(id).cloneNode(true);
+		clone.id  = newid;
+		clone.select('[monast]').each(function (e) {
+			e.id = newid + "-" + e.readAttribute('monast');
+		});
+		return clone;
+	},
+	
 	// Drag&Drop
 	dd: new Hash(),
 	createDragDrop: function (id, onDragDrop, validTargets)
@@ -1560,7 +1647,7 @@ var Monast = {
 		var minutes = chrono.minutes < 10 ? '0' + chrono.minutes : chrono.minutes;
 		var hours   = chrono.hours < 10 ? '0' + chrono.hours : chrono.hours;
 
-		var f = $('chrono-' + id);
+		var f = $(id + "-chrono");
 		if (!Object.isUndefined(f))
 			f.innerHTML = hours + ':' + minutes + (chrono.showSeconds ? ':' + seconds : '');		
 

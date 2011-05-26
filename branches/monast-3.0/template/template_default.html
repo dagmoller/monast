@@ -2,14 +2,14 @@
 <!-- TEMPLATES -->
 
 <!-- User/Peer -->
-<div style="display: none" id="Template::Userpeer">
+<div class="hidden" id="Template::Userpeer">
   <table class="status" width="175px">
     <tr>
-      <td colspan="2" bgcolor="#DDDDDD" nowrap="nowrap"><b>#{callerid}</b></td>
+      <td colspan="2" bgcolor="#DDDDDD" nowrap="nowrap"><b><span monast="callerid">&nbsp;</span></b></td>
     </tr>
     <tr>
-      <td id="#{id}-statuscolor" bgcolor="#{statuscolor}" width="115px" title="#{time} ms">#{status}</td>
-      <td id="#{id}-callscolor" bgcolor="#{callscolor}" width="60px"><span id="#{id}-calls">#{calls}</span> call(s)</td>
+      <td monast="statuscolor" width="115px"><span monast="status">&nbsp;</span></td>
+      <td monast="callscolor" width="60px"><span monast="calls">&nbsp;</span> call(s)</td>
     </tr>
   </table>
 </div>
@@ -76,21 +76,19 @@
   </table>
 </div>
 
-<!-- Monitor -->
-<div style="display: none" id="Template::Channel::Monitor">
-  <img src='image/record.png' border='0' width='8' height='8' title="Channel Monitored">&nbsp;&nbsp;
-</div>
-
 <!-- Channel -->
-<div style="display: none" id="Template::Channel">
+<div class="hidden" id="Template::Channel">
   <table width='330'>
     <tr>
       <td class='status' width='260'>
-        <span id="#{id}-monitoricon">#{monitoricon}</span><span id="#{id}-channel">#{channel}</span>
+        <span monast="monitor">
+          <img src='image/record.png' border='0' width='8' height='8' title="Channel Monitored">&nbsp;&nbsp;
+        </span>
+        <span monast="channel">&nbsp;</span>
         <br>
-        <span id="#{id}-callerid">#{callerid}</span>
+        <span monast="callerid">&nbsp;</span>
       </td>
-      <td bgcolor='#{statecolor}' class='status' width='70' id="#{id}-state">#{state}</td>
+      <td monast="statecolor" class='status' width='70'><span monast="state">&nbsp;</span></td>
     </tr> 
   </table>
 </div> 
@@ -126,16 +124,15 @@
 </div>
 
 <!-- Bridge -->
-<div style="display: none" id="Template::Bridge">
+<div class="hidden" id="Template::Bridge">
   <table width='570'>
-  <!-- <table width='570' height="64"> -->
     <tr>
-      <td class='status' width='250'><span id="#{id}-channel">#{channel}</span><br><span id="#{id}-callerid">#{callerid}</span></td>
-      <td class='status' width='70' bgcolor='#{statuscolor}' id="#{id}-statuscolor-fake"><span id="#{id}-status">#{status}</span><br><span style='font-family: monospace;' id='chrono-#{id}'></span></td>
-      <td class='status' width='250'><span id="#{id}-bridgedchannel">#{bridgedchannel}</span><br><span id="#{id}-bridgedcallerid">#{bridgedcallerid}</span></td>
+      <td class='status' width='250'><span monast="channel">&nbsp;</span><br><span monast="callerid">&nbsp;</span></td>
+      <td class='status' width='70' monast="statuscolor"><span monast="status">&nbsp;</span><br><span style='font-family: monospace;' monast='chrono'></span></td>
+      <td class='status' width='250'><span monast="bridgedchannel">&nbsp;</span><br><span monast="bridgedcallerid">&nbsp;</span></td>
     </tr>
   </table>
-</div> 
+</div>
 
 <!-- Bridge Information -->
 <div style="display: none" id="Template::Bridge::Info">
@@ -212,21 +209,21 @@
 </div>
 
 <!-- Meetme -->
-<div style="display: none" id="Template::Meetme">
+<div class="hidden" id="Template::Meetme">
   <div class='meetmeDiv'>
-    <table width='250' oncontextmenu="Monast.showMeetmeContextMenu('#{id}'); return false;">
+    <table width='250' monast="contextmenu">
       <tr>
-        <td align='center' class='statusHeader'>Meetme "#{meetme}" (<span id='countMeetme-#{id}'>0</span>)</td>
+        <td align='center' class='statusHeader'>Meetme "<span monast="meetme">&nbsp;</span>" (<span monast="countMeetme">0</span>)</td>
       </tr>
     </table>
   </div>
 </div>
 
 <!-- MeetmeUser -->
-<div style="display: none" id="Template::Meetme::User">
+<div class="hidden" id="Template::Meetme::User">
   <table width='250'>
     <tr>
-      <td class='status'>#{userinfo}</td>
+      <td class='status'><span monast="userinfo">&nbsp;</span></td>
     </tr>
   </table>
 </div>
@@ -280,12 +277,12 @@
 </div>
 
 <!-- Parked Call -->
-<div style="display: none" id="Template::ParkedCall">
+<div class="hidden" id="Template::ParkedCall">
   <table width="640">
     <tr>
-      <td class="status" align="center" width="80">#{exten}</td>
-      <td class="status" align="center" width="280">#{parkedFrom}<br>#{calleridnameFrom} &lt;#{calleridnumFrom}&gt;</td>
-      <td class="status" align="center" width="280">#{channel}<br>#{calleridname} &lt;#{calleridnum}&gt;</td>
+      <td class="status" align="center" width="80"><span monast="exten">&nbsp;</span></td>
+      <td class="status" align="center" width="280"><span monast="parkedFrom">&nbsp;</span><br><span monast="calleridnameFrom">&nbsp;</span> &lt;<span monast="calleridnumFrom">&nbsp;</span>&gt;</td>
+      <td class="status" align="center" width="280"><span monast="channel">&nbsp;</span><br><span monast="calleridname">&nbsp;</span> &lt;<span monast="calleridnum">&nbsp;</span>&gt;</td>
     </tr>
   </table>
 </div>
@@ -329,9 +326,9 @@
 </div>
 
 <!-- Queue -->
-<div style="display: none" id="Template::Queue">
+<div class="hidden" id="Template::Queue">
   <fieldset>
-    <legend>Queue: #{queue}</legend>
+    <legend>Queue: <span monast="queue">&nbsp;</span></legend>
     <div class="queueStatisticsDiv">
       <table width="532">
         <tr>
@@ -339,37 +336,37 @@
         </tr>
         <tr>
           <td class="statusHeader" align="right">Max:&nbsp;</td>
-          <td class="status" id="#{id}-max">#{max}</td>
+          <td class="status"><span monast="max">&nbsp;</span></td>
                 
           <td class="statusHeader" align="right">Calls:&nbsp;</td>
-          <td class="status" id="#{id}-calls">#{calls}</td>
+          <td class="status"><span monast="calls">&nbsp;</span></td>
                 
           <td class="statusHeader" align="right">Holdtime:&nbsp;</td>
-          <td class="status" id="#{id}-holdtime">#{holdtime}</td>
+          <td class="status"><span monast="holdtime">&nbsp;</span></td>
                 
           <td class="statusHeader" align="right">Completed:&nbsp;</td>
-          <td class="status" id="#{id}-completed">#{completed}</td>
+          <td class="status"><span monast="completed">&nbsp;</span></td>
         </tr>
         <tr>
           <td class="statusHeader" align="right">Abandoned:&nbsp;</td>
-          <td class="status" id="#{id}-abandoned">#{abandoned}</td>
+          <td class="status"><span monast="abandoned">&nbsp;</span></td>
                 
           <td class="statusHeader" align="right">Service Level:&nbsp;</td>
-          <td class="status" id="#{id}-servicelevel">#{servicelevel}</td>
+          <td class="status"><span monast="servicelevel">&nbsp;</span></td>
                 
           <td class="statusHeader" align="right">Service level Perf.:&nbsp;</td>
-          <td class="status" id="#{id}-servicelevelperf">#{servicelevelperf}</td>
+          <td class="status"><span monast="servicelevelperf">&nbsp;</span></td>
                 
           <td class="statusHeader" align="right">Weight:&nbsp;</td>
-          <td class="status" id="#{id}-weight">#{weight}</td>
+          <td class="status"><span monast="weight">&nbsp;</span></td>
         </tr>
       </table>
     </div>
-    <div class="queueMembersDivWrap" id="queueMembers-#{id}">
-      <div class="queueMembersDiv" id="queueMembersDrop-#{id}">
+    <div class="queueMembersDivWrap" monast="queueMembers">
+      <div class="queueMembersDiv" monast="queueMembersDrop">
         <table width="300">
           <tr>
-            <td class="tableTitle" colspan="3" align="center">Members (<span id="queueMembersCount-#{id}">0</span>)</td>
+            <td class="tableTitle" colspan="3" align="center">Members (<span monast="queueMembersCount">0</span>)</td>
           </tr>
           <tr>
             <td class="statusHeader" width="170" align="center">Location/Name</td>
@@ -379,11 +376,11 @@
         </table>
       </div>
     </div>
-    <div class="queueClientsDivWrap" id="queueClients-#{id}">
+    <div class="queueClientsDivWrap" monast="queueClients">
       <div class="queueClientsDiv">
         <table width="220">
           <tr>
-            <td class="tableTitle" align="center">Clients (<span id="queueClientsCount-#{id}">0</span>)</td>
+            <td class="tableTitle" align="center">Clients (<span monast="queueClientsCount">0</span>)</td>
           </tr>
         </table>
       </div>
@@ -392,30 +389,30 @@
 </div>
 
 <!-- QueueMember -->
-<div style="display: none" id="Template::Queue::Member">
+<div class="hidden" id="Template::Queue::Member">
   <table width='300'>
     <tr>
-      <td class='status' width='170' align='center' id="#{id}-name">#{name}</td>
-      <td class='status' width='40' align='center' id="#{id}-callstaken">#{callstaken}</td>
-      <td class='status' width='90' align='center' bgcolor='#{statuscolor}'  id="#{id}-statustext">#{statustext}</td>
+      <td class='status' width='170' align='center'><span monast="name">&nbsp;</span></td>
+      <td class='status' width='40' align='center'><span monast="callstaken">&nbsp;</span></td>
+      <td class='status' width='90' align='center' monast='statuscolor'><span monast="statustext">&nbsp;</span></td>
     </tr>
   </table>
 </div>
 
 <!-- QueueClient -->
-<div style="display: none" id="Template::Queue::Client">
+<div class="hidden" id="Template::Queue::Client">
   <table width='220'>
     <tr>
-      <td class='status' align='center'>#{callerid}<br><span style='font-family: monospace;' id='chrono-#{id}'></span></td>
+      <td class='status' align='center'><span monast="callerid">&nbsp;</span><br><span style='font-family: monospace;' monast='chrono'></span></td>
     </tr>
   </table>
 </div>
 
 <!-- QueueCall -->
-<div style="display: none" id="Template::Queue::Call">
-  <table width='300' id='#{id}'>
+<div class="hidden" id="Template::Queue::Call">
+  <table width='300'>
     <tr>
-      <td class='status' width='213'>#{callerid}<br><span style='font-family: monospace;' id='chrono-#{id}'></span></td>
+      <td class='status' width='213'><span monast="callerid">&nbsp;</span><br><span style='font-family: monospace;' monast='chrono'></span></td>
       <td class='status' width='87' bgcolor='#ffffb0'>Answered</td>
     </tr>
   </table>

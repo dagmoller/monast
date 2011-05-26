@@ -32,6 +32,10 @@ BODY {
 	font-family: verdana,arial,helvetica,sans-serif;
 }
 
+.hidden {
+	display: none;
+}
+
 .requestInfo pre {
 	font-family: 'courier new'; 
 	font-size: 0.8em;
@@ -104,7 +108,7 @@ BODY {
 	float: left; 
 	margin: 5px;
 }
-.meetmeDiv {
+.meetmeDiv, .meetmeUser {
 	width: 250px;
 	border: 1px solid #aaaaaa;
 	margin-bottom: 2px;
