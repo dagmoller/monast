@@ -84,7 +84,7 @@ var Monast = {
 	    }
 		return '#dddddd';
 	},
-	blink: function (id, color)
+	blinkBackground: function (id, color)
 	{
 		if (!MONAST_BLINK_ONCHANGE)
 			return;
@@ -95,6 +95,20 @@ var Monast = {
 			$A(["#FFFFFF", color]).each(function (c) {
 				t += MONAST_BLINK_INTERVAL;
 				setTimeout("if ($('" + id + "')) { $('" + id + "').style.backgroundColor = '" + c + "'; }", t);
+			});
+		}
+	},
+	blinkText: function (id)
+	{
+		if (!MONAST_BLINK_ONCHANGE)
+			return;
+		
+		var t = 0;
+		for (i = 0; i < MONAST_BLINK_COUNT; i++)
+		{
+			$A(["#FFFFFF", "#000000"]).each(function (c) {
+				t += MONAST_BLINK_INTERVAL;
+				setTimeout("if ($('" + id + "')) { $('" + id + "').style.color = '" + c + "'; }", t);
 			});
 		}
 	},
@@ -130,14 +144,14 @@ var Monast = {
 						$(elid).style.backgroundColor = u[key];
 						$(elid).title = "Status: " + u.status + " :: Latency: " + u.time + " ms";
 						if (old && old.status != u.status)
-							Monast.blink(elid, u.statuscolor);
+							Monast.blinkBackground(elid, u.statuscolor);
 						break;
 						
 					case "callscolor":
 						$(elid).style.backgroundColor = u[key];
 						$(elid).title = u.calls + " call(s)";
 						if (old && old.calls != u.calls)
-							Monast.blink(elid, u.callscolor);
+							Monast.blinkBackground(elid, u.callscolor);
 						break;
 	
 					default:
@@ -350,7 +364,7 @@ var Monast = {
 					case "statecolor":
 						$(elid).style.backgroundColor = c[key];
 						if (c.subaction == "Update")
-							Monast.blink(elid, c.statecolor);
+							Monast.blinkBackground(elid, c.statecolor);
 						break;
 						
 					case "monitor":
@@ -474,7 +488,7 @@ var Monast = {
 					case "statuscolor":
 						$(elid).style.backgroundColor = b[key];
 						if (b.subaction == "Update")
-							Monast.blink(elid, b.statuscolor);
+							Monast.blinkBackground(elid, b.statuscolor);
 						break;
 						
 					default:
@@ -950,6 +964,8 @@ var Monast = {
 			dual.appendChild(clone);
 			$('fieldset-queuedual').appendChild(dual);
 		}
+
+		var old = this.queues.get(q.id);
 		
 		Object.keys(q).each(function (key) {
 			var elid = q.id + '-' + key;
@@ -959,16 +975,16 @@ var Monast = {
 				{
 					default:
 						$(elid).innerHTML = q[key];
+						if (old && old[key] != q[key])
+							Monast.blinkText(elid);
 						break;
 				}
 			}
 		});
 		
-		var old = this.queues.get(q.id);
-		
 		q.members = old ? old.members : new Hash();
 		q.clients = old ? old.clients : new Hash();
-		q.calls   = old ? old.calls : new Hash();
+		q.ccalls  = old ? old.ccalls : new Hash();
 		
 		this.queues.set(q.id, q);
 	},
@@ -998,12 +1014,14 @@ var Monast = {
 				{
 					case "statuscolor":
 						$(elid).style.backgroundColor = m.statuscolor;
-						if (m.subaction == "Update")
-							Monast.blink(elid, m.statuscolor);
+						if (old && old.status != m.status)
+							Monast.blinkBackground(elid, m.statuscolor);
 						break;
 						
 					default:
 						$(elid).innerHTML = m[key];
+						if (old && old[key] != m[key])
+							Monast.blinkText(elid);
 						break;
 				}
 			}
@@ -1183,7 +1201,7 @@ var Monast = {
 		if (c.client.calleridname)
 			c.callerid = c.client.calleridname + " &lt;" + c.client.calleridnum + "&gt;";
 		
-		if (Object.isUndefined(this.queues.get(c.queueid).calls.get(c.id))) // Queue Call does not exists
+		if (Object.isUndefined(this.queues.get(c.queueid).ccalls.get(c.id))) // Queue Call does not exists
 		{
 			var clone           = Monast.buildClone("Template::Queue::Call", c.id);
 			clone.className     = "";
@@ -1205,13 +1223,13 @@ var Monast = {
 			}
 		});
 		
-		this.queues.get(c.queueid).calls.set(c.id, c);
+		this.queues.get(c.queueid).ccalls.set(c.id, c);
 	},
 	removeQueueCall: function (c)
 	{
 		c.id       = md5("queueCall-" + c.uniqueid + "::" + c.location);
 		c.queueid  = md5("queue-" + c.queue);
-		call       = this.queues.get(c.queueid).calls.unset(c.id);
+		call       = this.queues.get(c.queueid).ccalls.unset(c.id);
 		if (!Object.isUndefined(call))
 		{
 			this.stopChrono(c.id);
