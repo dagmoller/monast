@@ -647,6 +647,7 @@ var Monast = {
 	
 		// Clear meetme users
 		$(m.id).select('[class="meetmeUser"]').each(function (el) { el.remove(); });
+		$(m.id + "-countMeetme").innerHTML = 0;
 		
 		Object.keys(m).each(function (key) {
 			var elid = m.id + '-' + key;
