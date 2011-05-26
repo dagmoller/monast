@@ -1014,14 +1014,18 @@ var Monast = {
 				{
 					case "statuscolor":
 						$(elid).style.backgroundColor = m.statuscolor;
-						if (old && old.status != m.status)
+						if (old && (old.status != m.status || old.paused != m.paused))
 							Monast.blinkBackground(elid, m.statuscolor);
+						break;
+						
+					case "callstaken":
+						$(elid).innerHTML = m[key];
+						if (old && old[key] != m[key])
+							Monast.blinkText(elid);
 						break;
 						
 					default:
 						$(elid).innerHTML = m[key];
-						if (old && old[key] != m[key])
-							Monast.blinkText(elid);
 						break;
 				}
 			}
