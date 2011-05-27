@@ -459,7 +459,7 @@ var Monast = {
 			this.removeBridge(b);
 			return;
 		}
-	
+		
 		b.id              = md5(b.uniqueid + "+++" + b.bridgeduniqueid);
 		b.statuscolor     = this.getColor(b.status);
 		b.channel         = b.channel.replace('<', '&lt;').replace('>', '&gt;');
@@ -1014,8 +1014,16 @@ var Monast = {
 				{
 					case "statuscolor":
 						$(elid).style.backgroundColor = m.statuscolor;
-						if (old && (old.status != m.status || old.paused != m.paused))
-							Monast.blinkBackground(elid, m.statuscolor);
+						if (old && old.paused == "1")
+						{
+							if (old.paused != m.paused)
+								Monast.blinkBackground(elid, m.statuscolor);
+						}
+						else
+						{
+							if (old && old.status != m.status)
+								Monast.blinkBackground(elid, m.statuscolor);
+						}
 						break;
 						
 					case "callstaken":
@@ -1214,6 +1222,7 @@ var Monast = {
 			this.startChrono(c.id, c.seconds);
 		}
 		
+		var old = this.queues.get(c.queueid).ccalls.get(c.id);		
 		Object.keys(c).each(function (key) {
 			var elid = c.id + '-' + key;
 			if ($(elid))

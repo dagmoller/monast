@@ -74,6 +74,7 @@ switch ($response)
 		
 	default:
 		$servers = monast_json_decode($response);
+		sort($servers);
 		session_start();
 		setValor('Servers', $servers);
 		if (!$server || array_search($server, $servers) === false)

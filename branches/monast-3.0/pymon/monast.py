@@ -298,8 +298,10 @@ class MonastHTTP(resource.Resource):
 			tmp[servername]['channels'].append(channel.__dict__)
 		## Bridges
 		for uniqueid, bridge in server.status.bridges.items():
-			bridge.seconds = int(time.time()) - bridge.linktime
+			bridge.seconds = [0, int(time.time()) - int(bridge.linktime)][bridge.status == "Link"]
 			tmp[servername]['bridges'].append(bridge.__dict__)
+		tmp[servername]['bridges'].sort(lambda x, y: cmp(x.get('seconds'), y.get('seconds')))
+		tmp[servername]['bridges'].reverse()
 		## Meetmes
 		for meetmeroom, meetme in server.status.meetmes.items():
 			tmp[servername]['meetmes'].append(meetme.__dict__)
@@ -307,7 +309,7 @@ class MonastHTTP(resource.Resource):
 		## Parked Calls
 		for channel, parked in server.status.parkedCalls.items():
 			tmp[servername]['parkedCalls'].append(parked.__dict__)
-		tmp[servername]['parkedCalls'].sort(lambda x, y: cmp(x.get('channel'), y.get('channel')))
+		tmp[servername]['parkedCalls'].sort(lambda x, y: cmp(x.get('exten'), y.get('exten')))
 		## Queues
 		for queuename, queue in server.status.queues.items():
 			tmp[servername]['queues'].append(queue.__dict__)
@@ -319,7 +321,8 @@ class MonastHTTP(resource.Resource):
 		for (queuename, uniqueid), client in server.status.queueClients.items():
 			client.seconds = int(time.time()) - int(client.jointime)
 			tmp[servername]['queueClients'].append(client.__dict__)
-		tmp[servername]['queueClients'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
+		tmp[servername]['queueClients'].sort(lambda x, y: cmp(x.get('seconds'), y.get('seconds')))
+		tmp[servername]['queueClients'].reverse()
 		for uniqueid, call in server.status.queueCalls.items():
 			call.seconds = int(time.time()) - int(call.starttime)  
 			tmp[servername]['queueCalls'].append(call.__dict__)
@@ -344,7 +347,8 @@ class MonastHTTP(resource.Resource):
 		session = request.getSession()
 		servers = self.monast.servers.keys()
 		if self.monast.authRequired and session.isAuthenticated and session.username:
-			servers = self.monast.authUsers[session.username].servers.keys()		
+			servers = self.monast.authUsers[session.username].servers.keys()
+		servers.sort()		
 		request.write(json.dumps(servers, encoding = "ISO8859-1"))
 		request.finish()
 	
@@ -677,8 +681,8 @@ class Monast:
 			bridge.bridgedchannel  = bridgedchannel
 			bridge.status          = kw.get('status', 'Link')
 			bridge.dialtime        = kw.get('dialtime', int(time.time()))
-			bridge.linktime        = kw.get('linktime', 0)
-			bridge.seconds         = int(time.time()) - bridge.linktime
+			bridge.linktime        = kw.get('linktime', int(time.time()))
+			bridge.seconds         = int(time.time()) - int(bridge.linktime)
 			
 			log.debug("Server %s :: Bridge create: %s (%s) with %s (%s) %s", servername, uniqueid, channel, bridgeduniqueid, bridgedchannel, _log)
 			server.status.bridges[bridgekey] = bridge
@@ -706,7 +710,7 @@ class Monast:
 							bridge.__dict__[k] = v
 						else:
 							log.warning("Server %s :: Bridge %s (%s) with %s (%s) does not have attribute %s", servername, uniqueid, bridge.channel, bridgeduniqueid, bridge.bridgedchannel, k)
-				bridge.seconds = int(time.time()) - bridge.linktime
+				bridge.seconds = int(time.time()) - int(bridge.linktime)
 				self.http._addUpdate(servername = servername, subaction = 'Update', **bridge.__dict__.copy())
 				if logging.DUMPOBJECTS:
 					log.debug("Object Dump:%s", bridge)
@@ -1425,8 +1429,6 @@ class Monast:
 								channel         = channel,
 								bridgedchannel  = bridgedchannel,
 								status          = 'Link',
-								#starttime       = int(time.time()) - seconds,
-								#seconds         = seconds,
 								dialtime        = int(time.time()) - seconds,
 								linktime        = int(time.time()) - seconds,
 								seconds         = seconds,
@@ -1940,8 +1942,6 @@ class Monast:
 				bridgedchannel  = event.get('destination'),
 				status          = 'Dial',
 				dialtime        = int(time.time()),
-				#starttime       = 0,
-				linktime        = 0,
 				_log            = '-- Dial Begin'
 			)
 		elif subevent.lower() == 'end':
