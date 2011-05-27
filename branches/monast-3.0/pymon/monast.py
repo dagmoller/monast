@@ -301,9 +301,9 @@ class MonastHTTP(resource.Resource):
 		for uniqueid, bridge in server.status.bridges.items():
 			bridge.seconds = [0, int(time.time() - bridge.linktime)][bridge.status == "Link"]
 			tmp[servername]['bridges'].append(bridge.__dict__)
-		#tmp[servername]['bridges'].sort(lambda x, y: cmp(x.get('seconds'), y.get('seconds')))
-		#tmp[servername]['bridges'].reverse()
-		tmp[servername]['bridges'].sort(lambda x, y: cmp(x.get('dialtime'), y.get('dialtime')))
+		tmp[servername]['bridges'].sort(lambda x, y: cmp(x.get('seconds'), y.get('seconds')))
+		tmp[servername]['bridges'].reverse()
+		#tmp[servername]['bridges'].sort(lambda x, y: cmp(x.get('dialtime'), y.get('dialtime')))
 		## Meetmes
 		for meetmeroom, meetme in server.status.meetmes.items():
 			tmp[servername]['meetmes'].append(meetme.__dict__)
