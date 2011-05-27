@@ -1569,6 +1569,9 @@ var Monast = {
 		if (!Monast.IE)
 			document.captureEvents(Event.MOUSEMOVE);
 		document.onmousemove = Monast.followMousePos;
+		
+		if (MONAST_CALL_TIME)
+			setInterval("Monast._runChrono()", 1000);
 	},
 	
 	showHidePannels: function (e)
@@ -1670,68 +1673,34 @@ var Monast = {
 	
 	// Chrono
 	_chrono: new Hash(),
-	startChrono: function (id, seconds, hideSeconds)
+	startChrono: function (id, seconds)
 	{
 		if (!MONAST_CALL_TIME)
 			return;
-
-		var hideSeconds = Object.isUndefined(hideSeconds) ? false : hideSeconds;
-		var chrono      = this._chrono.get(id);
-		
-		if (Object.isUndefined(chrono))
-		{
-			if (seconds)
-			{
-				var d  = new Date(seconds * 1000);
-				chrono = {hours: d.getUTCHours(), minutes: d.getUTCMinutes(), seconds: d.getUTCSeconds(), run: null, showSeconds: !hideSeconds};
-			}
-			else
-			{
-				chrono = {hours: 0, minutes: 0, seconds: 0, run: null, showSeconds: !hideSeconds};
-			}
-			this._chrono.set(id, chrono);
-		}
-		else
-		{
-			if (Object.isUndefined(seconds))
-			{
-				chrono.seconds += 1;
-			}
-			else
-			{
-				var d = new Date(secs * 1000);
-				chrono.seconds = d.getUTCSeconds();
-				chrono.minutes = d.getUTCMinutes();
-				chrono.hours   = d.getUTCHours();
-			}
-			
-			if (chrono.seconds == 60)
-			{
-				chrono.seconds  = 0;
-				chrono.minutes += 1;
-			}
-			if (chrono.minutes == 60)
-			{
-				chrono.minutes = 0;
-				chrono.hours  += 1;
-			}
-		}
-		
-		var seconds = chrono.seconds < 10 ? '0' + chrono.seconds : chrono.seconds;
-		var minutes = chrono.minutes < 10 ? '0' + chrono.minutes : chrono.minutes;
-		var hours   = chrono.hours < 10 ? '0' + chrono.hours : chrono.hours;
-
-		var f = $(id + "-chrono");
-		if (!Object.isUndefined(f))
-			f.innerHTML = hours + ':' + minutes + (chrono.showSeconds ? ':' + seconds : '');		
-
-		chrono.run = setTimeout("Monast.startChrono('" + id + "')", 1000);	
+		var now = new Date();
+		var sec = now - (seconds * 1000);
+		this._touchChrono(id, new Date(now - sec));
+		this._chrono.set(id, sec);
 	},
 	stopChrono: function (id)
 	{
-		var chrono = this._chrono.unset(id);
-		if (!Object.isUndefined(chrono))
-			clearTimeout(chrono.run);
+		this._chrono.unset(id);
+	},
+	_touchChrono: function (id, d)
+	{
+		var s = d.getUTCSeconds();
+		var m = d.getUTCMinutes();
+		var h = d.getUTCHours();
+		if ($(id + "-chrono"))
+			$(id + "-chrono").innerHTML = (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+	},
+	_runChrono: function ()
+	{
+		var now = new Date();
+		this._chrono.keys().each(function (id) {
+			var d = new Date(now - Monast._chrono.get(id));
+			Monast._touchChrono(id, d);
+		});
 	},
 	
 	// Extra Utils
