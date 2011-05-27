@@ -506,6 +506,8 @@ var Monast = {
 		
 		this.bridges.set(b.id, b);
 		$("countCalls").innerHTML = this.bridges.keys().length;
+		
+		this.sortBridges();
 	},
 	dd_bridgeDrop: function (e, id)
 	{
@@ -857,6 +859,8 @@ var Monast = {
 		
 		this.parkedCalls.set(p.id, p);
 		$("countParked").innerHTML = this.parkedCalls.keys().length;
+		
+		this.sortParkedCalls();
 	},
 	dd_parkedCallDrop: function (e, id)
 	{
@@ -1307,7 +1311,6 @@ var Monast = {
 					
 				case "Bridge":
 					this.processBridge(event);
-					this.sortBridges();
 					break;
 					
 				case "Meetme":
@@ -1316,7 +1319,6 @@ var Monast = {
 					
 				case "ParkedCall":
 					this.processParkedCall(event);
-					this.sortParkedCalls();
 					break;
 					
 				case "Queue":
