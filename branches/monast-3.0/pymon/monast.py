@@ -296,9 +296,10 @@ class MonastHTTP(resource.Resource):
 		## Channels
 		for uniqueid, channel in server.status.channels.items():
 			tmp[servername]['channels'].append(channel.__dict__)
+		tmp[servername]['channels'].sort(lambda x, y: cmp(x.get('starttime'), y.get('starttime')))
 		## Bridges
 		for uniqueid, bridge in server.status.bridges.items():
-			bridge.seconds = [0, int(time.time()) - int(bridge.linktime)][bridge.status == "Link"]
+			bridge.seconds = [0, int(time.time() - bridge.linktime)][bridge.status == "Link"]
 			tmp[servername]['bridges'].append(bridge.__dict__)
 		tmp[servername]['bridges'].sort(lambda x, y: cmp(x.get('seconds'), y.get('seconds')))
 		tmp[servername]['bridges'].reverse()
@@ -315,16 +316,16 @@ class MonastHTTP(resource.Resource):
 			tmp[servername]['queues'].append(queue.__dict__)
 		tmp[servername]['queues'].sort(lambda x, y: cmp(x.get('queue'), y.get('queue')))
 		for (queuename, membername), member in server.status.queueMembers.items():
-			member.pausedur = int(time.time()) - int(member.pausedat)
+			member.pausedur = int(time.time() - member.pausedat)
 			tmp[servername]['queueMembers'].append(member.__dict__)
 		tmp[servername]['queueMembers'].sort(lambda x, y: cmp(x.get('name'), y.get('name')))
 		for (queuename, uniqueid), client in server.status.queueClients.items():
-			client.seconds = int(time.time()) - int(client.jointime)
+			client.seconds = int(time.time() - client.jointime)
 			tmp[servername]['queueClients'].append(client.__dict__)
 		tmp[servername]['queueClients'].sort(lambda x, y: cmp(x.get('seconds'), y.get('seconds')))
 		tmp[servername]['queueClients'].reverse()
 		for uniqueid, call in server.status.queueCalls.items():
-			call.seconds = int(time.time()) - int(call.starttime)  
+			call.seconds = int(time.time() - call.starttime)  
 			tmp[servername]['queueCalls'].append(call.__dict__)
 					 
 		request.write(json.dumps(tmp, encoding = "ISO8859-1"))
@@ -589,6 +590,7 @@ class Monast:
 			chan.calleridnum  = kw.get('calleridnum', '')
 			chan.calleridname = kw.get('calleridname', '')
 			chan.monitor      = kw.get('monitor', False)
+			chan.starttime    = time.time()
 			
 			log.debug("Server %s :: Channel create: %s (%s) %s", servername, uniqueid, channel, _log)
 			server.status.channels[uniqueid] = chan
@@ -680,9 +682,9 @@ class Monast:
 			bridge.channel         = channel
 			bridge.bridgedchannel  = bridgedchannel
 			bridge.status          = kw.get('status', 'Link')
-			bridge.dialtime        = kw.get('dialtime', int(time.time()))
+			bridge.dialtime        = kw.get('dialtime', time.time())
 			bridge.linktime        = kw.get('linktime', 0)
-			bridge.seconds         = int(time.time()) - int(bridge.linktime)
+			bridge.seconds         = int(time.time() - bridge.linktime)
 			
 			log.debug("Server %s :: Bridge create: %s (%s) with %s (%s) %s", servername, uniqueid, channel, bridgeduniqueid, bridgedchannel, _log)
 			server.status.bridges[bridgekey] = bridge
@@ -710,7 +712,7 @@ class Monast:
 							bridge.__dict__[k] = v
 						else:
 							log.warning("Server %s :: Bridge %s (%s) with %s (%s) does not have attribute %s", servername, uniqueid, bridge.channel, bridgeduniqueid, bridge.bridgedchannel, k)
-				bridge.seconds = int(time.time()) - int(bridge.linktime)
+				bridge.seconds = int(time.time() - bridge.linktime)
 				self.http._addUpdate(servername = servername, subaction = 'Update', **bridge.__dict__.copy())
 				if logging.DUMPOBJECTS:
 					log.debug("Object Dump:%s", bridge)
@@ -963,7 +965,7 @@ class Monast:
 						member.membership = kw.get('membership')
 						member.paused     = kw.get('paused')
 						member.pausedat   = [member.pausedat, time.time()][event == "QueueMemberPaused" and member.paused == '1']
-						member.pausedur   = int(time.time()) - int(member.pausedat)
+						member.pausedur   = int(time.time() - member.pausedat)
 						member.penalty    = kw.get('penalty')
 						member.status     = kw.get('status')
 						member.statustext = AST_DEVICE_STATES.get(member.status, 'Unknown')
@@ -1007,7 +1009,7 @@ class Monast:
 						client.calleridnum  = kw.get('calleridnum')
 						client.position     = kw.get('position')
 						client.abandonned   = False
-						client.jointime     = int(time.time() - int(kw.get('wait', 0)))
+						client.jointime     = time.time() - int(kw.get('wait', 0))
 						client.seconds      = int(time.time() - client.jointime)
 						self.http._addUpdate(servername = servername, **client.__dict__.copy())
 					else:
@@ -1065,7 +1067,7 @@ class Monast:
 							call.member    = None
 							call.link      = False
 							call.starttime = time.time()
-							call.seconds   = int(time.time()) - int(call.starttime)
+							call.seconds   = int(time.time() - call.starttime)
 							server.status.queueCalls[client.uniqueid] = call
 						
 						log.debug("Server %s :: Queue update, client removed: %s -> %s %s", servername, queuename, uniqueid, _log)
@@ -1429,8 +1431,8 @@ class Monast:
 								channel         = channel,
 								bridgedchannel  = bridgedchannel,
 								status          = 'Link',
-								dialtime        = int(time.time()) - seconds,
-								linktime        = int(time.time()) - seconds,
+								dialtime        = time.time() - seconds,
+								linktime        = time.time() - seconds,
 								seconds         = seconds,
 								_log            = "-- By Status Request"
 							)
@@ -1941,7 +1943,7 @@ class Monast:
 				bridgeduniqueid = event.get('destuniqueid'),
 				bridgedchannel  = event.get('destination'),
 				status          = 'Dial',
-				dialtime        = int(time.time()),
+				dialtime        = time.time(),
 				_log            = '-- Dial Begin'
 			)
 		elif subevent.lower() == 'end':
@@ -1992,7 +1994,7 @@ class Monast:
 				channel         = channel,
 				bridgedchannel  = bridgedchannel,
 				status          = 'Link',
-				linktime        = int(time.time()),
+				linktime        = time.time(),
 				_log            = "-- Link"
 			)
 		
@@ -2006,7 +2008,7 @@ class Monast:
 				log.debug("Server %s :: Queue update, client -> member call link: %s -> %s -> %s", ami.servername, queuename, uniqueid, location)
 				queueCall.member  = member.__dict__
 				queueCall.link    = True
-				queueCall.seconds = int(time.time()) - int(queueCall.starttime) 
+				queueCall.seconds = int(time.time() - queueCall.starttime) 
 				self.http._addUpdate(servername = ami.servername, **queueCall.__dict__.copy())
 				if logging.DUMPOBJECTS:
 					log.debug("Object Dump:%s", queueCall)
