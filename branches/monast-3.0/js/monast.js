@@ -1554,11 +1554,6 @@ var Monast = {
 			});
 		}
 		
-		// Drag&Drop ActionsDIV Targets
-		window._dTrash  = new YAHOO.util.DDTarget("trash");
-		window._dPark   = new YAHOO.util.DDTarget("park");
-		window._dRecord = new YAHOO.util.DDTarget("record");
-		
 		if (!Monast.IE)
 			document.captureEvents(Event.MOUSEMOVE);
 		document.onmousemove = Monast.followMousePos;
