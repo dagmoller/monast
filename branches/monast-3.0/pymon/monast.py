@@ -292,7 +292,7 @@ class MonastHTTP(resource.Resource):
 			tmp[servername]['peers'][tech] = []
 			for peername, peer in peerlist.items():
 				tmp[servername]['peers'][tech].append(peer.__dict__)
-			tmp[servername]['peers'][tech].sort(lambda x, y: cmp(x.get('callerid'), y.get('callerid')))
+			tmp[servername]['peers'][tech].sort(lambda x, y: cmp(x.get(self.monast.sortPeersBy), y.get(self.monast.sortPeersBy)))
 		## Channels
 		for uniqueid, channel in server.status.channels.items():
 			tmp[servername]['channels'].append(channel.__dict__)
@@ -301,8 +301,9 @@ class MonastHTTP(resource.Resource):
 		for uniqueid, bridge in server.status.bridges.items():
 			bridge.seconds = [0, int(time.time() - bridge.linktime)][bridge.status == "Link"]
 			tmp[servername]['bridges'].append(bridge.__dict__)
-		tmp[servername]['bridges'].sort(lambda x, y: cmp(x.get('seconds'), y.get('seconds')))
-		tmp[servername]['bridges'].reverse()
+		#tmp[servername]['bridges'].sort(lambda x, y: cmp(x.get('seconds'), y.get('seconds')))
+		#tmp[servername]['bridges'].reverse()
+		tmp[servername]['bridges'].sort(lambda x, y: cmp(x.get('dialtime'), y.get('dialtime')))
 		## Meetmes
 		for meetmeroom, meetme in server.status.meetmes.items():
 			tmp[servername]['meetmes'].append(meetme.__dict__)
@@ -386,7 +387,7 @@ class Monast:
 
 	configFile         = None
 	servers            = {}
-	sortby             = 'callerid'
+	sortPeersBy        = 'callerid'
 	clientActions      = []
 	authRequired       = False
 	isParkedCallStatus = False
@@ -1151,9 +1152,12 @@ class Monast:
 		## Peers
 		self.displayUsersDefault = config.get('peers', 'default') == 'show'
 		try:
-			self.sortby = config.get('peers', 'sortby')
+			self.sortPeersBy = config.get('peers', 'sortby')
+			if not self.sortPeersBy in ('channel', 'callerid'):
+				log.error("Invalid value for 'sortby' in section 'peers' of config file. valid options: channel, callerid")
+				self.sortPeersBy = 'callerid'
 		except NoOptionError:
-			self.sortby = 'callerid'
+			self.sortPeersBy = 'callerid'
 			log.error("No option 'sortby' in section: 'peers' of config file, sorting by CallerID")
 		
 		for user, display in config.items('peers'):
