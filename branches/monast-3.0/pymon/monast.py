@@ -681,7 +681,7 @@ class Monast:
 			bridge.bridgedchannel  = bridgedchannel
 			bridge.status          = kw.get('status', 'Link')
 			bridge.dialtime        = kw.get('dialtime', int(time.time()))
-			bridge.linktime        = kw.get('linktime', int(time.time()))
+			bridge.linktime        = kw.get('linktime', 0)
 			bridge.seconds         = int(time.time()) - int(bridge.linktime)
 			
 			log.debug("Server %s :: Bridge create: %s (%s) with %s (%s) %s", servername, uniqueid, channel, bridgeduniqueid, bridgedchannel, _log)
