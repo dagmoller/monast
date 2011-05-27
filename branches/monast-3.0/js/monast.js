@@ -449,6 +449,24 @@ var Monast = {
 		this._contextMenu.render(document.body);
 		this._contextMenu.show();
 	},
+	sortChannels: function ()
+	{
+		if (!MONAST_KEEP_CHANNELS_SORTED)
+			return;
+		
+		var channels = [];
+		this.channels.keys().each(function (id) {
+			var channel = Monast.channels.get(id);
+			channels.push({id: id, time: channel.starttime});
+		});
+		channels.sort(function (a, b) {
+			return a.time - b.time;
+		});
+		channels.each(function (c) {
+			var channel = $("channelsDiv").removeChild($(c.id));
+			$("channelsDiv").appendChild(channel);
+		});
+	},
 	
 	// Bridges
 	bridges: new Hash(),
@@ -645,6 +663,24 @@ var Monast = {
 		this._contextMenu.setItemGroupTitle("Call:  " + b.uniqueid + " -> " + b.bridgeduniqueid, 0);
 		this._contextMenu.render(document.body);
 		this._contextMenu.show();
+	},
+	sortBridges: function ()
+	{
+		if (!MONAST_KEEP_CALLS_SORTED)
+			return;
+		
+		var bridges = [];
+		this.bridges.keys().each(function (id) {
+			var bridge = Monast.bridges.get(id);
+			bridges.push({id: id, time: bridge.status == "Link" ? bridge.linktime : bridge.dialtime * 100});
+		});
+		bridges.sort(function (a, b) {
+			return a.time - b.time;
+		});
+		bridges.each(function (b) {
+			var bridge = $("callsDiv").removeChild($(b.id));
+			$("callsDiv").appendChild(bridge);
+		});
 	},
 	
 	// Meetmes
@@ -1267,10 +1303,12 @@ var Monast = {
 					
 				case "Channel":
 					this.processChannel(event);
+					this.sortChannels();
 					break;
 					
 				case "Bridge":
 					this.processBridge(event);
+					this.sortBridges();
 					break;
 					
 				case "Meetme":
@@ -1321,10 +1359,12 @@ var Monast = {
 					
 				case "RemoveChannel":
 					this.removeChannel(event);
+					this.sortChannels();
 					break;
 					
 				case "RemoveBridge":
 					this.removeBridge(event);
+					this.sortBridges();
 					break;
 					
 				case "RemoveMeetme":

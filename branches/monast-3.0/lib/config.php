@@ -39,6 +39,9 @@ define("MONAST_BLINK_ONCHANGE", true); // enable or disable blinking status chan
 define("MONAST_BLINK_COUNT", 3); // Number of blinks
 define("MONAST_BLINK_INTERVAL", 200); // interval of blinks (in miliseconds)
 
+define("MONAST_KEEP_CHANNELS_SORTED", true); // Keep channels sorted by time of creation (this cause browser to consume more CPU)
+define("MONAST_KEEP_CALLS_SORTED", true); // Keep calls sorted by link duration (this cause browser to consume more CPU)
+
 define("MONAST_CLI_TAB", true); // enable or disable Asterisk CLI TAB
 define("MONAST_DEBUG_TAB", false); // enable or disable debug TAB
 
