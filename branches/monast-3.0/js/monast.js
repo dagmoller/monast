@@ -449,24 +449,6 @@ var Monast = {
 		this._contextMenu.render(document.body);
 		this._contextMenu.show();
 	},
-	sortChannels: function ()
-	{
-		if (!MONAST_KEEP_CHANNELS_SORTED)
-			return;
-		
-		var channels = [];
-		this.channels.keys().each(function (id) {
-			var channel = Monast.channels.get(id);
-			channels.push({id: id, time: channel.starttime});
-		});
-		channels.sort(function (a, b) {
-			return a.time - b.time;
-		});
-		channels.each(function (c) {
-			var channel = $("channelsDiv").removeChild($(c.id));
-			$("channelsDiv").appendChild(channel);
-		});
-	},
 	
 	// Bridges
 	bridges: new Hash(),
@@ -954,6 +936,24 @@ var Monast = {
 		this._contextMenu.render(document.body);
 		this._contextMenu.show();
 	},
+	sortParkedCalls: function ()
+	{
+		if (!MONAST_KEEP_PARKEDCALLS_SORTED)
+			return;
+		
+		var parkedCalls = [];
+		this.parkedCalls.keys().each(function (id) {
+			var parkedCall = Monast.parkedCalls.get(id);
+			parkedCalls.push({id: id, exten: parkedCall.exten});
+		});
+		parkedCalls.sort(function (a, b) {
+			return a.exten < b.exten ? -1 : (a.exten > b.exten ? 1 : 0);
+		});
+		parkedCalls.each(function (b) {
+			var parkedCall = $("parkedsDiv").removeChild($(b.id));
+			$("parkedsDiv").appendChild(parkedCall);
+		});
+	},
 	
 	// Queues
 	queuesDual: [],
@@ -1303,7 +1303,6 @@ var Monast = {
 					
 				case "Channel":
 					this.processChannel(event);
-					this.sortChannels();
 					break;
 					
 				case "Bridge":
@@ -1317,6 +1316,7 @@ var Monast = {
 					
 				case "ParkedCall":
 					this.processParkedCall(event);
+					this.sortParkedCalls();
 					break;
 					
 				case "Queue":
@@ -1359,12 +1359,10 @@ var Monast = {
 					
 				case "RemoveChannel":
 					this.removeChannel(event);
-					this.sortChannels();
 					break;
 					
 				case "RemoveBridge":
 					this.removeBridge(event);
-					this.sortBridges();
 					break;
 					
 				case "RemoveMeetme":
