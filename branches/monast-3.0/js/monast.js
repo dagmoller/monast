@@ -1564,7 +1564,7 @@ var Monast = {
 		document.onmousemove = Monast.followMousePos;
 		
 		if (MONAST_CALL_TIME)
-			setInterval("Monast._runChrono()", 250);
+			setInterval("Monast._runChrono()", 500);
 	},
 	
 	showHidePannels: function (e)
