@@ -499,10 +499,7 @@ var Monast = {
 		});
 		
 		if (b.status == "Link")
-		{
-			this.stopChrono(b.id);
 			this.startChrono(b.id, parseInt(b.seconds));
-		}
 		
 		this.bridges.set(b.id, b);
 		$("countCalls").innerHTML = this.bridges.keys().length;
@@ -1054,16 +1051,13 @@ var Monast = {
 				{
 					case "statuscolor":
 						$(elid).style.backgroundColor = m.statuscolor;
-						if (old && old.paused == "1")
+						if (old && old.paused != m.paused)
 						{
-							if (old.paused != m.paused)
-								Monast.blinkBackground(elid, m.statuscolor);
+							Monast.blinkBackground(elid, m.statuscolor);
+							break;
 						}
-						else
-						{
-							if (old && old.status != m.status)
-								Monast.blinkBackground(elid, m.statuscolor);
-						}
+						if (old && m.paused == "0" && old.status != m.status)
+							Monast.blinkBackground(elid, m.statuscolor);
 						break;
 						
 					case "callstaken":
@@ -1185,7 +1179,6 @@ var Monast = {
 			}
 		});
 		
-		this.stopChrono(c.id);
 		this.startChrono(c.id, c.seconds);
 		
 		this.queues.get(c.queueid).clients.set(c.id, c);
@@ -1258,8 +1251,6 @@ var Monast = {
 			var clone           = Monast.buildClone("Template::Queue::Call", c.id);
 			clone.className     = "";
 			$(c.memberid).appendChild(clone);
-			this.stopChrono(c.id);
-			this.startChrono(c.id, c.seconds);
 		}
 		
 		var old = this.queues.get(c.queueid).ccalls.get(c.id);		
@@ -1275,6 +1266,8 @@ var Monast = {
 				}
 			}
 		});
+		
+		this.startChrono(c.id, c.seconds);
 		
 		this.queues.get(c.queueid).ccalls.set(c.id, c);
 	},
@@ -1571,7 +1564,7 @@ var Monast = {
 		document.onmousemove = Monast.followMousePos;
 		
 		if (MONAST_CALL_TIME)
-			setInterval("Monast._runChrono()", 1000);
+			setInterval("Monast._runChrono()", 250);
 	},
 	
 	showHidePannels: function (e)
