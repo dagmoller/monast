@@ -1494,6 +1494,7 @@ class Monast:
 				if (self.displayQueuesDefault and not server.displayQueues.has_key(queuename)) or (not self.displayQueuesDefault and server.displayQueues.has_key(queuename)):
 					self._updateQueue(servername, **event)
 			for callid, call in server.status.queueCalls.items():
+				call.seconds = int(time.time() - call.starttime)
 				self.http._addUpdate(servername = servername, **call.__dict__.copy())
 		
 		log.debug("Server %s :: Requesting Queues Status..." % servername)

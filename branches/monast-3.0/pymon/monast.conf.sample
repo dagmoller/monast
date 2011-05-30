@@ -136,7 +136,7 @@ default = show
 
 [user: admin]
 secret  = 12345
-roles   = originate,agent,command 
+roles   = originate,queue,command 
 servers = ALL
 
 [user: aguirre]
@@ -145,7 +145,7 @@ roles   = originate
 servers = Server_1, Server_2
 
 ## per server roles for user aguirre
-Server_2 = originate,agent,command
+Server_2 = originate,queue,command
 
 [user: demo]
 secret  = 
