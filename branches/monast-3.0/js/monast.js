@@ -313,7 +313,7 @@ var Monast = {
 		var meetmeList = [];
 		Monast.meetmes.keys().each(function (id) {
 			var m = Monast.meetmes.get(id);
-			if (/\d+/.match(m.meetme))
+			if (/^\d+$/.match(m.meetme))
 				meetmeList.push({text: m.meetme, onclick: {fn: inviteMeetme, obj: {peer: u, meetme: m.meetme}}});
 		});
 		if (meetmeList.length > 0)
@@ -631,7 +631,7 @@ var Monast = {
 		var meetmeList = [];
 		Monast.meetmes.keys().each(function (id) {
 			var m = Monast.meetmes.get(id);
-			if (/\d+/.match(m.meetme))
+			if (/^\d+$/.match(m.meetme))
 				meetmeList.push({text: m.meetme, onclick: {fn: inviteMeetme, obj: {bridge: b, meetme: m.meetme}}});
 		});
 		if (meetmeList.length > 0)
