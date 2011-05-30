@@ -765,6 +765,7 @@ class Monast:
 		server     = self.servers.get(servername)
 		meetmeroom = kw.get('meetme')
 		dynamic    = kw.get("dynamic", False)
+		forced     = kw.get("forced", False)
 		_log       = kw.get('_log')
 		meetme     = server.status.meetmes.get(meetmeroom)
 		
@@ -772,6 +773,7 @@ class Monast:
 			meetme = GenericObject("Meetme")
 			meetme.meetme  = meetmeroom
 			meetme.dynamic = dynamic
+			meetme.forced  = forced
 			meetme.users   = {}
 			
 			log.debug("Server %s :: Meetme create: %s %s", servername, meetme.meetme, _log)
@@ -1142,6 +1144,7 @@ class Monast:
 				'Khomp': {},
 			}
 			self.servers[servername].displayUsers        = {}
+			self.servers[servername].displayMeetmes      = {}
 			self.servers[servername].displayQueues       = {}
 			self.servers[servername].status.queues       = {}
 			self.servers[servername].status.queueMembers = {}
@@ -1195,6 +1198,23 @@ class Monast:
 					forced      = True,
 					_log        = '(forced peer)'
 				)
+		
+		## Meetmes / Conferences
+		self.displayMeetmesDefault = config.get('meetmes', 'default') == 'show'
+		for meetme, display in config.items('meetmes'):
+			if meetme in ('default'):
+				continue
+			
+			servername, meetme = meetme.split('/', 1)
+			server = self.servers.get(servername)
+			if not server:
+				continue
+			
+			if (self.displayMeetmesDefault and display == "hide") or (not self.displayMeetmesDefault and display == "show"):
+				server.displayMeetmes[meetme] = True
+				
+			if display == "force":
+				self._createMeetme(servername, meetme = meetme, forced = True, _log = "By monast config")
 					
 		## Queues
 		self.displayQueuesDefault = config.get('queues', 'default') == 'show'
@@ -1268,7 +1288,13 @@ class Monast:
 		self.http._addUpdate(servername = servername, action = "Reload", time = 5000)
 		
 		## Clear Server Status
-		server.status.meetmes.clear()
+		toRemove = []
+		for meetmeroom, meetme in server.status.meetmes.items():
+			if not meetme.forced:
+				toRemove.append(meetmeroom)
+		for meetmeroom in toRemove:
+			del server.status.meetmes[meetmeroom]
+		
 		server.status.channels.clear()
 		server.status.bridges.clear()
 		server.status.queues.clear()
@@ -1368,7 +1394,8 @@ class Monast:
 			for k, v in result.items():
 				if v.startswith("conf="):
 					meetmeroom = v.replace("conf=", "")
-					self._createMeetme(servername, meetme = meetmeroom)
+					if (self.displayMeetmesDefault and not server.displayMeetmes.has_key(meetmeroom)) or (not self.displayMeetmesDefault and server.displayMeetmes.has_key(meetmeroom)):
+						self._createMeetme(servername, meetme = meetmeroom)
 
 		log.debug("Server %s :: Requesting meetme.conf..." % servername)
 		server.ami.sendDeferred({'Action': 'GetConfig', 'Filename': 'meetme.conf'}) \
@@ -1545,14 +1572,14 @@ class Monast:
 		
 		if type == "meetmeInviteUser":
 			application = "Meetme"
-			data        = destination
+			data        = "%s,d" % destination
 			originates.append((channel, context, exten, priority, timeout, callerid, account, application, data, variable, async))
 			logs.append("Invite from %s to %s(%s)" % (channel, application, data))
 		
 		if type == "meetmeInviteNumbers":
 			dynamic     = not server.status.meetmes.has_key(destination)
 			application = "Meetme"
-			data        = [destination, "%s,d" % destination][dynamic]
+			data        = "%s,d" % destination
 			numbers     = source.replace('\r', '').split('\n')
 			for number in [i.strip() for i in numbers if i.strip()]:
 				channel     = "Local/%s@%s" % (number, context)
