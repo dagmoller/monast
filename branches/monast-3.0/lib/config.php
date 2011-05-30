@@ -46,4 +46,7 @@ define("MONAST_KEEP_PARKEDCALLS_SORTED", true); // Keep parked calls sorted by e
 define("MONAST_CLI_TAB", true); // enable or disable Asterisk CLI TAB
 define("MONAST_DEBUG_TAB", false); // enable or disable debug TAB
 
+// DOES NOT EDIT THIS LINE
+session_name("MONASTSESSID");
+
 ?>

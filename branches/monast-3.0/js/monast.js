@@ -27,6 +27,9 @@
 * OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+// Global Vars
+var MONAST_COOKIE_KEY = "MONASTCOOKIE";
+
 // Global Functions
 String.prototype.trim = function() { return this.replace(/^\s*/, "").replace(/\s*$/, ""); };
 
@@ -1513,15 +1516,15 @@ var Monast = {
 		window._buttons = new Array(ocheckBoxTab1, ocheckBoxTab2, ocheckBoxTab3, ocheckBoxTab4, ocheckBoxTab5);
 		
 		// Cookie to save View state
-		window._state = YAHOO.util.Cookie.get("_state");
-		if (!_state)
+		window._stateCookie = YAHOO.util.Cookie.get(MONAST_COOKIE_KEY);
+		if (!_stateCookie)
 		{
-			_state = {activeIndex: 1, buttons: {'checkBoxTab1': false, 'checkBoxTab2': false, 'checkBoxTab3': false, 'checkBoxTab4': false, 'checkBoxTab5': false}};
-			YAHOO.util.Cookie.set('_state', Object.toJSON(_state));
+			_stateCookie = {activeIndex: 1, buttons: {'checkBoxTab1': false, 'checkBoxTab2': false, 'checkBoxTab3': false, 'checkBoxTab4': false, 'checkBoxTab5': false}};
+			YAHOO.util.Cookie.set(MONAST_COOKIE_KEY, Object.toJSON(_stateCookie));
 		}
 		else
 		{
-			_state = _state.evalJSON();
+			_stateCookie = _stateCookie.evalJSON();
 		}
 		
 		// TabPannel and Listeners
@@ -1536,21 +1539,21 @@ var Monast = {
 			tabs.each(function (tab, i) {
 				if (tab.get('label') == e.newValue.get('label'))
 				{
-					_state.activeIndex = i;
-					YAHOO.util.Cookie.set('_state', Object.toJSON(_state));
+					_stateCookie.activeIndex = i;
+					YAHOO.util.Cookie.set(MONAST_COOKIE_KEY, Object.toJSON(_stateCookie));
 				}
 			});
 		});
 		_tabPannel.getTab(0).addListener('click', function(e) {
 			_buttons.each(function (button) {
-				button.set('checked', _state.buttons[button.get('id')]);
+				button.set('checked', _stateCookie.buttons[button.get('id')]);
 			});
 		});
-		_tabPannel.set('activeIndex', _state.activeIndex);
-		if (_state.activeIndex == 0)
+		_tabPannel.set('activeIndex', _stateCookie.activeIndex);
+		if (_stateCookie.activeIndex == 0)
 		{
 			_buttons.each(function (button) {
-				button.set('checked', _state.buttons[button.get('id')]);
+				button.set('checked', _stateCookie.buttons[button.get('id')]);
 			});
 		}
 		
@@ -1565,8 +1568,8 @@ var Monast = {
 	showHidePannels: function (e)
 	{
 		$(this.get('value')).className = (e.newValue ? '' : 'yui-hidden');
-		_state.buttons[this.get('id')] = e.newValue;
-		YAHOO.util.Cookie.set('_state', Object.toJSON(_state));
+		_stateCookie.buttons[this.get('id')] = e.newValue;
+		YAHOO.util.Cookie.set(MONAST_COOKIE_KEY, Object.toJSON(_stateCookie));
 	},
 	
 	hideTab: function (tabName)
