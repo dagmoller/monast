@@ -284,7 +284,7 @@ var Monast = {
 			if (found)
 				Monast._tabPannel.set("activeIndex", 3);
 			else
-				Monast.doAlert("No active calls for this user.");
+				Monast.doAlert("No Active Channels/Calls this User/Peer.");
 		};
 		
 		var u = this.userspeers.get(id);
