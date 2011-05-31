@@ -62,9 +62,6 @@
 
 </head>
 <body class="yui-skin-sam">
-<div id="_alertDialog"></div>
-<div id="_confirmDialog"></div>
-<div id="rendertarget"></div>
 
 <div class="monast-logo">
   <span class="monast-name">MonAst</span>&nbsp;
@@ -85,14 +82,12 @@
   <span class="monast-status" id="_reqStatus">Initializing...</span>
   <span><input type="button" id="buttonReload" value="Reload"></span>
   <script language="javascript">
-  var _buttonReload = new YAHOO.widget.Button("buttonReload");
-      _buttonReload.on("click", Monast.doReload);
+  Monast._buttonReload = new YAHOO.widget.Button("buttonReload", {onclick: {fn: Monast.doReload}});
   </script>
   <!-- START BLOCK : buttonLogout -->
   <span><input type="button" id="buttonLogout" value="Logout"></span>
   <script language="javascript">
-  var _buttonLogout = new YAHOO.widget.Button("buttonLogout");
-      _buttonLogout.on("click", Monast.doLogout);
+  Monast._buttonLogout = new YAHOO.widget.Button("buttonLogout", {onclick: {fn: Monast.doLogout}});
   </script>
   <!-- END BLOCK : buttonLogout -->
 </div>
@@ -136,9 +131,8 @@ $('_reqStatus').innerHTML = 'Authentication Required';
   </div>
 </div>
 <script language="javascript">
-var _buttonLogin  = new YAHOO.widget.Button("buttonLogin");
-    _buttonLogin.on("click", Monast.doLogin);
-var _buttonClear  = new YAHOO.widget.Button("buttonClear");
+Monast._buttonLogin = new YAHOO.widget.Button("buttonLogin", {onclick: {fn: Monast.doLogin}});
+Monast._buttonClear = new YAHOO.widget.Button("buttonClear");
 </script>
 <!-- END BLOCK : login -->
 
@@ -178,28 +172,7 @@ $('_reqStatus').innerHTML = '<font color="red"><b>MonAst Error</b></font>';
 </div> 
 
 <script language="javascript">
-var _alert =  new YAHOO.widget.SimpleDialog("_alertDialog", {
-	zindex: 10,
-	fixedcenter: true,
-	visible: false,
-	draggable: true,
-	close: true,
-	constraintoviewport: true,
-	modal: true,
-	buttons: [{text: "OK", handler: function() { this.hide(); }}]
-});
-_alert.render();
-
-var _confirm = new YAHOO.widget.SimpleDialog("_confirmDialog", {
-	zindex: 10,
-	fixedcenter: true,
-	visible: false,
-	draggable: true,
-	close: true,
-	constraintoviewport: true,
-	modal: true
-});
-_confirm.render();
+Monast.init();
 </script>
 
 </body>

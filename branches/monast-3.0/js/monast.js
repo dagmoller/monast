@@ -37,6 +37,14 @@ String.prototype.trim = function() { return this.replace(/^\s*/, "").replace(/\s
 var Monast = {
 	// Globals
 	_contextMenu: new YAHOO.widget.Menu("ContextMenu"),
+	
+	MONAST_CALL_TIME               : true,
+	MONAST_BLINK_ONCHANGE          : true,
+	MONAST_BLINK_COUNT             : 3,
+	MONAST_BLINK_INTERVAL          : 200,
+	MONAST_KEEP_CALLS_SORTED       : true,
+	MONAST_KEEP_PARKEDCALLS_SORTED : true,
+	
 	// Colors
 	getColor: function (status)
 	{
@@ -89,28 +97,28 @@ var Monast = {
 	},
 	blinkBackground: function (id, color)
 	{
-		if (!MONAST_BLINK_ONCHANGE)
+		if (!Monast.MONAST_BLINK_ONCHANGE)
 			return;
 		
 		var t = 0;
-		for (i = 0; i < MONAST_BLINK_COUNT; i++)
+		for (i = 0; i < Monast.MONAST_BLINK_COUNT; i++)
 		{
 			$A(["#FFFFFF", color]).each(function (c) {
-				t += MONAST_BLINK_INTERVAL;
+				t += Monast.MONAST_BLINK_INTERVAL;
 				setTimeout("if ($('" + id + "')) { $('" + id + "').style.backgroundColor = '" + c + "'; }", t);
 			});
 		}
 	},
 	blinkText: function (id)
 	{
-		if (!MONAST_BLINK_ONCHANGE)
+		if (!Monast.MONAST_BLINK_ONCHANGE)
 			return;
 		
 		var t = 0;
-		for (i = 0; i < MONAST_BLINK_COUNT; i++)
+		for (i = 0; i < Monast.MONAST_BLINK_COUNT; i++)
 		{
 			$A(["#FFFFFF", "#000000"]).each(function (c) {
-				t += MONAST_BLINK_INTERVAL;
+				t += Monast.MONAST_BLINK_INTERVAL;
 				setTimeout("if ($('" + id + "')) { $('" + id + "').style.color = '" + c + "'; }", t);
 			});
 		}
@@ -187,7 +195,7 @@ var Monast = {
 						});
 					}
 				);
-				_confirm.setHeader('Originate Call');
+				Monast.confirmDialog.setHeader('Originate Call');
 				break;
 		}
 	},
@@ -211,7 +219,7 @@ var Monast = {
 					});
 				}
 			);
-			_confirm.setHeader('Originate Call');
+			Monast.confirmDialog.setHeader('Originate Call');
 		};
 		var viewUserpeerInfo = function (p_sType, p_aArgs, p_oValue)
 		{
@@ -310,7 +318,7 @@ var Monast = {
 					});
 				}
 			);
-			_confirm.setHeader('Meetme Invite');
+			Monast.confirmDialog.setHeader('Meetme Invite');
 		};
 		var meetmeIdx  = 0;
 		var meetmeList = [];
@@ -539,7 +547,7 @@ var Monast = {
 						});
 					}
 				);
-				_confirm.setHeader('Transfer Call');
+				Monast.confirmDialog.setHeader('Transfer Call');
 				break;
 		}
 	},
@@ -629,7 +637,7 @@ var Monast = {
 					});
 				}
 			);
-			_confirm.setHeader('Meetme Invite');
+			Monast.confirmDialog.setHeader('Meetme Invite');
 		};
 		var meetmeList = [];
 		Monast.meetmes.keys().each(function (id) {
@@ -650,7 +658,7 @@ var Monast = {
 	},
 	sortBridges: function ()
 	{
-		if (!MONAST_KEEP_CALLS_SORTED)
+		if (!Monast.MONAST_KEEP_CALLS_SORTED)
 			return;
 		
 		var bridges = [];
@@ -765,7 +773,7 @@ var Monast = {
 				});
 			}
 		);
-		_confirm.setHeader('Invite Numbers to Meetme');
+		Monast.confirmDialog.setHeader('Invite Numbers to Meetme');
 	},
 	showMeetmeContextMenu: function (id)
 	{
@@ -888,7 +896,7 @@ var Monast = {
 						});
 					}
 				);
-				_confirm.setHeader('Transfer Parked Call');
+				Monast.confirmDialog.setHeader('Transfer Parked Call');
 				break;
 		}
 	},
@@ -942,7 +950,7 @@ var Monast = {
 	},
 	sortParkedCalls: function ()
 	{
-		if (!MONAST_KEEP_PARKEDCALLS_SORTED)
+		if (!Monast.MONAST_KEEP_PARKEDCALLS_SORTED)
 			return;
 		
 		var parkedCalls = [];
@@ -1289,8 +1297,8 @@ var Monast = {
 	// Process Events
 	processEvent: function (event)
 	{
-		if ($('debugMsg'))
-			$('debugMsg').innerHTML += Object.toJSON(event) + "<br>\r\n";
+		if ($('debugDiv'))
+			$('debugDiv').innerHTML += Object.toJSON(event) + "<br>\r\n";
 		
 		if (!Object.isUndefined(event.objecttype))
 		{
@@ -1454,30 +1462,30 @@ var Monast = {
 	// Alerts & Messages
 	doAlert: function (message)
 	{
-		_alert.setHeader('Information');
-		_alert.setBody("<table><tr><td valign='top'><span class='yui-icon infoicon'></span></td><td>" + message + "</td></tr></table>");
-		_alert.cfg.setProperty("fixedcenter", true);
-		_alert.cfg.setProperty("constraintoviewport", true);
-		_alert.render();
-		_alert.show();
+		Monast.alertDialog.setHeader('Information');
+		Monast.alertDialog.setBody("<table><tr><td valign='top'><span class='yui-icon infoicon'></span></td><td>" + message + "</td></tr></table>");
+		Monast.alertDialog.cfg.setProperty("fixedcenter", true);
+		Monast.alertDialog.cfg.setProperty("constraintoviewport", true);
+		Monast.alertDialog.render();
+		Monast.alertDialog.show();
 	},
 	doError: function (message)
 	{
-		_alert.setHeader('Error');
-		_alert.setBody("<table><tr><td valign='top'><span class='yui-icon blckicon'></span></td><td>" + message + "</td></tr></table>");
-		_alert.cfg.setProperty("fixedcenter", true);
-		_alert.cfg.setProperty("constraintoviewport", true);
-		_alert.render();
-		_alert.show();
+		Monast.alertDialog.setHeader('Error');
+		Monast.alertDialog.setBody("<table><tr><td valign='top'><span class='yui-icon blckicon'></span></td><td>" + message + "</td></tr></table>");
+		Monast.alertDialog.cfg.setProperty("fixedcenter", true);
+		Monast.alertDialog.cfg.setProperty("constraintoviewport", true);
+		Monast.alertDialog.render();
+		Monast.alertDialog.show();
 	},
 	doWarn: function (message)
 	{
-		_alert.setHeader('Warning');
-		_alert.setBody("<table><tr><td valign='top'><span class='yui-icon warnicon'></span></td><td>" + message + "</td></tr></table>");
-		_alert.cfg.setProperty("fixedcenter", true);
-		_alert.cfg.setProperty("constraintoviewport", true);
-		_alert.render();
-		_alert.show();
+		Monast.alertDialog.setHeader('Warning');
+		Monast.alertDialog.setBody("<table><tr><td valign='top'><span class='yui-icon warnicon'></span></td><td>" + message + "</td></tr></table>");
+		Monast.alertDialog.cfg.setProperty("fixedcenter", true);
+		Monast.alertDialog.cfg.setProperty("constraintoviewport", true);
+		Monast.alertDialog.render();
+		Monast.alertDialog.show();
 	},
 	doConfirm: function (message, handleYes, handleNo)
 	{
@@ -1489,11 +1497,11 @@ var Monast = {
 			{text: "No", handler: function () { this.hide(); handleNo(); }}
 		];
 		
-		_confirm.setHeader('Confirmation');
-		_confirm.setBody("<table><tr><td valign='top'><span class='yui-icon hlpicon'></span></td><td>" + message + "</td></tr></table>");
-		_confirm.cfg.setProperty("buttons", buttons); 
-		_confirm.render();
-		_confirm.show();
+		Monast.confirmDialog.setHeader('Confirmation');
+		Monast.confirmDialog.setBody("<table><tr><td valign='top'><span class='yui-icon hlpicon'></span></td><td>" + message + "</td></tr></table>");
+		Monast.confirmDialog.cfg.setProperty("buttons", buttons); 
+		Monast.confirmDialog.render();
+		Monast.confirmDialog.show();
 	},
 	
 	// Monast INIT
@@ -1501,59 +1509,96 @@ var Monast = {
 	{
 		YAHOO.util.DDM.mode = YAHOO.util.DDM.POINT;
 		
-		// CheckBox Buttons for Mixed Pannels
-		window.ocheckBoxTab1 = new YAHOO.widget.Button("checkBoxTab1", { label: "Peers/Users" });
-		window.ocheckBoxTab1.addListener('checkedChange', this.showHidePannels);
-		window.ocheckBoxTab2 = new YAHOO.widget.Button("checkBoxTab2", { label:"Meetme Rooms" });
-		window.ocheckBoxTab2.addListener('checkedChange', this.showHidePannels);
-		window.ocheckBoxTab3 = new YAHOO.widget.Button("checkBoxTab3", { label:"Channels/Calls" });
-		window.ocheckBoxTab3.addListener('checkedChange', this.showHidePannels);
-		window.ocheckBoxTab4 = new YAHOO.widget.Button("checkBoxTab4", { label:"Parked Calls" });
-		window.ocheckBoxTab4.addListener('checkedChange', this.showHidePannels);
-		window.ocheckBoxTab5 = new YAHOO.widget.Button("checkBoxTab5", { label:"Queues" });
-		window.ocheckBoxTab5.addListener('checkedChange', this.showHidePannels);
+		// Dialogs
+		Monast.alertDialog =  new YAHOO.widget.SimpleDialog("_alertDialog", {
+			zindex: 10,
+			fixedcenter: true,
+			visible: false,
+			draggable: true,
+			close: true,
+			constraintoviewport: true,
+			modal: true,
+			buttons: [{text: "OK", handler: function() { this.hide(); }}]
+		});
+		Monast.alertDialog.render(document.body);
 		
-		window._buttons = new Array(ocheckBoxTab1, ocheckBoxTab2, ocheckBoxTab3, ocheckBoxTab4, ocheckBoxTab5);
+		Monast.confirmDialog = new YAHOO.widget.SimpleDialog("_confirmDialog", {
+			zindex: 10,
+			fixedcenter: true,
+			visible: false,
+			draggable: true,
+			close: true,
+			constraintoviewport: true,
+			modal: true
+		});
+		Monast.confirmDialog.render(document.body);
+		
+		if ($('authentication') || $('error'))
+			return;
+		
+		// CheckBox Buttons for Mixed Pannels
+		Monast._checkBoxTabButtons = [];
+		var tabs = [
+		    ["peersDiv", "Peers/Users"],
+		    ["meetmesDiv", "Meetme Rooms"],
+		    ["chanCallDiv", "Channels/Calls"],
+		    ["parkedCallsDiv", "Parked Calls"],
+		    ["queuesDiv", "Queues"]
+		];
+		tabs.each(function (tab) {
+			var name  = tab[0];
+			var title = tab[1];
+			if ($("checkBoxTab_" + name))
+			{
+				var button = new YAHOO.widget.Button("checkBoxTab_" + name, { label: title });
+				button.addListener('checkedChange', Monast.showHidePannels);
+				Monast._checkBoxTabButtons.push(button);
+			}
+		});
 		
 		// Cookie to save View state
-		window._stateCookie = YAHOO.util.Cookie.get(MONAST_COOKIE_KEY);
-		if (!_stateCookie)
+		Monast._stateCookie = YAHOO.util.Cookie.get(MONAST_COOKIE_KEY);
+		if (!Monast._stateCookie)
 		{
-			_stateCookie = {activeIndex: 1, buttons: {'checkBoxTab1': false, 'checkBoxTab2': false, 'checkBoxTab3': false, 'checkBoxTab4': false, 'checkBoxTab5': false}};
-			YAHOO.util.Cookie.set(MONAST_COOKIE_KEY, Object.toJSON(_stateCookie));
+			Monast._stateCookie = {
+					activeIndex: 1,
+					buttons: {}
+			};
+			tabs.each(function (tab) {
+				Monast._stateCookie.buttons["checkBoxTab_" + tab[0]] = false;
+			});
 		}
 		else
 		{
-			_stateCookie = _stateCookie.evalJSON();
+			Monast._stateCookie = Monast._stateCookie.evalJSON();
 		}
 		
 		// TabPannel and Listeners
-		window._tabPannel = new YAHOO.widget.TabView('TabPannel');
-		_tabPannel.addListener('beforeActiveTabChange', function(e) {
-			var pannels = new Array('peersDiv', 'meetmesDiv', 'chanCallDiv', 'parkedCallsDiv', 'queuesDiv');
-			pannels.each(function (pannel) {
-				$(pannel).className = 'yui-hidden';
+		Monast._tabPannel = new YAHOO.widget.TabView('TabPannel');
+		Monast._tabPannel.addListener('beforeActiveTabChange', function(e) {
+			tabs.each(function (tab) {
+				$(tab[0]).className = 'yui-hidden';
 			});
 		
-			var tabs = this.get('tabs');
-			tabs.each(function (tab, i) {
+			var _tabs = this.get('tabs');
+			_tabs.each(function (tab, i) {
 				if (tab.get('label') == e.newValue.get('label'))
 				{
-					_stateCookie.activeIndex = i;
-					YAHOO.util.Cookie.set(MONAST_COOKIE_KEY, Object.toJSON(_stateCookie));
+					Monast._stateCookie.activeIndex = i;
+					YAHOO.util.Cookie.set(MONAST_COOKIE_KEY, Object.toJSON(Monast._stateCookie));
 				}
 			});
 		});
-		_tabPannel.getTab(0).addListener('click', function(e) {
-			_buttons.each(function (button) {
-				button.set('checked', _stateCookie.buttons[button.get('id')]);
+		Monast._tabPannel.getTab(0).addListener('click', function(e) {
+			Monast._checkBoxTabButtons.each(function (button) {
+				button.set('checked', Monast._stateCookie.buttons[button.get('id')]);
 			});
 		});
-		_tabPannel.set('activeIndex', _stateCookie.activeIndex);
-		if (_stateCookie.activeIndex == 0)
+		Monast._tabPannel.set('activeIndex', Monast._stateCookie.activeIndex);
+		if (Monast._stateCookie.activeIndex == 0)
 		{
-			_buttons.each(function (button) {
-				button.set('checked', _stateCookie.buttons[button.get('id')]);
+			Monast._checkBoxTabButtons.each(function (button) {
+				button.set('checked', Monast._stateCookie.buttons[button.get('id')]);
 			});
 		}
 		
@@ -1561,36 +1606,37 @@ var Monast = {
 			document.captureEvents(Event.MOUSEMOVE);
 		document.onmousemove = Monast.followMousePos;
 		
-		if (MONAST_CALL_TIME)
+		if (Monast.MONAST_CALL_TIME)
 			setInterval("Monast._runChrono()", 500);
 	},
 	
 	showHidePannels: function (e)
 	{
 		$(this.get('value')).className = (e.newValue ? '' : 'yui-hidden');
-		_stateCookie.buttons[this.get('id')] = e.newValue;
-		YAHOO.util.Cookie.set(MONAST_COOKIE_KEY, Object.toJSON(_stateCookie));
+		Monast._stateCookie.buttons[this.get('id')] = e.newValue;
+		YAHOO.util.Cookie.set(MONAST_COOKIE_KEY, Object.toJSON(Monast._stateCookie));
 	},
 	
 	hideTab: function (tabName)
 	{
 		var tabs = {
-			"Mixed Pannels"  : "Tab0",
-			"Peers/Users"    : "Tab1",
-			"Meetme Rooms"   : "Tab2",
-			"Channels/Calls" : "Tab3",
-			"Parked Calls"   : "Tab4",
-			"Queues"         : "Tab5",
-			"Asterisk CLI"   : "Tab6",
-			"Debug"          : "Tab7"
+			"Mixed Pannels"  : "mixed",
+			"Peers/Users"    : "peersDiv",
+			"Meetme Rooms"   : "meetmesDiv",
+			"Channels/Calls" : "chanCallDiv",
+			"Parked Calls"   : "parkedCallsDiv",
+			"Queues"         : "queuesDiv",
+			"Asterisk CLI"   : "cliDiv",
+			"Debug"          : "debugDiv"
 		};
 		if (!Object.isUndefined(tabs[tabName]))
 		{
-			if ($("li" + tabs[tabName]))
+			if ($("liTab_" + tabs[tabName]))
 			{
-				$("li" + tabs[tabName]).hide();
-				if ($('checkBox' + tabs[tabName]))
-					setTimeout("$('checkBox" + tabs[tabName] + "').hide()", 1000);
+				$(tabs[tabName]).hide();
+				$("liTab_" + tabs[tabName]).hide();
+				if ($('checkBoxTab_' + tabs[tabName]))
+					setTimeout("$('checkBoxTab_" + tabs[tabName] + "').hide()", 1000);
 			}
 		}
 	},
@@ -1666,7 +1712,7 @@ var Monast = {
 	_chrono: new Hash(),
 	startChrono: function (id, seconds)
 	{
-		if (!MONAST_CALL_TIME)
+		if (!Monast.MONAST_CALL_TIME)
 			return;
 		var now = new Date();
 		var sec = now - (seconds * 1000);
@@ -1854,7 +1900,7 @@ var Monast = {
 	requestInfoResponse: function (r)
 	{
 		this.doAlert("<table class='requestInfo'><tr><td><pre>" + r.response.join("\n").replace(/\</g, '&lt;').replace(/\>/g, '&gt;') + "</pre></td></tr></table>");
-		_alert.cfg.setProperty("fixedcenter", false);
-		_alert.cfg.setProperty("constraintoviewport", false);
+		Monast.alertDialog.cfg.setProperty("fixedcenter", false);
+		Monast.alertDialog.cfg.setProperty("constraintoviewport", false);
 	}
 };

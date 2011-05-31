@@ -31,17 +31,17 @@
 
 <div id="TabPannel" class="yui-navset" >
   <ul class="yui-nav">
-    <li id="liTab0"><a href="#tab0"><em>Mixed Pannels</em></a></li>
-    <li id="liTab1"><a href="#tab1"><em>Peers/Users</em></a></li>
-    <li id="liTab2"><a href="#tab2"><em>Meetme Rooms</em></a></li>
-    <li id="liTab3"><a href="#tab3"><em>Channels/Calls</em></a></li>
-    <li id="liTab4"><a href="#tab4"><em>Parked Calls</em></a></li>
-    <li id="liTab5"><a href="#tab5"><em>Queues</em></a></li>
+    <li id="liTab_mixed"><a href="#tab_mixed"><em>Mixed Pannels</em></a></li>
+    <li id="liTab_peersDiv"><a href="#tab_peersDiv"><em>Peers/Users</em></a></li>
+    <li id="liTab_meetmesDiv"><a href="#tab_meetmesDiv"><em>Meetme Rooms</em></a></li>
+    <li id="liTab_chanCallDiv"><a href="#tab_chanCallDiv"><em>Channels/Calls</em></a></li>
+    <li id="liTab_parkedCallsDiv"><a href="#tab_parkedCallsDiv"><em>Parked Calls</em></a></li>
+    <li id="liTab_queuesDiv"><a href="#tab_queuesDiv"><em>Queues</em></a></li>
     <!-- START BLOCK : cli_tab -->
-    <li id="liTab6"><a href="#tab6"><em>Asterisk CLI</em></a></li>
+    <li id="liTab_cliDiv"><a href="#tab_cliDiv"><em>Asterisk CLI</em></a></li>
     <!-- END BLOCK : cli_tab -->
     <!-- START BLOCK : debug_tab -->
-    <li id="liTab7"><a href="#tab7"><em>Debug</em></a></li>
+    <li id="liTab_debugDiv"><a href="#tab_debugDiv"><em>Debug</em></a></li>
     <!-- END BLOCK : debug_tab -->
   </ul>
   
@@ -49,11 +49,11 @@
     <div id="mixed">
       <fieldset id="pannelsToShow">
         <legend>Pannels to Show</legend> 
-        <input id="checkBoxTab1" type="checkbox" name="checkBoxTab1" value="peersDiv">
-        <input id="checkBoxTab2" type="checkbox" name="checkBoxTab2" value="meetmesDiv">
-        <input id="checkBoxTab3" type="checkbox" name="checkBoxTab3" value="chanCallDiv">
-        <input id="checkBoxTab4" type="checkbox" name="checkBoxTab4" value="parkedCallsDiv">
-        <input id="checkBoxTab5" type="checkbox" name="checkBoxTab5" value="queuesDiv">
+        <input id="checkBoxTab_peersDiv" type="checkbox" name="checkBoxTab_peersDiv" value="peersDiv">
+        <input id="checkBoxTab_meetmesDiv" type="checkbox" name="checkBoxTab_meetmesDiv" value="meetmesDiv">
+        <input id="checkBoxTab_chanCallDiv" type="checkbox" name="checkBoxTab_chanCallDiv" value="chanCallDiv">
+        <input id="checkBoxTab_parkedCallsDiv" type="checkbox" name="checkBoxTab_parkedCallsDiv" value="parkedCallsDiv">
+        <input id="checkBoxTab_queuesDiv" type="checkbox" name="checkBoxTab_queuesDiv" value="queuesDiv">
       </fieldset>
     </div>
   
@@ -78,8 +78,7 @@
       <legend>Meetme Rooms</legend>
         <span><input type="button" id="buttonMeemteCreate" value="Create Dynamic Meetme"></span>
         <script language="javascript">
-        var _buttonLogout = new YAHOO.widget.Button("buttonMeemteCreate", {onclick: {fn: Monast._meetmeInviteNumbers, obj: null}});
-            //_buttonLogout.on("click", Monast._meetmeInviteNumbers);
+        Monast._buttonMeetmeCreate = new YAHOO.widget.Button("buttonMeemteCreate", {onclick: {fn: Monast._meetmeInviteNumbers, obj: null}});
         </script>
       <div id="meetmeDivWrapper">
       </div>
@@ -157,7 +156,7 @@
 	<!-- END BLOCK : cli_tab_div -->
 
     <!-- START BLOCK : debug_tab_div -->
-    <div id="debugMsg">
+    <div id="debugDiv">
     </div>
     <!-- END BLOCK : debug_tab_div -->
     
@@ -167,14 +166,12 @@
 {templates}
 
 <script language="javascript">
-var MONAST_CALL_TIME               = {MONAST_CALL_TIME};
-var MONAST_BLINK_ONCHANGE          = {MONAST_BLINK_ONCHANGE};
-var MONAST_BLINK_COUNT             = {MONAST_BLINK_COUNT};
-var MONAST_BLINK_INTERVAL          = {MONAST_BLINK_INTERVAL};
-var MONAST_KEEP_CALLS_SORTED       = {MONAST_KEEP_CALLS_SORTED};
-var MONAST_KEEP_PARKEDCALLS_SORTED = {MONAST_KEEP_PARKEDCALLS_SORTED};
-
-Monast.init();
+Monast.MONAST_CALL_TIME               = {MONAST_CALL_TIME};
+Monast.MONAST_BLINK_ONCHANGE          = {MONAST_BLINK_ONCHANGE};
+Monast.MONAST_BLINK_COUNT             = {MONAST_BLINK_COUNT};
+Monast.MONAST_BLINK_INTERVAL          = {MONAST_BLINK_INTERVAL};
+Monast.MONAST_KEEP_CALLS_SORTED       = {MONAST_KEEP_CALLS_SORTED};
+Monast.MONAST_KEEP_PARKEDCALLS_SORTED = {MONAST_KEEP_PARKEDCALLS_SORTED};
 
 window.onload = function () {
 	<!-- START BLOCK : process -->
