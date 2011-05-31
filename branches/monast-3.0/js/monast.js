@@ -1041,7 +1041,7 @@ var Monast = {
 		m.id          = md5("queueMember-" + m.queue + '::' + m.location);
 		m.queueid     = md5("queue-" + m.queue);
 		m.statustext_nochrono = m.paused == '1' ? 'Paused' : m.statustext;
-		m.statustext  = m.paused == '1' ? 'Paused<br><span style="font-family: monospace;" id="' + m.id + '-chrono">00:00:00</span>' : m.statustext;
+		m.statustext  = m.paused == '1' ? 'Paused<br><span style="font-family: monospace;" id="' + m.id + '-chrono"></span>' : m.statustext;
 		m.pausedtext  = m.paused == "1" ? "Yes" : "No";
 		m.statuscolor = this.getColor(m.statustext); 
 				
