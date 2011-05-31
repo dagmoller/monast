@@ -98,7 +98,10 @@ var Monast = {
 	blinkBackground: function (id, color)
 	{
 		if (!Monast.MONAST_BLINK_ONCHANGE)
+		{
+			if ($(id)) { $(id).style.backgroundColor = color; }
 			return;
+		}
 		
 		var t = 0;
 		for (i = 0; i < Monast.MONAST_BLINK_COUNT; i++)
@@ -256,11 +259,40 @@ var Monast = {
 			);
 		};
 		
+		var viewUserpeerCalls = function (p_sType, p_aArgs, p_oValue)
+		{
+			var peer  = p_oValue;
+			var found = false; 
+			Monast.channels.keys().each(function (id) {
+				var channel = Monast.channels.get(id);
+				if (channel.channel.indexOf(peer.peername) != -1)
+				{
+					found = true;
+					Monast.blinkBackground(channel.id, "#99FFFF");
+					setTimeout("if ($('" + channel.id + "')) { $('" + channel.id + "').style.backgroundColor = '#FFFFFF'; }", 10000);
+				}
+			});
+			Monast.bridges.keys().each(function (id) {
+				var bridge = Monast.bridges.get(id);
+				if (bridge.channel.indexOf(peer.peername) != -1 || bridge.bridgedchannel.indexOf(peer.peername) != -1)
+				{
+					found = true;
+					Monast.blinkBackground(bridge.id, "#99FFFF");
+					setTimeout("if ($('" + bridge.id + "')) { $('" + bridge.id + "').style.backgroundColor = '#FFFFFF'; }", 10000);
+				}
+			});
+			if (found)
+				Monast._tabPannel.set("activeIndex", 3);
+			else
+				Monast.doAlert("No active calls for this user.");
+		};
+		
 		var u = this.userspeers.get(id);
 		var m = [
 			[
 				{text: "Originate Call", onclick: {fn: originateCall, obj: u}},
-				{text: "View User/Peer Info", onclick: {fn: viewUserpeerInfo, obj: u}}
+				{text: "View User/Peer Info", onclick: {fn: viewUserpeerInfo, obj: u}},
+				{text: "View User/Peer Channels/Calls", onclick: {fn: viewUserpeerCalls, obj: u}}
 			],
 		];
 		var addQueue = false;
