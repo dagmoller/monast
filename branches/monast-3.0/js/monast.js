@@ -224,6 +224,33 @@ var Monast = {
 			);
 			Monast.confirmDialog.setHeader('Originate Call');
 		};
+		var viewUserpeerCalls = function (p_sType, p_aArgs, p_oValue)
+		{
+			var peer  = p_oValue;
+			var found = false; 
+			Monast.channels.keys().each(function (id) {
+				var channel = Monast.channels.get(id);
+				if (channel.channel.indexOf(peer.channeltype + "/" + peer.peername) != -1)
+				{
+					found = true;
+					Monast.blinkBackground(channel.id, "#99FFFF");
+					setTimeout("if ($('" + channel.id + "')) { $('" + channel.id + "').style.backgroundColor = '#FFFFFF'; }", 10000);
+				}
+			});
+			Monast.bridges.keys().each(function (id) {
+				var bridge = Monast.bridges.get(id);
+				if (bridge.channel.indexOf(peer.channeltype + "/" + peer.peername) != -1 || bridge.bridgedchannel.indexOf(peer.channeltype + "/" + peer.peername) != -1)
+				{
+					found = true;
+					Monast.blinkBackground(bridge.id, "#99FFFF");
+					setTimeout("if ($('" + bridge.id + "')) { $('" + bridge.id + "').style.backgroundColor = '#FFFFFF'; }", 10000);
+				}
+			});
+			if (found)
+				Monast._tabPannel.set("activeIndex", 3);
+			else
+				Monast.doAlert("No Active Channels/Calls for this User/Peer.");
+		};
 		var viewUserpeerInfo = function (p_sType, p_aArgs, p_oValue)
 		{
 			p_oValue.channelVariables = [];
@@ -259,40 +286,12 @@ var Monast = {
 			);
 		};
 		
-		var viewUserpeerCalls = function (p_sType, p_aArgs, p_oValue)
-		{
-			var peer  = p_oValue;
-			var found = false; 
-			Monast.channels.keys().each(function (id) {
-				var channel = Monast.channels.get(id);
-				if (channel.channel.indexOf(peer.channeltype + "/" + peer.peername) != -1)
-				{
-					found = true;
-					Monast.blinkBackground(channel.id, "#99FFFF");
-					setTimeout("if ($('" + channel.id + "')) { $('" + channel.id + "').style.backgroundColor = '#FFFFFF'; }", 10000);
-				}
-			});
-			Monast.bridges.keys().each(function (id) {
-				var bridge = Monast.bridges.get(id);
-				if (bridge.channel.indexOf(peer.channeltype + "/" + peer.peername) != -1 || bridge.bridgedchannel.indexOf(peer.channeltype + "/" + peer.peername) != -1)
-				{
-					found = true;
-					Monast.blinkBackground(bridge.id, "#99FFFF");
-					setTimeout("if ($('" + bridge.id + "')) { $('" + bridge.id + "').style.backgroundColor = '#FFFFFF'; }", 10000);
-				}
-			});
-			if (found)
-				Monast._tabPannel.set("activeIndex", 3);
-			else
-				Monast.doAlert("No Active Channels/Calls for this User/Peer.");
-		};
-		
 		var u = this.userspeers.get(id);
 		var m = [
 			[
 				{text: "Originate Call", onclick: {fn: originateCall, obj: u}},
-				{text: "View User/Peer Info", onclick: {fn: viewUserpeerInfo, obj: u}},
-				{text: "View User/Peer Channels/Calls", onclick: {fn: viewUserpeerCalls, obj: u}}
+				{text: "View User/Peer Channels/Calls", onclick: {fn: viewUserpeerCalls, obj: u}},
+				{text: "View User/Peer Info", onclick: {fn: viewUserpeerInfo, obj: u}}
 			],
 		];
 		var addQueue = false;
