@@ -28,7 +28,7 @@ except ImportError:
 	print "Monast ERROR: Module starpy not found."
 	print "You need starpy to run Monast. Get it from http://www.vrplumber.com/programming/starpy/"
 	sys.exit(1)
-
+	
 try:
 	import json
 except ImportError:
@@ -486,7 +486,8 @@ class Monast:
 		if server.connected:
 			log.info("Server %s :: Marking as disconnected..." % servername)
 			log.debug("Server %s :: Stopping Task Check Status..." % servername)
-			server.taskCheckStatus.stop()
+			if server.taskCheckStatus.running:
+				server.taskCheckStatus.stop()
 		server.connected = False
 		server.ami       = None
 	
