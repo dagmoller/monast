@@ -35,34 +35,33 @@
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title>MonAst: The Asterisk Monitor Web Panel</title>
 
-<!-- css --> 
-<link rel="stylesheet" type="text/css" href="lib/yui-2.8.0r4/build/fonts/fonts-min.css"> 
-<link rel="stylesheet" type="text/css" href="lib/yui-2.8.0r4/build/assets/skins/sam/skin.css">
-<link rel="stylesheet" type="text/css" href="lib/yui-2.8.0r4/build/menu/assets/skins/sam/menu.css">
-<link rel="stylesheet" type="text/css" href="lib/yui-2.8.0r4/build/container/assets/skins/sam/container.css">
-<link rel="stylesheet" type="text/css" href="lib/yui-2.8.0r4/build/button/assets/skins/sam/button.css">
-<!-- js --> 
-<script type="text/javascript" src="lib/yui-2.8.0r4/build/yahoo-dom-event/yahoo-dom-event.js"></script> 
-<script type="text/javascript" src="lib/yui-2.8.0r4/build/animation/animation-min.js"></script> 
-<script type="text/javascript" src="lib/yui-2.8.0r4/build/dragdrop/dragdrop-min.js"></script> 
-<script type="text/javascript" src="lib/yui-2.8.0r4/build/container/container-min.js"></script>
-<script type="text/javascript" src="lib/yui-2.8.0r4/build/container/container_core-min.js"></script> 
-<script type="text/javascript" src="lib/yui-2.8.0r4/build/logger/logger-min.js"></script> 
-<script type="text/javascript" src="lib/yui-2.8.0r4/build/element/element-min.js"></script>
-<script type="text/javascript" src="lib/yui-2.8.0r4/build/button/button-min.js"></script> 
-<script type="text/javascript" src="lib/yui-2.8.0r4/build/tabview/tabview-min.js"></script> 
-<script type="text/javascript" src="lib/yui-2.8.0r4/build/menu/menu-min.js"></script>
-<script type="text/javascript" src="lib/yui-2.8.0r4/build/cookie/cookie-min.js"></script>
+<!-- Individual YUI CSS files --> 
+<link rel="stylesheet" type="text/css" href="lib/yui-2.9.0/build/fonts/fonts-min.css"> 
+<link rel="stylesheet" type="text/css" href="lib/yui-2.9.0/build/container/assets/skins/sam/container.css"> 
+<link rel="stylesheet" type="text/css" href="lib/yui-2.9.0/build/menu/assets/skins/sam/menu.css"> 
+<link rel="stylesheet" type="text/css" href="lib/yui-2.9.0/build/button/assets/skins/sam/button.css"> 
+<link rel="stylesheet" type="text/css" href="lib/yui-2.9.0/build/tabview/assets/skins/sam/tabview.css"> 
+<!-- Individual YUI JS files --> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/yahoo/yahoo-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/dom/dom-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/event/event-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/animation/animation-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/dragdrop/dragdrop-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/container/container-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/menu/menu-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/element/element-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/button/button-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/cookie/cookie-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/tabview/tabview-min.js"></script> 
 
-<script type="text/javascript" src="js/prototype-1.6.1.js"></script>
+<script type="text/javascript" src="js/prototype-1.7.0.0.js"></script>
+<script type="text/javascript" src="js/md5.js"></script>
 <script type="text/javascript" src="js/monast.js"></script>
 
 <link rel="stylesheet" type="text/css" href="css/styles.css"> 
 
 </head>
 <body class="yui-skin-sam">
-<div id="_alertDialog"></div>
-<div id="_confirmDialog"></div>
 
 <div class="monast-logo">
   <span class="monast-name">MonAst</span>&nbsp;
@@ -72,8 +71,8 @@
     Server: {server}
     <!-- END BLOCK : singleServer -->
     <!-- START BLOCK : serverList -->
-    Server: 
-    <select id="serverlist" onchange="changeServer(this.options[this.selectedIndex].value)">
+    Server:
+    <select id="serverlist" onchange="Monast.changeServer(this.options[this.selectedIndex].value)">
       <!-- START BLOCK : optionServer -->
       <option value="{server}" {selected}>{server}</option>
       <!-- END BLOCK : optionServer -->
@@ -81,11 +80,14 @@
     <!-- END BLOCK : serverList -->
   </span>
   <span class="monast-status" id="_reqStatus">Initializing...</span>
+  <span><input type="button" id="buttonReload" value="Reload"></span>
+  <script language="javascript">
+  Monast._buttonReload = new YAHOO.widget.Button("buttonReload", {onclick: {fn: Monast.doReload}});
+  </script>
   <!-- START BLOCK : buttonLogout -->
   <span><input type="button" id="buttonLogout" value="Logout"></span>
   <script language="javascript">
-  var _buttonLogout = new YAHOO.widget.Button("buttonLogout");
-      _buttonLogout.on("click", doLogout);
+  Monast._buttonLogout = new YAHOO.widget.Button("buttonLogout", {onclick: {fn: Monast.doLogout}});
   </script>
   <!-- END BLOCK : buttonLogout -->
 </div>
@@ -102,7 +104,7 @@ $('_reqStatus').innerHTML = 'Authentication Required';
   <div class="yui-content">
     <div id="authentication">
       <p>&nbsp;</p>
-      <form onsubmit="return doLogin()">
+      <form onsubmit="return false">
       <table border="0" cellpadding="2px" cellspacing="2px" align="center">
         <tr>
           <td align="right">User:</td>
@@ -129,9 +131,8 @@ $('_reqStatus').innerHTML = 'Authentication Required';
   </div>
 </div>
 <script language="javascript">
-var _buttonLogin  = new YAHOO.widget.Button("buttonLogin");
-    _buttonLogin.on("click", doLogin);
-var _buttonClear  = new YAHOO.widget.Button("buttonClear");
+Monast._buttonLogin = new YAHOO.widget.Button("buttonLogin", {onclick: {fn: Monast.doLogin}});
+Monast._buttonClear = new YAHOO.widget.Button("buttonClear");
 </script>
 <!-- END BLOCK : login -->
 
@@ -160,30 +161,18 @@ $('_reqStatus').innerHTML = '<font color="red"><b>MonAst Error</b></font>';
 
 <!-- INCLUDESCRIPT BLOCK : main -->
 
-<script language="javascript">
-var _alert =  new YAHOO.widget.SimpleDialog("_alertDialog", {
-	zindex: 10,
-	fixedcenter: true,
-	visible: false,
-	draggable: true,
-	close: true,
-	constraintoviewport: true,
-	modal: true,
-	buttons: [{text: "OK", handler: function() { this.hide(); }}]
-});
-_alert.render();
+<div> 
+  <table width="100%"> 
+    <tr>
+      <td align="right">
+        <a href="http://sourceforge.net/donate/index.php?group_id=232812" target="_blank"><img src="image/project-support.jpg" width="88" height="32" border="0" alt="Support This Project" /> </a> 
+      </td> 
+    </tr> 
+  </table> 
+</div> 
 
-var _confirm = new YAHOO.widget.SimpleDialog("_confirmDialog", {
-	zindex: 10,
-	fixedcenter: true,
-	visible: false,
-	draggable: true,
-	close: true,
-	constraintoviewport: true,
-	modal: true
-});
-_confirm.setHeader('Confirmation');
-_confirm.render();
+<script language="javascript">
+Monast.init();
 </script>
 
 </body>

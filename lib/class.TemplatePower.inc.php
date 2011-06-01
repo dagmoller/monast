@@ -252,7 +252,7 @@ class TemplatePowerParser
                                 
 								                if( $type == T_BYFILE )
 								                {
-                                    if( !@include_once( $include_file ) )
+                                    if( !include_once( $include_file ) )
                                     {
                                         $this->__errorAlert( 'TemplatePower Error: Couldn\'t include script [ '. $include_file .' ]!' );
 										                    exit();
