@@ -1084,7 +1084,8 @@ class Monast:
 					return
 				
 			else:
-				log.warning("Server %s :: Queue not found: %s", servername, queuename)
+				if (self.displayQueuesDefault and not server.displayQueues.has_key(queuename)) or (not self.displayQueuesDefault and server.displayQueues.has_key(queuename)):
+					log.warning("Server %s :: Queue not found: %s", servername, queuename)
 		except:
 			log.exception("Server %s :: Unhandled exception updating queue: %s", servername, queuename)
 			
