@@ -1,6 +1,6 @@
 
 /*
-* Copyright (c) 2008, Diego Aguirre
+* Copyright (c) 2008-2011, Diego Aguirre
 * All rights reserved.
 * 
 * Redistribution and use in source and binary forms, with or without modification,
