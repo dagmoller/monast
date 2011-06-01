@@ -1,7 +1,7 @@
 <?php
 
 /*
-* Copyright (c) 2008, Diego Aguirre
+* Copyright (c) 2008-2011, Diego Aguirre
 * All rights reserved.
 * 
 * Redistribution and use in source and binary forms, with or without modification,
@@ -29,58 +29,6 @@
 */
 
 require_once 'HTTP/Client.php';
-
-function color($t)
-{
-    $t = trim(strtolower($t));
-    switch ($t)
-    {
-        case 'down':
-        case 'unregistered':
-        case 'unreachable':
-        case 'unknown':
-        case 'unavailable':
-        case 'invalid':
-        case 'busy':
-        case 'logged out':
-            //return 'red';
-            return '#ffb0b0';
-            
-        case 'ring':
-        case 'ringing':
-        case 'ring, in use':
-        case 'in use':
-        case 'dial':
-        case 'lagged':
-        case 'on hold':
-            //return 'yellow';
-            return '#ffffb0';
-            
-        case 'up':
-        case 'link':
-        case 'registered':
-        case 'reachable':
-        case 'unmonitored':
-        case 'not in use':
-        case 'logged in':
-        case 'no alarm':
-            //return 'green';
-            return '#b0ffb0';
-    }
-    
-    if (strpos($t, 'signal') != -1)
-    {
-    	$level = str_replace("%", "", str_replace("signal: ", "", $t));
-    	if ($level >= 70)
-    		return '#b0ffb0';
-    	if ($level >= 40 && $level < 70)
-    		return '#ffffb0';
-    	if ($level < 40)
-    		return '#ffb0b0';
-    }
-    
-    return '#dddddd';
-}
 
 function getValor($nome, $location = 'request')
 {
