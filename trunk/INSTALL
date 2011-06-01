@@ -4,8 +4,8 @@
       [monast_user]
       secret=monast_secret
       writetimeout=100
-      read=system,call,log,verbose,command,agent,user,config,originate
-      write=system,call,log,verbose,command,agent,user,config,originate
+      read=system,call,log,verbose,command,agent,user,config,originate,reporting
+      write=system,call,log,verbose,command,agent,user,config,originate,reporting
 
 2 - Configure apache to point to location where you extracted monast.
     - Sample:
@@ -19,8 +19,10 @@
     properly as documented inside of this file.
 
 4 - Install dependencies:
-    Twisted Python (http://twistedmatrix.com)
-    zope.interface (http://pypi.python.org/pypi/zope.interface#download)
+    Twisted Python 10.1+ (http://twistedmatrix.com)
+    zope.interface 3.6+ (http://pypi.python.org/pypi/zope.interface#download)
+    Starpy SVN-Trunk (http://sourceforge.net/projects/starpy/) Trunk tarball: http://starpy.svn.sourceforge.net/viewvc/starpy/trunk/?view=tar
+    PHP PEAR Packages: (HTTP_Client)
 
 5 - Run monast.py:
     # cd pymon

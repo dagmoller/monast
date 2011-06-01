@@ -81,7 +81,7 @@ meetme_prefix  =
 # sort peers (options: peer, callerid, calleridname, calleridnum)
 sortby = callerid
 
-# defualt show/hide
+# default show/hide
 default = show
 
 # hide peer when default = show
@@ -95,6 +95,23 @@ default = show
 
 # force CallerID (only in forced mode)
 ;<Server Name>/SIP/user-4 = force,Diego Aguirre <5555>
+
+
+##
+## Meetmes / Conferences Definitions
+##
+[meetmes]
+# default show/hide
+default = show
+
+# hide meetme when default = show
+;<Server Name>/1234 = hide
+
+# show meetme when default = hide
+;<Server Name>/1234 = show
+
+# always show meetme
+;<Server Name>/1234 = force
 
 
 ##
@@ -119,7 +136,7 @@ default = show
 
 [user: admin]
 secret  = 12345
-roles   = originate,agent,command 
+roles   = originate,queue,command 
 servers = ALL
 
 [user: aguirre]
@@ -128,7 +145,7 @@ roles   = originate
 servers = Server_1, Server_2
 
 ## per server roles for user aguirre
-Server_2 = originate,agent,command
+Server_2 = originate,queue,command
 
 [user: demo]
 secret  = 

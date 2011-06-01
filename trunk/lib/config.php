@@ -36,7 +36,17 @@ define("MONAST_BROWSER_REFRESH", 60 * 10); // 10 minutes
 
 define("MONAST_CALL_TIME", true); // enable or disable call timer
 
+define("MONAST_BLINK_ONCHANGE", true); // enable or disable blinking status changes
+define("MONAST_BLINK_COUNT", 3); // Number of blinks
+define("MONAST_BLINK_INTERVAL", 200); // interval of blinks (in miliseconds)
+
+define("MONAST_KEEP_CALLS_SORTED", true); // Keep calls sorted by link duration (this cause browser to consume more CPU)
+define("MONAST_KEEP_PARKEDCALLS_SORTED", true); // Keep parked calls sorted by exten (this cause browser to consume more CPU)
+
 define("MONAST_CLI_TAB", true); // enable or disable Asterisk CLI TAB
 define("MONAST_DEBUG_TAB", false); // enable or disable debug TAB
+
+// DOES NOT EDIT THIS LINE
+session_name("MONASTSESSID");
 
 ?>

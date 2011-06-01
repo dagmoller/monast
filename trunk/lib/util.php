@@ -28,9 +28,11 @@
 * OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+require_once 'HTTP/Client.php';
+
 function color($t)
 {
-    $t = strtolower($t);
+    $t = trim(strtolower($t));
     switch ($t)
     {
         case 'down':
@@ -61,9 +63,22 @@ function color($t)
         case 'unmonitored':
         case 'not in use':
         case 'logged in':
+        case 'no alarm':
             //return 'green';
             return '#b0ffb0';
     }
+    
+    if (strpos($t, 'signal') != -1)
+    {
+    	$level = str_replace("%", "", str_replace("signal: ", "", $t));
+    	if ($level >= 70)
+    		return '#b0ffb0';
+    	if ($level >= 40 && $level < 70)
+    		return '#ffffb0';
+    	if ($level < 40)
+    		return '#ffb0b0';
+    }
+    
     return '#dddddd';
 }
 
@@ -85,6 +100,73 @@ function setValor($nome, $valor, $location = 'session')
 	eval("\$location = &$$location;");
 	
 	$location[$nome] = $valor;
+}
+
+function print_pre($obj)
+{
+	echo "<pre>";
+	print_r($obj);
+	echo "</pre>";
+}
+
+define("MONAST_PYTHON_COOKIE_KEY", "MonAst::Cookie");
+function doGet($path, $data = array())
+{
+	session_start();
+	$cookieManager = getValor(MONAST_PYTHON_COOKIE_KEY, 'session');
+	$cookieManager = $cookieManager ? unserialize($cookieManager) : null;
+	session_write_close();
+	
+	$conn = new HTTP_Client(null, null, $cookieManager);
+	$code = $conn->get("http://" . HOSTNAME . ':' . HOSTPORT . '/' . $path, $data);
+	
+	switch ($code)
+	{
+		case Pear::isError($code):
+			if ($code->getCode() == 111 || strtolower($code->getMessage()) == "connection refused")
+				return "ERROR :: Connection Refused";
+			break;
+		
+		case 500:
+			return "ERROR :: Internal Server Error";
+			break;
+	}
+	
+	$cookieManager = $conn->getCookieManager();
+	$cookieManager->serializeSessionCookies(true);
+	session_start();
+	setValor(MONAST_PYTHON_COOKIE_KEY, serialize($cookieManager), 'session');
+	session_write_close();
+	
+	$response = $conn->currentResponse();
+	$body     = trim($response['body']);
+	
+	return $body;
+}
+
+$json = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
+function monast_json_encode($object, $setJsonResponseHeader = false)
+{
+	global $json;
+	if (function_exists('json_encode'))
+	{
+		if ($setJsonResponseHeader)
+			header('Content-type: application/json');
+		return json_encode($object);
+	}
+	
+	if ($setJsonResponseHeader)
+		return $json->encode($object);
+	return $json->encodeUnsafe($object);
+}
+
+function monast_json_decode($string)
+{
+	global $json;
+	if (function_exists('json_decode'))
+		return json_decode($string, true);
+	
+	return $json->decode($string);
 }
 
 ?>

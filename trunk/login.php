@@ -28,73 +28,43 @@
 * OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-header('Content-Type: application/json;');
-
 require_once 'lib/include.php';
 
-session_start();
-
-$json      = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
 $saida     = array();
-$sessionId = session_id();
 $username  = getValor('username');
 $secret    = getValor('secret'); 
 
-$sock = @socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-if ($sock === false)
+$response = doGet("doAuthentication", array('username' => $username, 'secret' => $secret));
+switch ($response)
 {
-	$saida['error']  = "<font size='3'><b>Monast Error</b></font>\n<p>Could not create socket!<br>\n";
-	$saida['error'] .= socket_strerror(socket_last_error()) . "</p>";
-}
-else 
-{
-	$conn = @socket_connect($sock, HOSTNAME, HOSTPORT);
-	if ($conn === false)
-	{
-		$saida['error']  = "<font size='3'><b>Monast Error</b></font>\n<p>Could not connect to " . HOSTNAME . ":" . HOSTPORT . " (" . socket_strerror(socket_last_error()) . ").<br>\n";
-		$saida['error'] .= "Make sure monast.py is running so the panel can connect to its port properly.</p>";
-	}
-	else 
-	{
-		$buffer = "";
-		$action = array('Action' => 'Login', 'Username' => $username, 'Secret' => $secret, 'Session' => $sessionId);
-		socket_write($sock, $json->encode($action) . "\r\n");
+	case "ERROR :: Connection Refused":
+		$saida['error']  = "Could not connect to " . HOSTNAME . ":" . HOSTPORT . " ($response).<br>";
+		$saida['error'] .= "Make sure monast.py is running so the panel can connect to its port properly.";
+		break;
 		
-		while ($message = socket_read($sock, 1024 * 16)) 
-		{
-			$buffer .= $message;
-			
-			if ($buffer == "OK\r\n" || $buffer == "Authentication Success\r\n")
-			{
-				setValor('login', true);
-				setValor('username', $username);
-				$saida['success'] = true;
-				
-				socket_write($sock, "BYE\r\n");
-			}
-			
-			if (strpos($buffer, "WAIT") !== false)
-			{
-				sleep(1);
-				$buffer = "";
-				$action = array('Action' => 'Login', 'Username' => $username, 'Secret' => $secret, 'Session' => $sessionId);
-				socket_write($sock, $json->encode($action) . "\r\n");
-			}
-			
-			if (strpos($buffer, "ERROR: ") !== false)
-			{
-				$message        = str_replace("ERROR: ", "", $buffer);
-				$saida['error'] = $message;
-				
-				socket_write($sock, "BYE\r\n");
-			}
-		}
-		socket_close($sock);
-	}
-}
+	case "ERROR :: Request Not Found":
+		$saida['error']  = "The request to http://" . HOSTNAME . ":" . HOSTPORT . "/doAuthentication was not found.<br>";
+		$saida['error'] .= "Make sure monast.py is running so the panel can connect to its port properly.";
+		break;
+		
+	case "ERROR :: Internal Server Error":
+		$saida['error']  = "We got an \"Internal Server Error\" connecting to http://" . HOSTNAME . ":" . HOSTPORT . "/doAuthentication.<br>";
+		$saida['error'] .= "Please lookup log file and report errors at http://monast.sf.net";
+		break;
+		
+	case "ERROR :: Invalid Username/Secret":
+		$saida['error'] = "Invalid Username/Secret";
+		break;
+		
+	case "OK :: Authentication Success":
+		session_start();
+		setValor('login', true);
+		setValor('username', $username);
+		session_write_close();
+		$saida['success'] = true;
+		break;
+} 
 
-echo $json->encode($saida);
-
-session_write_close();
+echo monast_json_encode($saida, true);
 
 ?>
