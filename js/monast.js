@@ -70,6 +70,7 @@ var Monast = {
 			case 'dial':
 			case 'lagged':
 			case 'on hold':
+			case 'off hook':
 				return '#ffffb0';
 				
 			// GREEN
@@ -81,6 +82,7 @@ var Monast = {
 			case 'not in use':
 			case 'logged in':
 			case 'no alarm':
+			case 'on hook':
 				return '#b0ffb0';
 		}
 		if (status.indexOf('signal') != -1)

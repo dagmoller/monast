@@ -400,9 +400,6 @@ class Monast:
 			'ChannelReload'       : self.handlerEventChannelReload,
 			'PeerEntry'           : self.handlerEventPeerEntry,
 			'PeerStatus'          : self.handlerEventPeerStatus,
-			#'SkypeAccountStatus'  : self.handlerSkypeAccountStatus,
-			#'BranchOnHook'        : self.handlerBranchOnHook,
-			#'BranchOffHook'       : self.handlerBranchOffHook,
 			'Newchannel'          : self.handlerEventNewchannel,
 			'Newstate'            : self.handlerEventNewstate,
 			'Rename'              : self.handlerEventRename,
@@ -430,6 +427,8 @@ class Monast:
 			'MonitorStart'        : self.handlerEventMonitorStart,
 			'MonitorStop'         : self.handlerEventMonitorStop,
 			'AntennaLevel'        : self.handlerEventAntennaLevel,
+			'BranchOnHook'        : self.handlerEventBranchOnHook,
+			'BranchOffHook'       : self.handlerEventBranchOffHook,
 		}
 		
 		self.actionHandlers = {
@@ -2186,6 +2185,17 @@ class Monast:
 		channeltype, peername = channel.split('/', 1)
 		self._updatePeer(ami.servername, channeltype = channeltype, peername = peername, status = 'Signal: %s' % signal)
 		
+	def handlerEventBranchOnHook(self, ami, event):
+		log.debug("Server %s :: Processing Event BranchOnHook..." % ami.servername)
+		channel = event.get('channel')
+		channeltype, peername = channel.split('/', 1)
+		self._updatePeer(ami.servername, channeltype = channeltype, peername = peername, status = "On Hook")
+		
+	def handlerEventBranchOffHook(self, ami, event):
+		log.debug("Server %s :: Processing Event BranchOffHook..." % ami.servername)
+		channel = event.get('channel')
+		channeltype, peername = channel.split('/', 1)
+		self._updatePeer(ami.servername, channeltype = channeltype, peername = peername, status = "Off Hook")
 ##
 ## Daemonizer
 ##
