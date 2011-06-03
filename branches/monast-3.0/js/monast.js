@@ -1005,7 +1005,8 @@ var Monast = {
 	queues: new Hash(),
 	processQueue: function (q)
 	{
-		q.id = md5("queue-" + q.queue);
+		q.id          = md5("queue-" + q.queue);
+		q.contextmenu = null; // FAKE
 		
 		if (Object.isUndefined(this.queues.get(q.id))) // Queue does not exists
 		{
@@ -1054,6 +1055,10 @@ var Monast = {
 			{
 				switch (key)
 				{
+					case "contextmenu":
+						$(elid).oncontextmenu = function () { Monast.showQueueContextMenu(q.id); return false; };
+						break;
+				
 					default:
 						$(elid).innerHTML = q[key];
 						if (old && old[key] != q[key])
@@ -1068,6 +1073,45 @@ var Monast = {
 		q.ccalls  = old ? old.ccalls : new Hash();
 		
 		this.queues.set(q.id, q);
+	},
+	showQueueContextMenu: function (id)
+	{
+		this._contextMenu.clearContent();
+		this._contextMenu.cfg.queueProperty("xy", this.getMousePosition());
+	
+		var viewQueueInfo = function (p_sType, p_aArgs, p_oValue)
+		{
+			Monast.doAlert(new Template($("Template::Queue::Info").innerHTML).evaluate(p_oValue));
+		};
+		var addExternalMember = function (p_sType, p_aArgs, p_oValue)
+		{
+			Monast.doConfirm(
+				new Template($("Template::Queue::Form::ExternalMember").innerHTML).evaluate(p_oValue),
+				function () {
+					new Ajax.Request('action.php', 
+					{
+						method: 'get',
+						parameters: {
+							reqTime: new Date().getTime(),
+							action: Object.toJSON({action: 'QueueMemberAdd', queue: p_oValue.queue, membername: $("Template::Queue::Form::ExternalMember::Name").value, location: $("Template::Queue::Form::ExternalMember::Location").value, external: true})
+						}
+					});
+				}
+			);
+			Monast.confirmDialog.setHeader("Add External Member");
+		};
+		
+		var q = this.queues.get(id);
+		var m = [
+			[
+			 	{text: "Add External Member", onclick: {fn: addExternalMember, obj: q}},
+				{text: "View Queue Info", onclick: {fn: viewQueueInfo, obj: q}}
+			]
+		];
+		this._contextMenu.addItems(m);
+		this._contextMenu.setItemGroupTitle("Queue:  " + q.queue, 0);
+		this._contextMenu.render(document.body);
+		this._contextMenu.show();
 	},
 	processQueueMember: function (m)
 	{

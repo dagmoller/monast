@@ -1705,12 +1705,14 @@ class Monast:
 		servername = action['server'][0]
 		queue      = action['queue'][0]
 		location   = action['location'][0]
-		membername = location
+		external   = action.get('external', [False])[0]
+		membername = action.get('membername', [location])[0]
 		
-		tech, peer = location.split('/')
-		peer       = self.servers.get(servername).status.peers.get(tech).get(peer)
-		if peer.callerid:
-			membername = peer.callerid
+		if not external:
+			tech, peer = location.split('/')
+			peer       = self.servers.get(servername).status.peers.get(tech).get(peer)
+			if peer.callerid:
+				membername = peer.callerid
 		
 		log.info("Server %s :: Executting Client Action Queue Member Add: %s -> %s..." % (servername, queue, location))
 		server = self.servers.get(servername)
