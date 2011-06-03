@@ -330,7 +330,7 @@
   <fieldset>
     <legend>Queue: <span monast="queue">&nbsp;</span></legend>
     <div class="queueStatisticsDiv">
-      <table width="532">
+      <table width="532" monast="contextmenu">
         <tr>
           <td class="tableTitle" colspan="8" align="center">Statistics</td>
         </tr>
@@ -386,6 +386,76 @@
       </div>
     </div>
   </fieldset>
+</div>
+
+<!-- Queue Information -->
+<div style="display: none" id="Template::Queue::Info">
+  <table class="tableInfo">
+    <tr>
+      <td class="key">Queue:</td>
+      <td>#{queue}</td>
+    </tr>
+    <tr>
+      <td class="key">Max Calls:</td>
+      <td>#{max}</td>
+    </tr>
+    <tr>
+      <td class="key">Active Calls:</td>
+      <td>#{calls}</td>
+    </tr>
+    <tr>
+      <td class="key">Holdtime:</td>
+      <td>#{holdtime} (sec)</td>
+    </tr>
+    <tr>
+      <td class="key">Completed Calls:</td>
+      <td>#{completed}</td>
+    </tr>
+    <tr>
+      <td class="key">Abandoned Calls:</td>
+      <td>#{abandoned}</td>
+    </tr>
+    <tr>
+      <td class="key">Service Level:</td>
+      <td>#{servicelevel} (sec)</td>
+    </tr>
+    <tr>
+      <td class="key">Service level Perf.:</td>
+      <td>#{servicelevelperf}%</td>
+    </tr>
+    <tr>
+      <td class="key">Weight:</td>
+      <td>#{weight}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Queue Form Add External Member -->
+<div style="display: none" id="Template::Queue::Form::ExternalMember">
+  <table class="tableInfo">
+    <tr>
+      <td class="key">Queue:</td>
+      <td>#{queue}</td>
+    </tr>
+    <tr>
+      <td class="key">Member Name:</td>
+      <td>
+        <input type="text" id="Template::Queue::Form::ExternalMember::Name" size="30">
+      </td>
+    </tr>
+    <tr>
+      <td class="key">Member Location:</td>
+      <td>
+        <input type="text" id="Template::Queue::Form::ExternalMember::Location" size="30">
+      </td>
+    </tr>
+    <tr>
+      <td class="key">&nbsp;</td>
+      <td>
+        <span>Format: Local/&lt;external_number&gt;@&lt;context&gt;</span>
+      </td>
+    </tr>
+  </table>
 </div>
 
 <!-- QueueMember -->
