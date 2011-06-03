@@ -364,9 +364,47 @@ class MonastHTTP(resource.Resource):
 ##
 ## Monast AMI
 ##
+class MonastAMIProtocol(manager.AMIProtocol):
+	"""Class Extended to solve some issues on original methods"""
+	def redirect(self, channel, context, exten, priority, extraChannel = None, extraContext = None, extraExten = None, extraPriority = None):
+		"""Transfer channel(s) to given context/exten/priority"""
+		message = {
+			'action': 'redirect', 'channel': channel, 'context': context,
+			'exten': exten, 'priority': priority,
+		}
+		if extraChannel is not None:
+			message['extrachannel'] = extraChannel
+		if extraExten is not None:
+			message['extraexten'] = extraExten
+		if extraContext is not None:
+			message['extracontext'] = extraContext
+		if extraPriority is not None:
+			message['extrapriority'] = extraPriority
+		return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
+
+	def stopMonitor(self, channel):
+		"""Stop monitorin the given channel"""
+		message = {"action": "stopmonitor", "channel": channel}
+		return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
+
+	def queueAdd(self, queue, interface, penalty=0, paused=True, membername=None, stateinterface=None):
+		"""Add given interface to named queue"""
+		if paused in (True,'true',1):
+			paused = 'true'
+		else:
+			paused = 'false'
+		message = {'action': 'queueadd', 'queue': queue, 'interface': interface, 'penalty':penalty, 'paused': paused}
+		if membername is not None:
+			message['membername'] = membername
+		if stateinterface is not None:
+			message['stateinterface'] = stateinterface
+		return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
+
+
 class MonastAMIFactory(manager.AMIFactory):
 	amiWorker  = None
 	servername = None
+	protocol   = MonastAMIProtocol
 	def __init__(self, servername, username, password, amiWorker):
 		log.info('Server %s :: Initializing Monast AMI Factory...' % servername)
 		self.servername = servername
@@ -461,6 +499,9 @@ class Monast:
 		server           = self.servers.get(servername)
 		server.connected = True
 		server.ami       = ami
+		
+		## Patch AMI
+		#patchAMI(server.ami)
 		
 		## Request Server Version
 		def _onCoreShowVersion(result):
@@ -1602,19 +1643,28 @@ class Monast:
 		type        = action['type'][0]
 		server      = self.servers.get(servername)
 		
-		channel      = source
-		context      = server.default_context
-		exten        = destination
-		priority     = 1
-		extraChannel = None
+		channel       = source
+		context       = server.default_context
+		exten         = destination
+		priority      = 1
+		extraChannel  = None
+		extraExten    = None
+		extraContext  = None
+		extraPriority = None
 		
 		if type == "meetme":
 			extraChannel = action['extrachannel'][0]
 			exten        = "%s%s" % (server.meetme_prefix, exten)
 			context      = server.meetme_context
+			
+			if server.version == 1.8:
+				extraExten    = exten
+				extraContext  = context
+				extraPriority = priority
+				
 		
 		log.info("Server %s :: Executting Client Action Transfer: %s -> %s@%s..." % (servername, channel, exten, context))
-		server.ami.redirect(channel, context, exten, priority, extraChannel) \
+		server.ami.redirect(channel, context, exten, priority, extraChannel, extraContext, extraExten, extraPriority) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Client Action Transfer: %s -> %s@%s" % (channel, exten, context))
 
 	def clientAction_Park(self, session, action):
@@ -1677,8 +1727,7 @@ class Monast:
 		
 		log.info("Server %s :: Executting Client Action Monitor Stop: %s..." % (servername, channel))
 		server = self.servers.get(servername)
-		server.ami.sendDeferred({'action': 'StopMonitor', 'channel': channel}) \
-			.addCallback(server.ami.errorUnlessResponse) \
+		server.ami.stopMonitor(channel) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Monitor Stop on Channel: %s" % channel)
 			
 	def clientAction_QueueMemberPause(self, session, action):
@@ -1716,9 +1765,9 @@ class Monast:
 		
 		log.info("Server %s :: Executting Client Action Queue Member Add: %s -> %s..." % (servername, queue, location))
 		server = self.servers.get(servername)
-		server.ami.sendDeferred({'action': 'QueueAdd', 'queue': queue, 'interface': location, 'membername': membername}) \
-			.addCallback(server.ami.errorUnlessResponse) \
+		server.ami.queueAdd(queue, location, 0, False, membername) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Queue Member Add: %s -> %s" % (queue, location))
+
 			
 	def clientAction_QueueMemberRemove(self, session, action):
 		servername = action['server'][0]
@@ -2333,4 +2382,4 @@ if __name__ == '__main__':
 	reactor.run()
 	
 	_logHandler.close()
-	
+
