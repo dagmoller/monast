@@ -45,6 +45,17 @@ var Monast = {
 	MONAST_KEEP_CALLS_SORTED       : true,
 	MONAST_KEEP_PARKEDCALLS_SORTED : true,
 	
+	COLORS: {
+		BLACK  : "#000000",
+		WHITE  : "#ffffff",
+		RED    : "#ffb0b0", 
+		YELLOW : "#ffffb0", 
+		ORANGE : "#ff9933", 
+		BLUE   : "#99ffff", 
+		GREEN  : "#b0ffb0", 
+		GRAY   : "#dddddd"
+	},
+	
 	// Colors
 	getColor: function (status)
 	{
@@ -60,7 +71,8 @@ var Monast = {
 			case 'invalid':
 			case 'busy':
 			case 'logged out':
-				return '#ffb0b0';
+			case 'red alarm':
+				return Monast.COLORS.RED;
 			
 			// YELLOW	
 			case 'ring':
@@ -71,7 +83,13 @@ var Monast = {
 			case 'lagged':
 			case 'on hold':
 			case 'off hook':
-				return '#ffffb0';
+			case 'yellow alarm':
+			case 'dnd enabled':
+				return Monast.COLORS.YELLOW;
+			
+			// BLUE
+			case 'blue alarm':
+				return Monast.COLORS.BLUE;
 				
 			// GREEN
 			case 'up':
@@ -83,19 +101,24 @@ var Monast = {
 			case 'logged in':
 			case 'no alarm':
 			case 'on hook':
-				return '#b0ffb0';
+				return Monast.COLORS.GREEN;
 		}
+		// GSM Signal
 		if (status.indexOf('signal') != -1)
 		{
 			var level = status.replace('%', '').replace('signal: ', '');
 			if (level >= 70)
-				return '#b0ffb0';
+				return Monast.COLORS.GREEN;
 			if (level >= 40 && level < 70)
-				return '#ffffb0';
+				return Monast.COLORS.YELLOW;
 			if (level < 40)
-				return '#ffb0b0';
+				return Monast.COLORS.RED;
 	    }
-		return '#dddddd';
+		// Other Alarms
+		if (status.indexOf('alarm') != -1)
+			return Monast.COLORS.ORANGE;
+		
+		return Monast.COLORS.GRAY;
 	},
 	blinkBackground: function (id, color)
 	{
@@ -108,7 +131,7 @@ var Monast = {
 		var t = 0;
 		for (i = 0; i < Monast.MONAST_BLINK_COUNT; i++)
 		{
-			$A(["#FFFFFF", color]).each(function (c) {
+			$A([Monast.COLORS.WHITE, color]).each(function (c) {
 				t += Monast.MONAST_BLINK_INTERVAL;
 				setTimeout("if ($('" + id + "')) { $('" + id + "').style.backgroundColor = '" + c + "'; }", t);
 			});
@@ -122,7 +145,7 @@ var Monast = {
 		var t = 0;
 		for (i = 0; i < Monast.MONAST_BLINK_COUNT; i++)
 		{
-			$A(["#FFFFFF", "#000000"]).each(function (c) {
+			$A([Monast.COLORS.WHITE, Monast.COLORS.BLACK]).each(function (c) {
 				t += Monast.MONAST_BLINK_INTERVAL;
 				setTimeout("if ($('" + id + "')) { $('" + id + "').style.color = '" + c + "'; }", t);
 			});
@@ -134,6 +157,7 @@ var Monast = {
 	processUserpeer: function (u)
 	{
 		u.id          = md5(u.channel);
+		u.status      = u.dnd && u.status == "No Alarm" ? "DND Enabled" : u.status;
 		u.statuscolor = this.getColor(u.status);
 		u.callscolor  = u.calls > 0 ? this.getColor('in use') : this.getColor('not in use');
 		u.latency     = u.time == -1 ? "--" : u.time + " ms";
@@ -235,8 +259,8 @@ var Monast = {
 				if (channel.channel.indexOf(peer.channeltype + "/" + peer.peername) != -1)
 				{
 					found = true;
-					Monast.blinkBackground(channel.id, "#99FFFF");
-					setTimeout("if ($('" + channel.id + "')) { $('" + channel.id + "').style.backgroundColor = '#FFFFFF'; }", 10000);
+					Monast.blinkBackground(channel.id, Monast.COLORS.BLUE);
+					setTimeout("if ($('" + channel.id + "')) { $('" + channel.id + "').style.backgroundColor = Monast.COLORS.WHITE; }", 10000);
 				}
 			});
 			Monast.bridges.keys().each(function (id) {
@@ -244,8 +268,8 @@ var Monast = {
 				if (bridge.channel.indexOf(peer.channeltype + "/" + peer.peername) != -1 || bridge.bridgedchannel.indexOf(peer.channeltype + "/" + peer.peername) != -1)
 				{
 					found = true;
-					Monast.blinkBackground(bridge.id, "#99FFFF");
-					setTimeout("if ($('" + bridge.id + "')) { $('" + bridge.id + "').style.backgroundColor = '#FFFFFF'; }", 10000);
+					Monast.blinkBackground(bridge.id, Monast.COLORS.BLUE);
+					setTimeout("if ($('" + bridge.id + "')) { $('" + bridge.id + "').style.backgroundColor = Monast.COLORS.WHITE; }", 10000);
 				}
 			});
 			if (found)

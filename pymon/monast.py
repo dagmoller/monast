@@ -59,10 +59,6 @@ AST_DEVICE_STATES = { # copied from include/asterisk/devicestate.h
 	'8': 'On Hold'
 }
 
-AST_TECH_STATES = {
-	'Khomp': 'Not in Use'
-}
-
 ##
 ## Logging Initialization
 ##
@@ -436,6 +432,9 @@ class Monast:
 		self.eventHandlers = {
 			'Reload'              : self.handlerEventReload,
 			'ChannelReload'       : self.handlerEventChannelReload,
+			'Alarm'               : self.handlerEventAlarm,
+			'AlarmClear'          : self.handlerEventAlarmClear,
+			'DNDState'            : self.handlerEventDNDState,
 			'PeerEntry'           : self.handlerEventPeerEntry,
 			'PeerStatus'          : self.handlerEventPeerStatus,
 			'Newchannel'          : self.handlerEventNewchannel,
@@ -573,7 +572,7 @@ class Monast:
 			if channeltype == 'DAHDI':
 				peer.signalling = kw.get('signalling')
 				peer.alarm      = kw.get('alarm')
-				peer.dnd        = kw.get('dnd')
+				peer.dnd        = kw.get('dnd', 'disabled').lower() == 'enabled'
 				peer.callerid   = [peer.channel, "%s %02d" % (peer.signalling, int(peer.peername))][peer.callerid == '--']
 				peer.status     = ['--', peer.alarm][peer.status == '--']
 				
@@ -1423,7 +1422,8 @@ class Monast:
 							self._createPeer(
 								servername,
 								channeltype = 'Khomp',
-								peername    = 'B%dC%d' % (int(board), int(chanid))
+								peername    = 'B%dC%d' % (int(board), int(chanid)),
+								status      = 'No Alarm'
 							)
 			
 		log.debug("Server %s :: Requesting Khomp Channels..." % servername)
@@ -1807,6 +1807,38 @@ class Monast:
 		if time.time() - server.lastReload > 5:
 			server.lastReload = time.time()
 			self.__requestAsteriskConfig(ami.servername)
+	
+	def handlerEventAlarm(self, ami, event):
+		log.debug("Server %s :: Processing Event Alarm..." % ami.servername)
+		channel = event.get('channel')
+		alarm   = event.get('alarm', 'No Alarm')
+		tech    = "DAHDI"
+		chan    = channel
+		
+		if not channel.isdigit(): # Not a DAHDI Channel
+			tech, chan = channel.split('/', 1)
+		
+		self._updatePeer(ami.servername, channeltype = tech, peername = chan, alarm = alarm, status = alarm, _log = "Alarm Detected (%s)" % alarm)
+		
+	def handlerEventAlarmClear(self, ami, event):
+		log.debug("Server %s :: Processing Event AlarmClear..." % ami.servername)
+		channel = event.get('channel')
+		tech    = "DAHDI"
+		chan    = channel
+		
+		if not channel.isdigit(): # Not a DAHDI Channel
+			tech, chan = channel.split('/', 1)
+		
+		self._updatePeer(ami.servername, channeltype = tech, peername = chan, alarm = 'No Alarm', status = 'No Alarm', _log = "Alarm Cleared")
+			
+	def handlerEventDNDState(self, ami, event):
+		log.debug("Server %s :: Processing Event DNDState..." % ami.servername)
+		channel = event.get('channel')
+		status  = event.get('status')
+		dnd     = status.lower() == "enabled"
+				
+		tech, chan = channel.split('/', 1)
+		self._updatePeer(ami.servername, channeltype = tech, peername = chan, dnd = dnd, _log = "DND (%s)" % status)
 		
 	def handlerEventPeerEntry(self, ami, event):
 		log.debug("Server %s :: Processing Event PeerEntry..." % ami.servername)
