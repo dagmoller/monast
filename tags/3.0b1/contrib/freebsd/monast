@@ -1,0 +1,38 @@
+#!/bin/sh
+#
+# PROVIDE: monast
+# REQUIRE: DAEMON
+# BEFORE: LOGIN
+# KEYWORD: shutdown
+#
+# Add the following line to /etc/rc.conf to enable the monast daemon:
+#
+# monast_enable="YES"
+#
+
+. /etc/rc.subr
+
+monast_enable=${monast_enable:-"NO"}
+
+name=monast
+rcvar=`set_rcvar`
+
+command="/usr/local/monast/monast.py"
+pidfile="/var/run/${name}.pid"
+
+load_rc_config ${name}
+
+start_cmd=start_func
+stop_cmd=stop_func
+
+start_func()
+{
+        $command --daemon
+}
+
+stop_func()
+{
+        kill -9 `cat ${pidfile}`
+}
+
+run_rc_command "$1"
