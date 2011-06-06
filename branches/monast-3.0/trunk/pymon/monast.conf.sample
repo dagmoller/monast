@@ -1,0 +1,154 @@
+
+# Copyright (c) 2008-2011, Diego Aguirre
+# All rights reserved.
+# 
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+# 
+#     * Redistributions of source code must retain the above copyright notice, 
+#       this list of conditions and the following disclaimer.
+#     * Redistributions in binary form must reproduce the above copyright notice, 
+#       this list of conditions and the following disclaimer in the documentation 
+#       and/or other materials provided with the distribution.
+#     * Neither the name of the DagMoller nor the names of its contributors
+#       may be used to endorse or promote products derived from this software 
+#       without specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+# OF THE POSSIBILITY OF SUCH DAMAGE.
+
+##
+## Global Section
+##
+[global]
+
+# Bind client connetions on host:port
+bind_host = 127.0.0.1
+bind_port = 5039
+
+# Use client autentication on browser 
+auth_required = false
+
+
+##
+## Servers Definitions
+##
+[server: Server_1] # Server name can not contains space
+hostname = 192.168.0.1
+hostport = 5038
+username = ami_username
+password = ami_password
+
+# Default user context
+default_context = default
+
+# Context to use in transfer calls
+transfer_context = default
+
+# Context and prefix for meetme
+meetme_context = default
+meetme_prefix  = 
+
+[server: Server_2] # Server name can not contains space
+hostname = 192.168.0.2
+hostport = 5038
+username = ami_username
+password = ami_password
+
+# Default user context
+default_context = default
+
+# Context to use in transfer calls
+transfer_context = default
+
+# Context and prefix for meetme
+meetme_context = default
+meetme_prefix  = 
+
+
+##
+## Peers Definitions
+##
+[peers]
+# sort peers (options: peer, callerid, calleridname, calleridnum)
+sortby = callerid
+
+# default show/hide
+default = show
+
+# hide peer when default = show
+;<Server Name>/SIP/user-1 = hide
+
+# show peer when default = hide
+;<Server Name>/SIP/user-2 = show
+
+# always show peer.
+;<Server Name>/SIP/user-3 = force
+
+# force CallerID (only in forced mode)
+;<Server Name>/SIP/user-4 = force,Diego Aguirre <5555>
+
+
+##
+## Meetmes / Conferences Definitions
+##
+[meetmes]
+# default show/hide
+default = show
+
+# hide meetme when default = show
+;<Server Name>/1234 = hide
+
+# show meetme when default = hide
+;<Server Name>/1234 = show
+
+# always show meetme
+;<Server Name>/1234 = force
+
+
+##
+## Queues Definitions
+##
+[queues]
+# defualt show/hide
+default = show
+
+# show queue queue01
+;<Server Name>/queue01 = show
+
+# hide queue queue02
+;<Server Name>/queue02 = hide
+
+
+## Define users and roles to use on auth_required is set to true
+## roles must be:
+##                originate : user can originate, transfer, park and drop calls
+##                agent     : user cans add, remove, pause and unpause members on queues
+##                command   : user can execute asterisk cli commands
+
+[user: admin]
+secret  = 12345
+roles   = originate,queue,command 
+servers = ALL
+
+[user: aguirre]
+secret  = 12345
+roles   = originate
+servers = Server_1, Server_2
+
+## per server roles for user aguirre
+Server_2 = originate,queue,command
+
+[user: demo]
+secret  = 
+roles   = 
+servers = Server_1
+ 

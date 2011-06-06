@@ -1,0 +1,150 @@
+#!/bin/sh
+#
+# Author: Carlos Cesario 
+#
+# init.d/monast
+#
+#   and symbolic its link
+#
+# /usr/sbin/rcmonast
+#
+# System startup script for the monast
+#
+
+### BEGIN INIT INFO
+# Provides: 			monast
+# Required-Start:		$asterisk $apache2 $network
+# Required-Stop:
+# Default-Start:		3 5
+# Default-Stop:			0 1 2 4 6
+# Description: 			The Asterisk Monitor Web Panel
+### END INIT INFO
+
+# Shell functions sourced from /etc/rc.status:
+#      rc_check         check and set local and overall rc status
+#      rc_status        check and set local and overall rc status
+#      rc_status -v     ditto but be verbose in local rc status
+#      rc_status -v -r  ditto and clear the local rc status
+#      rc_failed        set local and overall rc status to failed
+#      rc_failed <num>  set local and overall rc status to <num>
+#      rc_reset         clear local rc status (overall remains)
+#      rc_exit          exit appropriate to overall rc status
+. /etc/rc.status
+
+# First reset status of this service
+rc_reset
+
+# Return values acc. to LSB for all commands but status:
+# 0 - success
+# 1 - generic or unspecified error
+# 2 - invalid or excess argument(s)
+# 3 - unimplemented feature (e.g. "reload")
+# 4 - insufficient privilege
+# 5 - program is not installed
+# 6 - program is not configured
+# 7 - program is not running
+#
+# Note that starting an already running service, stopping
+# or restarting a not-running service as well as the restart
+# with force-reload (in case signalling is not supported) are
+# considered a success.
+
+
+# Full path to monast binary and config
+#MONAST_DAEMON="/var/lib/asterisk/pymon/monast.py"
+#MONAST_CONF="/etc/asterisk/monast.conf"
+
+
+#Checking to monast binary
+if [ -f /usr/bin/monast ]; then
+	MONAST_DAEMON="/usr/bin/monast"
+elif [ -f /opt/monast/monast.py ]; then
+	MONAST_DAEMON="/opt/monast/monast.py"
+elif [ -f /var/lib/asterisk/pymon/monast.py ]; then
+	MONAST_DAEMON="/var/lib/asterisk/pymon/monast.py"
+else
+	echo "ERROR: monast binary not found"
+	rc_status -s
+	exit 5
+fi
+
+#Checking to monast conf
+if [ -f /etc/monast.conf ]; then
+        MONAST_CONF=/etc/monast.conf
+elif [ -f /opt/monast/monast.conf ]; then
+        MONAST_CONF=/opt/monast/monast.conf
+elif [ -f /etc/asterisk/monast.conf ]; then
+        MONAST_CONF=/etc/asterisk/monast.conf
+else
+        echo "ERROR: monast config not found"
+        rc_status -s
+        exit 6
+fi
+
+
+#Defines
+LOGFILE="/var/log/monast.log"
+PIDFILE="/var/run/monast.pid"
+MONASTARGS=" -c ${MONAST_CONF} -l ${LOGFILE} -d"
+
+
+
+case "$1" in
+	start)
+		echo -n "Starting service monast "
+		##
+		if checkproc -p ${PIDFILE} ${MONAST_DAEMON}; then
+			echo -e -n "\nMonast is already running."
+			rc_status -s
+			exit
+		## Start daemon with startproc(8). If this fails
+		## the echo return value is set appropriate.
+		else
+			startproc -q -p ${PIDFILE} ${MONAST_DAEMON} ${MONASTARGS}
+		fi
+
+		rc_status -v
+	;;
+	stop)
+		echo -n "Shutting down service monast "
+		## Stop daemon with killproc(8) and if this fails
+		## set echo the echo return value.
+
+		killproc -p ${PIDFILE} -TERM -q ${MONAST_DAEMON}
+		sleep 1
+
+		rc_status -v
+	;;
+	restart)
+		$0 stop
+		sleep 5
+		$0 start
+		rc_status
+	;;
+	reload)
+		echo -n "Reloading service monast "
+		if checkproc -p ${PIDFILE} ${MONAST_DAEMON}; then
+			killproc -p ${PIDFILE} -HUP ${MONAST_DAEMON}
+			rc_status -v
+			exit
+		else
+			echo -e -n "\nMonast is not running."
+			rc_status -s
+			exit
+		fi
+	;;
+		
+	status)
+		echo -n "Checking for service monast: "
+		## Check status with checkproc(8), if process is running
+		## checkproc will return with exit status 0.
+
+		checkproc -p ${PIDFILE}  ${MONAST_DAEMON}
+		rc_status -v
+	;;
+	*)
+		echo "Usage: $0 {start|stop|restart|reload|status}"
+		exit 1
+	;;
+esac
+rc_exit
