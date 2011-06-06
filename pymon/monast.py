@@ -1440,8 +1440,7 @@ class Monast:
 						self._createMeetme(servername, meetme = meetmeroom)
 
 		log.debug("Server %s :: Requesting meetme.conf..." % servername)
-		server.ami.sendDeferred({'Action': 'GetConfig', 'Filename': 'meetme.conf'}) \
-			.addCallback(server.ami.errorUnlessResponse) \
+		server.ami.getConfig('meetme.conf') \
 			.addCallbacks(onGetMeetmeConfig, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting meetme.conf"))
 		
 		# Queues
