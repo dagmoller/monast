@@ -256,7 +256,7 @@ var Monast = {
 			var found = false; 
 			Monast.channels.keys().each(function (id) {
 				var channel = Monast.channels.get(id);
-				if (channel.channel.indexOf(peer.channel) != -1)
+				if (channel.channel.indexOf(peer.channel + "-") != -1)
 				{
 					found = true;
 					Monast.blinkBackground(channel.id, Monast.COLORS.BLUE);
@@ -265,7 +265,7 @@ var Monast = {
 			});
 			Monast.bridges.keys().each(function (id) {
 				var bridge = Monast.bridges.get(id);
-				if (bridge.channel.indexOf(peer.channel) != -1 || bridge.bridgedchannel.indexOf(peer.channel) != -1)
+				if (bridge.channel.indexOf(peer.channel + "-") != -1 || bridge.bridgedchannel.indexOf(peer.channel + "-") != -1)
 				{
 					found = true;
 					Monast.blinkBackground(bridge.id, Monast.COLORS.BLUE);
