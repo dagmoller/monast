@@ -1472,6 +1472,7 @@ class Monast:
 		def onStatusComplete(events):
 			log.debug("Server %s :: Processing channels status..." % servername)
 			channelStatus = {}
+			callsCounter  = {}
 			#Sort channels by uniqueid desc
 			events.sort(lambda x, y: cmp(y.get('uniqueid'), x.get('uniqueid')))
 			for event in events:
@@ -1479,6 +1480,12 @@ class Monast:
 				channel         = event.get('channel')
 				bridgedchannel  = event.get('bridgedchannel', event.get('link'))
 				seconds         = int(event.get('seconds', 0))
+				
+				tech, chan = channel.rsplit('-', 1)[0].split('/', 1)
+				try:
+					callsCounter[(tech, chan)] += 1
+				except:
+					callsCounter[(tech, chan)] = 1
 				
 				channelStatus[uniqueid] = None
 				channelCreated          = self._createChannel(
@@ -1522,7 +1529,15 @@ class Monast:
 			]
 			for uniqueid, bridgeduniqueid in lostBridges:
 				self._removeBridge(servername, uniqueid = uniqueid, bridgeduniqueid = bridgeduniqueid, _isLostBridge = True, _log = "-- Lost Bridge")
-					
+			
+			## Update Peer Calls Counter
+			for channeltype, peers in server.status.peers.items():
+				for peername, peer in peers.items():
+					calls = callsCounter.get((channeltype, peername), 0)
+					if peer.calls != calls:
+						self._updatePeer(servername, channeltype = channeltype, peername = peername, calls = calls, _log = "-- Update calls counter (by status request)")
+						log.warning("Server %s :: Updating %s/%s calls counter from %d to %d, we lost some AMI events...", servername, channeltype, peername, peer.calls, calls)
+				
 			log.debug("Server %s :: End of channels status..." % servername)
 			
 		server.ami.status().addCallbacks(onStatusComplete, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Channels Status"))
