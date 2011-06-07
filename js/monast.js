@@ -210,7 +210,7 @@ var Monast = {
 		{
 			case "peerTable":
 				var dst = Monast.userspeers.get(id);
-				var obj = {fromcallerid: peer.callerid, fromchannel: peer.channeltype + "/" + peer.peername, tocallerid: dst.callerid, tochannel: dst.channeltype + "/" + dst.peername};
+				var obj = {fromcallerid: peer.callerid, fromchannel: peer.channel, tocallerid: dst.callerid, tochannel: dst.channel};
 				Monast.doConfirm(
 					new Template($("Template::Userpeer::Form::Originate::InternalCall").innerHTML).evaluate(obj),
 					function () {
@@ -243,7 +243,7 @@ var Monast = {
 						method: 'get',
 						parameters: {
 							reqTime: new Date().getTime(),
-							action: Object.toJSON({action: 'Originate', from: p_oValue.channeltype + "/" + p_oValue.peername, to: $('Userpeer::Form::Originate::Dial::To').value, callerid: p_oValue.callerid, type: 'dial'})
+							action: Object.toJSON({action: 'Originate', from: p_oValue.channel, to: $('Userpeer::Form::Originate::Dial::To').value, callerid: p_oValue.callerid, type: 'dial'})
 						}
 					});
 				}
@@ -256,7 +256,7 @@ var Monast = {
 			var found = false; 
 			Monast.channels.keys().each(function (id) {
 				var channel = Monast.channels.get(id);
-				if (channel.channel.indexOf(peer.channeltype + "/" + peer.peername) != -1)
+				if (channel.channel.indexOf(peer.channel) != -1)
 				{
 					found = true;
 					Monast.blinkBackground(channel.id, Monast.COLORS.BLUE);
@@ -265,7 +265,7 @@ var Monast = {
 			});
 			Monast.bridges.keys().each(function (id) {
 				var bridge = Monast.bridges.get(id);
-				if (bridge.channel.indexOf(peer.channeltype + "/" + peer.peername) != -1 || bridge.bridgedchannel.indexOf(peer.channeltype + "/" + peer.peername) != -1)
+				if (bridge.channel.indexOf(peer.channel) != -1 || bridge.bridgedchannel.indexOf(peer.channel) != -1)
 				{
 					found = true;
 					Monast.blinkBackground(bridge.id, Monast.COLORS.BLUE);
@@ -275,9 +275,7 @@ var Monast = {
 			if (found)
 			{
 				if (Monast._tabPannel.get("activeIndex") == 0 && Monast._stateCookie.buttons["checkBoxTab_chanCallDiv"])
-				{
 					new YAHOO.util.Scroll(document.body, {scroll: {to: YAHOO.util.Dom.getXY($('chanCallDiv'))}}, 0.5).animate();
-				}
 				else
 					Monast._tabPannel.set("activeIndex", 3);
 			}
@@ -312,7 +310,7 @@ var Monast = {
 						method: 'get',
 						parameters: {
 							reqTime: new Date().getTime(),
-							action: Object.toJSON({action: 'QueueMemberAdd', queue: p_oValue.queue, location: p_oValue.peer.channeltype + '/' + p_oValue.peer.peername})
+							action: Object.toJSON({action: 'QueueMemberAdd', queue: p_oValue.queue, location: p_oValue.peer.channel})
 						}
 					});
 				}
@@ -356,7 +354,7 @@ var Monast = {
 			var queueList = [];
 			Monast.queues.keys().each(function (id) {
 				var q = Monast.queues.get(id);
-				var m = q.members.get(md5("queueMember-" + q.queue + '::' + u.channeltype + "/" + u.peername));
+				var m = q.members.get(md5("queueMember-" + q.queue + '::' + u.channel));
 				if (Object.isUndefined(m))
 					queueList.push({text: q.queue, onclick: {fn: addQueueMember, obj: {peer: u, queue: q.queue}}});
 			});
@@ -377,7 +375,7 @@ var Monast = {
 						method: 'get',
 						parameters: {
 							reqTime: new Date().getTime(),
-							action: Object.toJSON({action: 'Originate', from: p_oValue.peer.channeltype + "/" + p_oValue.peer.peername, to: p_oValue.meetme, callerid: p_oValue.peer.callerid, type: 'meetmeInviteUser'})
+							action: Object.toJSON({action: 'Originate', from: p_oValue.peer.channel, to: p_oValue.meetme, callerid: p_oValue.peer.callerid, type: 'meetmeInviteUser'})
 						}
 					});
 				}
@@ -596,7 +594,7 @@ var Monast = {
 				}
 				var obj  = bridge;
 				obj.tocallerid = peer.callerid;
-				obj.tochannel  = peer.channeltype + "/" + peer.peername;
+				obj.tochannel  = peer.channel;
 				obj.toexten    = to[1];
 				Monast.doConfirm(
 					"<div style='text-align: center'>Select Channel to Transfer:</div><br>" + new Template($("Template::Bridge::Form::Transfer::Internal").innerHTML).evaluate(obj),
@@ -955,7 +953,7 @@ var Monast = {
 							method: 'get',
 							parameters: {
 								reqTime: new Date().getTime(),
-								action: Object.toJSON({action: 'Originate', from: peer.channeltype + "/" + peer.peername, to: parked.exten, type: 'dial'})
+								action: Object.toJSON({action: 'Originate', from: peer.channel, to: parked.exten, type: 'dial'})
 							}
 						});
 					}
@@ -1970,7 +1968,6 @@ var Monast = {
 		$('cliCommand').value = '';
 		
 		$('cliResponse').value += '\r\n> ' + command;
-		//$('cliResponse').scrollTop = $('cliResponse').scrollHeight - $('cliResponse').offsetHeight + 10;
 		new YAHOO.util.Scroll('cliResponse', {scroll: {to: [0, $('cliResponse').scrollHeight]}}, 0.5).animate();
 		
 		if (command)
@@ -1989,7 +1986,6 @@ var Monast = {
 	{
 		r.response.each(function (line) {
 			$('cliResponse').value += '\r\n' + line;
-			//$('cliResponse').scrollTop = $('cliResponse').scrollHeight - $('cliResponse').offsetHeight + 10;
 		});
 		$('cliResponse').value += '\r\n';
 		new YAHOO.util.Scroll('cliResponse', {scroll: {to: [0, $('cliResponse').scrollHeight]}}, 0.5).animate();
