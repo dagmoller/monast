@@ -273,7 +273,14 @@ var Monast = {
 				}
 			});
 			if (found)
-				Monast._tabPannel.set("activeIndex", 3);
+			{
+				if (Monast._tabPannel.get("activeIndex") == 0 && Monast._stateCookie.buttons["checkBoxTab_chanCallDiv"])
+				{
+					new YAHOO.util.Scroll(document.body, {scroll: {to: YAHOO.util.Dom.getXY($('chanCallDiv'))}}, 0.5).animate();
+				}
+				else
+					Monast._tabPannel.set("activeIndex", 3);
+			}
 			else
 				Monast.doAlert("No Active Channels/Calls for this User/Peer.");
 		};
@@ -1785,7 +1792,7 @@ var Monast = {
 					to: dd.startPos
 				}
 			},
-			0.3,
+			0.5,
 			YAHOO.util.Easing.easeOut
 		).animate();
 
@@ -1963,7 +1970,8 @@ var Monast = {
 		$('cliCommand').value = '';
 		
 		$('cliResponse').value += '\r\n> ' + command;
-		$('cliResponse').scrollTop = $('cliResponse').scrollHeight - $('cliResponse').offsetHeight + 10;
+		//$('cliResponse').scrollTop = $('cliResponse').scrollHeight - $('cliResponse').offsetHeight + 10;
+		new YAHOO.util.Scroll('cliResponse', {scroll: {to: [0, $('cliResponse').scrollHeight]}}, 0.5).animate();
 		
 		if (command)
 		{
@@ -1981,9 +1989,10 @@ var Monast = {
 	{
 		r.response.each(function (line) {
 			$('cliResponse').value += '\r\n' + line;
-			$('cliResponse').scrollTop = $('cliResponse').scrollHeight - $('cliResponse').offsetHeight + 10;
+			//$('cliResponse').scrollTop = $('cliResponse').scrollHeight - $('cliResponse').offsetHeight + 10;
 		});
 		$('cliResponse').value += '\r\n';
+		new YAHOO.util.Scroll('cliResponse', {scroll: {to: [0, $('cliResponse').scrollHeight]}}, 0.5).animate();
 	},
 	
 	requestInfo: function (p_sType, p_aArgs, p_oValue)
