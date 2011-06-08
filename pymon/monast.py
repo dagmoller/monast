@@ -158,7 +158,7 @@ class ServerObject(GenericObject):
 		GenericObject.__init__(self, "Server")
 	
 	def pushTask(self, f, *args, **kwargs):
-		log.debug("New Task Added to Task Queue...")
+		#log.debug("New Task Added to Task Queue...")
 		if self._runningTasks < self._maxConcurrentTasks:
 			self._runningTasks += 1
 			return f(*args, **kwargs).addBoth(self._try_queued)
@@ -1517,20 +1517,24 @@ class Monast:
 		# Queues
 		def onQueueStatus(events):
 			log.debug("Server %s :: Processing Queues..." % servername)
+			otherEvents = []
 			for event in events:
 				eventType = event.get('event')
 				if eventType == "QueueParams":
 					queuename = event.get('queue')
 					if (self.displayQueuesDefault and not server.displayQueues.has_key(queuename)) or (not self.displayQueuesDefault and server.displayQueues.has_key(queuename)):
 						self._createQueue(servername, **event)
-					continue
+				else:
+					otherEvents.append(event)
+			for event in otherEvents:
+				self._updateQueue(servername, **event)
 		
 		log.debug("Server %s :: Requesting Queues..." % servername)
 		server.pushTask(server.ami.collectDeferred, {'Action': 'QueueStatus'}, 'QueueStatusComplete') \
 			.addCallbacks(onQueueStatus, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Queue Status"))
 		
 		## Run Task Channels Status
-		reactor.callLater(2, self.taskCheckStatus, servername)
+		reactor.callWhenRunning(self.taskCheckStatus, servername)
 	
 	##
 	## Tasks
