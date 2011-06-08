@@ -13,7 +13,9 @@ import optparse
 from ConfigParser import SafeConfigParser, NoOptionError
 
 try:
+	from twisted.python import failure
 	from twisted.internet import reactor, task, defer
+	from twisted.internet import error as tw_error
 	from twisted.web import server as TWebServer
 	from twisted.web import resource
 except ImportError:
@@ -146,6 +148,34 @@ class GenericObject(object):
 		out.append("##################################################")
 		
 		return "\n".join(out)
+	
+class ServerObject(GenericObject):
+	_maxConcurrentTasks = 1
+	_runningTasks       = 0
+	_queuedTasks        = []
+	
+	def __init__(self):
+		GenericObject.__init__(self, "Server")
+	
+	def pushTask(self, f, *args, **kwargs):
+		log.debug("New Task Added to Task Queue...")
+		if self._runningTasks < self._maxConcurrentTasks:
+			self._runningTasks += 1
+			return f(*args, **kwargs).addBoth(self._try_queued)
+		d = defer.Deferred()
+		self._queuedTasks.append((f, args, kwargs, d))
+		return d
+	
+	def _try_queued(self, r):
+		self._runningTasks -= 1
+		if self._runningTasks < self._maxConcurrentTasks and self._queuedTasks:
+			f, args, kwargs, d = self._queuedTasks.pop(0)
+			self._runningTasks += 1
+			actuald = f(*args, **kwargs).addBoth(self._try_queued)
+			actuald.chainDeferred(d)
+		if isinstance(r, failure.Failure):
+			r.trap()
+		return r
 	
 
 class MyConfigParser(SafeConfigParser):
@@ -362,6 +392,47 @@ class MonastHTTP(resource.Resource):
 ##
 class MonastAMIProtocol(manager.AMIProtocol):
 	"""Class Extended to solve some issues on original methods"""
+	def connectionLost(self, reason):
+		"""Connection lost, clean up callbacks"""
+		for key,callable in self.actionIDCallbacks.items():
+			try:
+				callable(tw_error.ConnectionDone("""AMI connection terminated"""))
+			except Exception, err:
+				log.error("""Failure during connectionLost for callable %s: %s""", callable, err)
+		self.actionIDCallbacks.clear()
+		self.eventTypeCallbacks.clear()
+		
+	def collectDeferred(self, message, stopEvent):
+		"""Collect all responses to this message until stopEvent or error
+		   returns deferred returning sequence of events/responses
+		"""
+		df = defer.Deferred()
+		cache = []
+		def onEvent(event):
+			if type(event) == type(dict()):
+				if event.get('response') == 'Error':
+					df.errback(AMICommandFailure(event))
+				elif event['event'] == stopEvent:
+					df.callback(cache)
+				else:
+					cache.append(event)
+			else:
+				df.errback(AMICommandFailure(event))
+		actionid = self.sendMessage(message, onEvent)
+		df.addCallbacks(
+			self.cleanup, self.cleanup,
+			callbackArgs=(actionid,), errbackArgs=(actionid,)
+		)
+		return df
+	
+	def errorUnlessResponse(self, message, expected='Success'):
+		"""Raise a AMICommandFailure error unless message['response'] == expected
+		If == expected, returns the message
+		"""
+		if type(message) == type(dict()) and message['response'] != expected or type(message) != type(dict()):
+			raise AMICommandFailure(message)
+		return message
+	
 	def redirect(self, channel, context, exten, priority, extraChannel = None, extraContext = None, extraExten = None, extraPriority = None):
 		"""Transfer channel(s) to given context/exten/priority"""
 		message = {
@@ -499,9 +570,6 @@ class Monast:
 		server.connected = True
 		server.ami       = ami
 		
-		## Patch AMI
-		#patchAMI(server.ami)
-		
 		## Request Server Version
 		def _onCoreShowVersion(result):
 			versions = [1.4, 1.6, 1.8]
@@ -517,7 +585,7 @@ class Monast:
 			server.taskCheckStatus.start(TASK_CHECK_STATUS_INTERVAL, False)
 			self.__requestAsteriskConfig(servername)
 			
-		server.ami.command('core show version') \
+		server.pushTask(server.ami.command, 'core show version') \
 			.addCallbacks(_onCoreShowVersion, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Asterisk Version"))
 		
 	def __disconnected__(self, servername):
@@ -545,7 +613,7 @@ class Monast:
 	def onLoginFailure(self, reason, servername):
 		log.error("Server %s :: Monast AMI Failed to Login, reason: %s" % (servername, reason.getErrorMessage()))
 		self.__disconnected__(servername)
-	
+		
 	##
 	## Helpers
 	##
@@ -1159,7 +1227,7 @@ class Monast:
 			username   = config.get(server, 'username')
 			password   = config.get(server, 'password')
 			
-			self.servers[servername] = GenericObject("Server")
+			self.servers[servername]                  = ServerObject()
 			self.servers[servername].servername       = servername
 			self.servers[servername].version          = None
 			self.servers[servername].lastReload       = 0
@@ -1356,7 +1424,7 @@ class Monast:
 		
 		## Peers (SIP, IAX) :: Process results via handlerEventPeerEntry
 		log.debug("Server %s :: Requesting SIP Peers..." % servername)
-		server.ami.sendDeferred({'action': 'sippeers'}) \
+		server.pushTask(server.ami.sendDeferred, {'action': 'sippeers'}) \
 			.addCallback(server.ami.errorUnlessResponse) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Requesting SIP Peers")
 
@@ -1368,11 +1436,11 @@ class Monast:
 						peername = line.split(' ', 1)[0].split('/', 1)[0]
 						self.handlerEventPeerEntry(server.ami, {'channeltype': 'IAX2', 'objectname': peername, 'status': 'Unknown'})
 			log.debug("Server %s :: Requesting IAX Peers (via iax2 show peers)..." % servername)
-			server.ami.command('iax2 show peers') \
+			server.pushTask(server.ami.command, 'iax2 show peers') \
 				.addCallbacks(onIax2ShowPeers, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting IAX Peers (via iax2 show peers)"))
 		else:		
 			log.debug("Server %s :: Requesting IAX Peers..." % servername)
-			server.ami.sendDeferred({'action': 'iaxpeers'}) \
+			server.pushTask(server.ami.sendDeferred, {'action': 'iaxpeers'}) \
 				.addCallback(server.ami.errorUnlessResponse) \
 				.addErrback(self._onAmiCommandFailure, servername, "Error Requesting IAX Peers")
 		
@@ -1396,7 +1464,7 @@ class Monast:
 				self._onAmiCommandFailure(reason, servername, message)			
 
 		log.debug("Server %s :: Requesting DAHDI Channels..." % servername)
-		server.ami.collectDeferred({'action': 'dahdishowchannels'}, 'DAHDIShowChannelsComplete') \
+		server.pushTask(server.ami.collectDeferred, {'action': 'dahdishowchannels'}, 'DAHDIShowChannelsComplete') \
 			.addCallbacks(onDahdiShowChannels, onDahdiShowChannelsFailure, errbackArgs = (servername, "Error Requesting DAHDI Channels"))
 		
 		# Khomp
@@ -1430,7 +1498,7 @@ class Monast:
 							)
 			
 		log.debug("Server %s :: Requesting Khomp Channels..." % servername)
-		server.ami.command('khomp channels show') \
+		server.pushTask(server.ami.command, 'khomp channels show') \
 			.addCallbacks(onKhompChannelsShow, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Khomp Channels"))
 		
 		# Meetme
@@ -1443,7 +1511,7 @@ class Monast:
 						self._createMeetme(servername, meetme = meetmeroom)
 
 		log.debug("Server %s :: Requesting meetme.conf..." % servername)
-		server.ami.getConfig('meetme.conf') \
+		server.pushTask(server.ami.getConfig, 'meetme.conf') \
 			.addCallbacks(onGetMeetmeConfig, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting meetme.conf"))
 		
 		# Queues
@@ -1458,7 +1526,7 @@ class Monast:
 					continue
 		
 		log.debug("Server %s :: Requesting Queues..." % servername)
-		server.ami.collectDeferred({'Action': 'QueueStatus'}, 'QueueStatusComplete') \
+		server.pushTask(server.ami.collectDeferred, {'Action': 'QueueStatus'}, 'QueueStatusComplete') \
 			.addCallbacks(onQueueStatus, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Queue Status"))
 		
 		## Run Task Channels Status
@@ -1538,12 +1606,13 @@ class Monast:
 				for peername, peer in peers.items():
 					calls = callsCounter.get((channeltype, peername), 0)
 					if peer.calls != calls:
-						self._updatePeer(servername, channeltype = channeltype, peername = peername, calls = calls, _log = "-- Update calls counter (by status request)")
 						log.warning("Server %s :: Updating %s/%s calls counter from %d to %d, we lost some AMI events...", servername, channeltype, peername, peer.calls, calls)
+						self._updatePeer(servername, channeltype = channeltype, peername = peername, calls = calls, _log = "-- Update calls counter (by status request)")
 				
 			log.debug("Server %s :: End of channels status..." % servername)
 			
-		server.ami.status().addCallbacks(onStatusComplete, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Channels Status"))
+		server.pushTask(server.ami.status) \
+			.addCallbacks(onStatusComplete, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Channels Status"))
 		
 		## Queues
 		def onQueueStatusComplete(events):
@@ -1558,7 +1627,7 @@ class Monast:
 		
 		log.debug("Server %s :: Requesting Queues Status..." % servername)
 		for queuename in server.status.queues.keys():
-			server.ami.collectDeferred({'Action': 'QueueStatus', 'Queue': queuename}, 'QueueStatusComplete') \
+			server.pushTask(server.ami.collectDeferred, {'Action': 'QueueStatus', 'Queue': queuename}, 'QueueStatusComplete') \
 				.addCallbacks(onQueueStatusComplete, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Queues Status"))
 				
 		## Parked Calls
@@ -1569,7 +1638,7 @@ class Monast:
 		
 		log.debug("Server %s :: Requesting Parked Calls..." % servername)
 		self.isParkedCallStatus = True
-		server.ami.collectDeferred({'Action': 'ParkedCalls'}, 'ParkedCallsComplete') \
+		server.pushTask(server.ami.collectDeferred, {'Action': 'ParkedCalls'}, 'ParkedCallsComplete') \
 			.addCallbacks(onParkedCalls, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Parked Calls"))
 		
 	##
@@ -1650,7 +1719,7 @@ class Monast:
 		for idx, originate in enumerate(originates):
 			channel, context, exten, priority, timeout, callerid, account, application, data, variable, async = originate
 			log.info("Server %s :: Executting Client Action Originate: %s..." % (servername, logs[idx]))
-			server.ami.originate(*originate) \
+			server.pushTask(server.ami.originate, *originate) \
 				.addErrback(self._onAmiCommandFailure, servername, "Error Executting Client Action Originate: %s" % (logs[idx]))
 				
 	def clientAction_Transfer(self, session, action):
@@ -1681,7 +1750,7 @@ class Monast:
 				
 		
 		log.info("Server %s :: Executting Client Action Transfer: %s -> %s@%s..." % (servername, channel, exten, context))
-		server.ami.redirect(channel, context, exten, priority, extraChannel, extraContext, extraExten, extraPriority) \
+		server.pushTask(server.ami.redirect, channel, context, exten, priority, extraChannel, extraContext, extraExten, extraPriority) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Client Action Transfer: %s -> %s@%s" % (channel, exten, context))
 
 	def clientAction_Park(self, session, action):
@@ -1691,7 +1760,7 @@ class Monast:
 		server      = self.servers.get(servername)
 		
 		log.info("Server %s :: Executting Client Action Park: %s from %s..." % (servername, channel, announce))
-		server.ami.park(channel, announce, "") \
+		server.pushTask(server.ami.park, channel, announce, "") \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Client Action Transfer: %s from %s" % (channel, announce))
 
 	def clientAction_CliCommand(self, session, action):
@@ -1703,7 +1772,7 @@ class Monast:
 			self.http._addUpdate(servername = servername, sessid = session.uid, action = "CliResponse", response = response)
 		
 		log.info("Server %s :: Executting Client Action CLI Command: %s..." % (servername, command))
-		server.ami.command(command) \
+		server.pushTask(server.ami.command, command) \
 			.addCallbacks(_onResponse, self._onAmiCommandFailure, \
 			errbackArgs = (servername, "Error Executting Client Action CLI Command '%s'" % command))
 		
@@ -1716,7 +1785,7 @@ class Monast:
 			self.http._addUpdate(servername = servername, sessid = session.uid, action = "RequestInfoResponse", response = response)
 			
 		log.info("Server %s :: Executting Client Action Request Info: %s..." % (servername, command))
-		server.ami.command(command) \
+		server.pushTask(server.ami.command, command) \
 			.addCallbacks(_onResponse, self._onAmiCommandFailure, \
 			errbackArgs = (servername, "Error Executting Client Action Request Info '%s'" % command))
 			
@@ -1726,7 +1795,7 @@ class Monast:
 		
 		log.info("Server %s :: Executting Client Action Hangup: %s..." % (servername, channel))
 		server = self.servers.get(servername)
-		server.ami.hangup(channel) \
+		server.pushTask(server.ami.hangup, channel) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Hangup on Channel: %s" % channel)
 			
 	def clientAction_MonitorStart(self, session, action):
@@ -1735,7 +1804,7 @@ class Monast:
 		
 		log.info("Server %s :: Executting Client Action Monitor Start: %s..." % (servername, channel))
 		server = self.servers.get(servername)
-		server.ami.monitor(channel, "", "", 1) \
+		server.pushTask(server.ami.monitor, channel, "", "", 1) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Monitor Start on Channel: %s" % channel)
 			
 	def clientAction_MonitorStop(self, session, action):
@@ -1744,7 +1813,7 @@ class Monast:
 		
 		log.info("Server %s :: Executting Client Action Monitor Stop: %s..." % (servername, channel))
 		server = self.servers.get(servername)
-		server.ami.stopMonitor(channel) \
+		server.pushTask(server.ami.stopMonitor, channel) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Monitor Stop on Channel: %s" % channel)
 			
 	def clientAction_QueueMemberPause(self, session, action):
@@ -1754,7 +1823,7 @@ class Monast:
 		
 		log.info("Server %s :: Executting Client Action Queue Member Pause: %s -> %s..." % (servername, queue, location))
 		server = self.servers.get(servername)
-		server.ami.queuePause(queue, location, True) \
+		server.pushTask(server.ami.queuePause, queue, location, True) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Queue Member Pause: %s -> %s" % (queue, location))
 			
 	def clientAction_QueueMemberUnpause(self, session, action):
@@ -1764,7 +1833,7 @@ class Monast:
 		
 		log.info("Server %s :: Executting Client Action Queue Member Unpause: %s -> %s..." % (servername, queue, location))
 		server = self.servers.get(servername)
-		server.ami.queuePause(queue, location, False) \
+		server.pushTask(server.ami.queuePause, queue, location, False) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Queue Member Unpause: %s -> %s" % (queue, location))
 			
 	def clientAction_QueueMemberAdd(self, session, action):
@@ -1782,7 +1851,7 @@ class Monast:
 		
 		log.info("Server %s :: Executting Client Action Queue Member Add: %s -> %s..." % (servername, queue, location))
 		server = self.servers.get(servername)
-		server.ami.queueAdd(queue, location, 0, False, membername) \
+		server.pushTask(server.ami.queueAdd, queue, location, 0, False, membername) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Queue Member Add: %s -> %s" % (queue, location))
 
 			
@@ -1793,7 +1862,7 @@ class Monast:
 		
 		log.info("Server %s :: Executting Client Action Queue Member Remove: %s -> %s..." % (servername, queue, location))
 		server = self.servers.get(servername)
-		server.ami.queueRemove(queue, location) \
+		server.pushTask(server.ami.queueRemove, queue, location) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Queue Member Remove: %s -> %s" % (queue, location))
 			
 	def clientAction_MeetmeKick(self, session, action):
@@ -1803,7 +1872,7 @@ class Monast:
 		
 		log.info("Server %s :: Executting Client Action Meetme Kick: %s -> %s..." % (servername, meetme, usernum))
 		server = self.servers.get(servername)
-		server.ami.command("meetme kick %s %s" % (meetme, usernum)) \
+		server.pushTask(server.ami.command, "meetme kick %s %s" % (meetme, usernum)) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Client Action Meetme Kick: %s -> %s..." % (meetme, usernum))
 		
 	
@@ -1931,7 +2000,7 @@ class Monast:
 					variables   = variables
 				)
 					
-			server.ami.command(command) \
+			server.pushTask(server.ami.command, command) \
 				.addCallbacks(onShowPeer, self._onAmiCommandFailure, \
 					errbackArgs = (ami.servername, "Error Executting Command '%s'" % command))
 				
