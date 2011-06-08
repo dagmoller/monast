@@ -561,7 +561,7 @@ class Monast:
 	def __start(self):
 		log.info("Starting Monast Services...")
 		for servername in self.servers:
-			reactor.callLater(1, self.connect, servername)
+			reactor.callWhenRunning(self.connect, servername)
 	
 	def __connected__(self, ami, servername):
 		log.info("Server %s :: Marking as connected..." % servername)
