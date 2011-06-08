@@ -1291,12 +1291,9 @@ class Monast:
 					server.displayUsers[user] = True
 					
 			if display.startswith('force'):
-				status = '--'
-				if AST_TECH_STATES.has_key(tech):
-					status = AST_TECH_STATES[tech]
-				
 				tmp      = display.split(',')
 				display  = tmp[0].strip()
+				status   = '--'
 				callerid = '--'
 				if len(tmp) == 2:
 					callerid = tmp[1].strip()
