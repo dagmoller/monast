@@ -621,13 +621,14 @@ class Monast:
 	def _createPeer(self, servername, **kw):
 		server      = self.servers.get(servername)
 		channeltype = kw.get('channeltype')
+		peername    = kw.get('peername')
 		_log        = kw.get('_log', '')
 		
 		if server.status.peers.has_key(channeltype):
 			peer             = GenericObject("User/Peer")
 			peer.channeltype = channeltype
-			peer.peername    = kw.get('peername')
-			peer.channel     = '%s/%s' % (channeltype, kw.get('peername'))
+			peer.peername    = peername
+			peer.channel     = '%s/%s' % (channeltype, peername)
 			peer.callerid    = kw.get('callerid', '--')
 			peer.context     = kw.get('context', server.default_context)
 			peer.variables   = kw.get('variables', [])
@@ -1450,7 +1451,7 @@ class Monast:
 					self._createPeer(
 						servername,
 						channeltype = 'DAHDI',
-						peername    = event.get('dahdichannel'),
+						peername    = event.get('dahdichannel', event.get('channel')),
 						context     = event.get('context'),
 						alarm       = event.get('alarm'),
 						signalling  = event.get('signalling'),
