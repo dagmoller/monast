@@ -78,7 +78,7 @@ meetme_prefix  =
 ## Peers Definitions
 ##
 [peers]
-# sort peers (options: peer, callerid, calleridname, calleridnum)
+# sort peers (options: channel, callerid)
 sortby = callerid
 
 # default show/hide
