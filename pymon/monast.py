@@ -154,28 +154,52 @@ class ServerObject(GenericObject):
 	_runningTasks       = 0
 	_queuedTasks        = []
 	
+	_callid = 0
+	_calls  = {}
+	
 	def __init__(self):
 		GenericObject.__init__(self, "Server")
 	
-	def pushTask(self, f, *args, **kwargs):
-		#log.debug("New Task Added to Task Queue...")
+	def _getNextCallId(self):
+		self._callid += 1
+		return self._callid
+	
+	def pushTask(self, task, *args, **kwargs):
 		if self._runningTasks < self._maxConcurrentTasks:
 			self._runningTasks += 1
-			return f(*args, **kwargs).addBoth(self._try_queued)
-		d = defer.Deferred()
-		self._queuedTasks.append((f, args, kwargs, d))
-		return d
+			callid = self._getNextCallId()
+			df     = task(*args, **kwargs).addBoth(self._try_queued, callid)
+			call   = reactor.callLater(5, self._fireTimeout, callid, df)
+			self._calls[callid] = call
+			return df
+		df = defer.Deferred()
+		self._queuedTasks.append((task, args, kwargs, df))
+		return df
 	
-	def _try_queued(self, r):
+	def _try_queued(self, item, callid):
 		self._runningTasks -= 1
+		call = self._calls.get(callid)
+		if call:
+			del self._calls[callid]
+			call.cancel()
 		if self._runningTasks < self._maxConcurrentTasks and self._queuedTasks:
-			f, args, kwargs, d = self._queuedTasks.pop(0)
 			self._runningTasks += 1
-			actuald = f(*args, **kwargs).addBoth(self._try_queued)
-			actuald.chainDeferred(d)
-		if isinstance(r, failure.Failure):
-			r.trap()
-		return r
+			task, args, kwargs, df = self._queuedTasks.pop(0)
+			callid = self._getNextCallId()
+			curdf  = task(*args, **kwargs).addBoth(self._try_queued, callid)
+			curdf.chainDeferred(df)
+			call = reactor.callLater(5, self._fireTimeout, callid, curdf)
+			self._calls[callid] = call
+		if isinstance(item, failure.Failure):
+			item.trap()
+		return item
+	
+	def _fireTimeout(self, callid, df):
+		call = self._calls.get(callid)
+		if call:
+			del self._calls[callid]
+		if not df.called:
+			defer.timeout(df)
 	
 
 class MyConfigParser(SafeConfigParser):
