@@ -1,0 +1,152 @@
+
+<div id="TabPannel" class="yui-navset" >
+  <ul class="yui-nav">
+    <li id="liTab_mixed"><a href="#tab_mixed"><em>Mixed Pannels</em></a></li>
+    <li id="liTab_peersDiv"><a href="#tab_peersDiv"><em>Peers/Users</em></a></li>
+    <li id="liTab_meetmesDiv"><a href="#tab_meetmesDiv"><em>Meetme Rooms</em></a></li>
+    <li id="liTab_chanCallDiv"><a href="#tab_chanCallDiv"><em>Channels/Calls</em></a></li>
+    <li id="liTab_parkedCallsDiv"><a href="#tab_parkedCallsDiv"><em>Parked Calls</em></a></li>
+    <li id="liTab_queuesDiv"><a href="#tab_queuesDiv"><em>Queues</em></a></li>
+    <!-- START BLOCK : cli_tab -->
+    <li id="liTab_cliDiv"><a href="#tab_cliDiv"><em>Asterisk CLI</em></a></li>
+    <!-- END BLOCK : cli_tab -->
+    <!-- START BLOCK : debug_tab -->
+    <li id="liTab_debugDiv"><a href="#tab_debugDiv"><em>Debug</em></a></li>
+    <!-- END BLOCK : debug_tab -->
+  </ul>
+  
+  <div class="yui-content"> 
+    <div id="mixed">
+      <fieldset id="pannelsToShow">
+        <legend>Pannels to Show</legend> 
+        <input id="checkBoxTab_peersDiv" type="checkbox" name="checkBoxTab_peersDiv" value="peersDiv">
+        <input id="checkBoxTab_meetmesDiv" type="checkbox" name="checkBoxTab_meetmesDiv" value="meetmesDiv">
+        <input id="checkBoxTab_chanCallDiv" type="checkbox" name="checkBoxTab_chanCallDiv" value="chanCallDiv">
+        <input id="checkBoxTab_parkedCallsDiv" type="checkbox" name="checkBoxTab_parkedCallsDiv" value="parkedCallsDiv">
+        <input id="checkBoxTab_queuesDiv" type="checkbox" name="checkBoxTab_queuesDiv" value="queuesDiv">
+      </fieldset>
+    </div>
+  
+    <div id="peersDiv">
+    <fieldset>
+      <legend>Peers/Users</legend>
+      <div id="peersDivWraper"> 
+
+      <!-- START BLOCK : technology -->
+      <fieldset id="fieldset-{technology}">
+        <legend>{technology} ({count})</legend>
+      </fieldset>
+      <!-- END BLOCK : technology -->
+      
+      </div>
+      <div style="clear: both;"></div>
+    </fieldset>
+    </div>
+    
+    <div id="meetmesDiv">
+    <fieldset>
+      <legend>Meetme Rooms</legend>
+        <span><input type="button" id="buttonMeemteCreate" value="Create Dynamic Meetme"></span>
+        <script language="javascript">
+        Monast._buttonMeetmeCreate = new YAHOO.widget.Button("buttonMeemteCreate", {onclick: {fn: Monast._meetmeInviteNumbers, obj: null}});
+        </script>
+      <div id="meetmeDivWrapper">
+      </div>
+    </fieldset>
+    </div>
+    
+    <div id="chanCallDiv">
+    <fieldset>
+      <legend>Channels/Calls</legend> 
+      <div id="channelsDiv">
+        <div class="channelDiv">
+          <table width="330">
+            <tr>
+              <td class="tableTitle" align="center" colspan="2">Channels (<span id="countChannels">0</span>)</td>
+            </tr>
+            <tr>
+              <td class="statusHeader" align="center" width="260">Channel</td>
+              <td class="statusHeader" align="center" width="70">Status</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div id="callsDiv">
+        <div class="callDiv">
+          <table width="570">
+            <tr>
+              <td class="tableTitle" align="center" colspan="3">Calls (<span id="countCalls">0</span>)</td>
+            </tr>
+            <tr>
+              <td class="statusHeader" align="center" width="250">SRC Channel</td>
+              <td class="statusHeader" align="center" width="70">Status</td>
+              <td class="statusHeader" align="center" width="250">DST Channel</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div style="clear: both;"></div>
+    </fieldset>
+    </div>
+    
+    <div id="parkedCallsDiv">
+    <fieldset>
+      <legend>Parked Calls</legend>
+      <div id="parkedsDiv">
+        <div class="parkedDiv">
+          <table width="640">
+            <tr>
+              <td class="tableTitle" align="center" colspan="3">Parked Calls (<span id="countParked">0</span>)</td>
+            </tr>
+            <tr>
+              <td class="statusHeader" align="center" width="80">Exten</td>
+              <td class="statusHeader" align="center" width="280">Parked From</td>
+              <td class="statusHeader" align="center" width="280">Parked Channel</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </fieldset>
+    </div>
+    
+    <div id="queuesDiv">
+    <fieldset id="fieldset-queuedual">
+      <legend>Queues</legend>
+      
+      <!-- <div style="clear: both;"></div> -->
+    </fieldset>
+    </div>
+
+    <!-- START BLOCK : cli_tab_div -->
+	<div id="cliDiv">
+	  <textarea id="cliResponse" rows="40" cols="160" readonly="readonly"></textarea><br>
+	  <input id="cliCommand" type="text" size="60" onkeypress="Monast.onKeyPressCliCommand(event)">
+	  &nbsp;<button onclick="Monast.cliCommand()">Send</button>&nbsp;<button onclick="$('cliResponse').value=''">Clear</button>
+	</div>
+	<!-- END BLOCK : cli_tab_div -->
+
+    <!-- START BLOCK : debug_tab_div -->
+    <div id="debugDiv">
+    </div>
+    <!-- END BLOCK : debug_tab_div -->
+    
+  </div>
+</div>
+
+{templates}
+
+<script language="javascript">
+Monast.MONAST_CALL_TIME               = {MONAST_CALL_TIME};
+Monast.MONAST_BLINK_ONCHANGE          = {MONAST_BLINK_ONCHANGE};
+Monast.MONAST_BLINK_COUNT             = {MONAST_BLINK_COUNT};
+Monast.MONAST_BLINK_INTERVAL          = {MONAST_BLINK_INTERVAL};
+Monast.MONAST_KEEP_CALLS_SORTED       = {MONAST_KEEP_CALLS_SORTED};
+Monast.MONAST_KEEP_PARKEDCALLS_SORTED = {MONAST_KEEP_PARKEDCALLS_SORTED};
+
+window.onload = function () {
+	<!-- START BLOCK : process -->
+	Monast.processEvent('{json}'.evalJSON());
+	<!-- END BLOCK : process -->
+	setTimeout('Monast.requestStatus()', 1000);
+}
+</script>

@@ -1,0 +1,264 @@
+
+/*
+* Copyright (c) 2008-2011, Diego Aguirre
+* All rights reserved.
+* 
+* Redistribution and use in source and binary forms, with or without modification,
+* are permitted provided that the following conditions are met:
+* 
+*     * Redistributions of source code must retain the above copyright notice, 
+*       this list of conditions and the following disclaimer.
+*     * Redistributions in binary form must reproduce the above copyright notice, 
+*       this list of conditions and the following disclaimer in the documentation 
+*       and/or other materials provided with the distribution.
+*     * Neither the name of the DagMoller nor the names of its contributors
+*       may be used to endorse or promote products derived from this software 
+*       without specific prior written permission.
+* 
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
+* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
+* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+* OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+BODY {
+	margin-top: 5px;
+	font-family: verdana,arial,helvetica,sans-serif;
+}
+
+.hidden {
+	display: none;
+}
+
+.requestInfo pre {
+	font-family: 'courier new'; 
+	font-size: 0.8em;
+}
+
+.monast-logo {
+	height: 45px;
+}
+.monast-logo .monast-name {
+	font-family: sans-serif; 
+	font-size: 2.3em; 
+	font-weight: bold; 
+	border-bottom: 2px solid #000000;
+}
+.monast-logo .monast-text {
+	font-family: sans-serif; 
+	font-size: 1.0em; 
+	border-top: 2px solid #000000;
+}
+.monast-logo .monast-serverlist {
+	margin-left: 25px; 
+	padding-left: 5px;
+	border-left: 2px solid #000000;
+	display: inline-block;
+}
+.monast-logo .monast-status {
+	margin-left: 25px; 
+	padding-left: 5px;
+	border-left: 2px solid #000000;
+	display: inline-block;
+	width: 250px; 
+}
+
+#actionsDiv {
+	position: absolute; 
+	top: 10px; 
+	right: 25px; 
+	border: 1px solid #000000; 
+	background-color: #ffffff; 
+	z-index: 5;
+}
+#trash, #record, #park {
+	float: left; 
+	text-align: center; 
+	margin: 5px 10px 5px 10px;
+}
+
+#mixed {
+	margin: 5px;
+}
+#peersDiv {
+	padding: 5px; 
+}
+#peersDivWraper {
+	margin-left: 5px;
+}
+.peerTable {
+	float: left; 
+	/*margin: 5px;*/
+	margin-right: 6px;
+	margin-bottom: 3px;
+	margin-top: 3px;
+	background-color: #ffffff;
+	z-index: 1;
+}
+#meetmesDiv {
+	padding: 5px; 
+}
+.meetmeDivWrap {
+	float: left; 
+	margin: 5px;
+}
+.meetmeDiv, .meetmeUser {
+	width: 250px;
+	border: 1px solid #aaaaaa;
+	margin-bottom: 2px;
+	background-color: #ffffff;
+	z-index: 1;
+}
+#chanCallDiv {
+	padding: 5px; 
+}
+#channelsDiv {
+	width: 330px;
+	float: left;
+	margin: 5px;
+}
+.channelDiv {
+	width: 330px;
+	border: 1px solid #aaaaaa;
+	margin-bottom: 2px;
+	background-color: #ffffff;
+	z-index: 1;
+}
+#callsDiv {
+	width: 570px;
+	float: left;
+	margin: 5px;
+	margin-left: 20px;
+}
+.callDiv {
+	width: 570px;
+	border: 1px solid #aaaaaa;
+	margin-bottom: 2px;
+	background-color: #ffffff;
+	z-index: 1;
+}
+#parkedCallsDiv {
+	padding: 5px; 
+}
+#parkedsDiv {
+	margin: 5px;
+}
+.parkedDiv {
+	width: 640px;
+	border: 1px solid #aaaaaa;
+	margin-bottom: 2px;
+	background-color: #ffffff;
+	z-index: 1;
+}
+
+#queuesDiv {
+	padding: 5px;
+}
+.queueDualDiv {
+	float: left;
+}
+.queueDiv {
+	float: left;
+	margin-right: 10px;
+	margin-bottom: 10px;
+}
+.queueStatisticsDiv {
+	border: 1px solid #aaaaaa; 
+	background-color: #ffffff; 
+	margin-bottom: 5px;
+}
+.queueMembersDivWrap {
+	float: left;
+	margin-right: 10px;
+}
+.queueMembersDiv {
+	border: 1px solid #aaaaaa;
+	background-color: #ffffff;
+	margin-bottom: 2px;
+	z-index: 1;
+}
+.queueClientsDivWrap {
+	float: left;
+}
+.queueClientsDiv {
+	border: 1px solid #aaaaaa;
+	background-color: #ffffff;
+	margin-bottom: 2px;
+}
+
+#debugDiv {
+	border: black 1px solid; 
+	width: 100%; 
+	height: 500px; 
+	overflow: auto; 
+	font-family: 'courier new'; 
+	font-size: 0.8em;
+	color: #ffffff;
+	background-color: #000000;
+	margin: 0 auto;
+}
+.tableTitle {
+	font-size: 0.7em;
+	font-weight: bold;
+	background-color: #bbbbbb;
+}
+.statusHeader {
+	font-size: 0.7em;
+	font-weight: bold;
+	background-color: #dddddd;
+}
+.status {
+	font-size: 0.7em;
+	text-align: center;
+	border: 1px solid #aaaaaa;
+}
+.status a {
+	color: black;
+	text-decoration: none;
+}
+.campo {
+	border: 1px solid #dddddd;
+	font-size: 0.9em;
+}
+
+#cliDiv textarea {
+	font-family: 'courier new'; 
+	font-size: 0.8em;
+	color: #ffffff;
+	background-color: #000000;
+}
+#cliDiv input {
+	color: #ffffff;
+	background-color: #000000;
+}
+
+fieldset legend {
+	font-size: 0.8em;
+}
+
+.tableInfo {
+	font-size: 0.7em;
+}
+.tableInfo .key {
+	font-weight: bold;
+	text-align: right;
+}
+
+/* YUI */
+.yui-skin-sam .yui-button button, .yui-skin-sam .yui-button a {
+	font-size: 0.8em;
+	line-height:2;
+	min-height:2em;
+	padding:0 10px;
+}
+
+.yui-navset li em {
+	font-style:normal;
+	font-size: 0.9em;
+}

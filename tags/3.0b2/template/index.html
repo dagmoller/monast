@@ -1,0 +1,179 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+
+<!--
+/*
+* Copyright (c) 2008-2011, Diego Aguirre
+* All rights reserved.
+* 
+* Redistribution and use in source and binary forms, with or without modification,
+* are permitted provided that the following conditions are met:
+* 
+*     * Redistributions of source code must retain the above copyright notice, 
+*       this list of conditions and the following disclaimer.
+*     * Redistributions in binary form must reproduce the above copyright notice, 
+*       this list of conditions and the following disclaimer in the documentation 
+*       and/or other materials provided with the distribution.
+*     * Neither the name of the DagMoller nor the names of its contributors
+*       may be used to endorse or promote products derived from this software 
+*       without specific prior written permission.
+* 
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
+* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
+* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+* OF THE POSSIBILITY OF SUCH DAMAGE.
+*/ 
+ -->
+
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>MonAst: The Asterisk Monitor Web Panel</title>
+
+<!-- Individual YUI CSS files --> 
+<link rel="stylesheet" type="text/css" href="lib/yui-2.9.0/build/fonts/fonts-min.css"> 
+<link rel="stylesheet" type="text/css" href="lib/yui-2.9.0/build/container/assets/skins/sam/container.css"> 
+<link rel="stylesheet" type="text/css" href="lib/yui-2.9.0/build/menu/assets/skins/sam/menu.css"> 
+<link rel="stylesheet" type="text/css" href="lib/yui-2.9.0/build/button/assets/skins/sam/button.css"> 
+<link rel="stylesheet" type="text/css" href="lib/yui-2.9.0/build/tabview/assets/skins/sam/tabview.css"> 
+<!-- Individual YUI JS files --> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/yahoo/yahoo-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/dom/dom-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/event/event-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/animation/animation-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/dragdrop/dragdrop-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/container/container-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/menu/menu-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/element/element-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/button/button-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/cookie/cookie-min.js"></script> 
+<script type="text/javascript" src="lib/yui-2.9.0/build/tabview/tabview-min.js"></script> 
+
+<script type="text/javascript" src="js/prototype-1.7.0.0.js"></script>
+<script type="text/javascript" src="js/md5.js"></script>
+<script type="text/javascript" src="js/monast.js"></script>
+
+<link rel="stylesheet" type="text/css" href="css/styles.css"> 
+
+</head>
+<body class="yui-skin-sam">
+
+<div class="monast-logo">
+  <span class="monast-name">MonAst</span>&nbsp;
+  <span class="monast-text">The Asterisk Monitor Web Panel</span>
+  <span class="monast-serverlist">
+    <!-- START BLOCK : singleServer -->
+    Server: {server}
+    <!-- END BLOCK : singleServer -->
+    <!-- START BLOCK : serverList -->
+    Server:
+    <select id="serverlist" onchange="Monast.changeServer(this.options[this.selectedIndex].value)">
+      <!-- START BLOCK : optionServer -->
+      <option value="{server}" {selected}>{server}</option>
+      <!-- END BLOCK : optionServer -->
+    </select>
+    <!-- END BLOCK : serverList -->
+  </span>
+  <span class="monast-status" id="_reqStatus">Initializing...</span>
+  <span><input type="button" id="buttonReload" value="Reload"></span>
+  <script language="javascript">
+  Monast._buttonReload = new YAHOO.widget.Button("buttonReload", {onclick: {fn: Monast.doReload}});
+  </script>
+  <!-- START BLOCK : buttonLogout -->
+  <span><input type="button" id="buttonLogout" value="Logout"></span>
+  <script language="javascript">
+  Monast._buttonLogout = new YAHOO.widget.Button("buttonLogout", {onclick: {fn: Monast.doLogout}});
+  </script>
+  <!-- END BLOCK : buttonLogout -->
+</div>
+
+<!-- START BLOCK : login -->
+<script language="javascript">
+$('_reqStatus').innerHTML = 'Authentication Required';
+</script>
+
+<div id="TabPannel" class="yui-navset" >
+  <ul class="yui-nav">
+    <li><a href="#tab0"><em>Authentication</em></a></li>
+  </ul>
+  <div class="yui-content">
+    <div id="authentication">
+      <p>&nbsp;</p>
+      <form onsubmit="return false">
+      <table border="0" cellpadding="2px" cellspacing="2px" align="center">
+        <tr>
+          <td align="right">User:</td>
+          <td><input type="text" name="_username" id="_username" size="15"></td>
+        </tr>
+        <tr>
+          <td align="right">Secret:</td>
+          <td><input type="password" name="_secret" id="_secret" size="15"></td>
+        </tr>
+        <tr>
+          <td colspan="2">&nbsp;</td>
+        </tr>
+        <tr>
+          <td>&nbsp;</td>
+          <td align="center">
+            <input type="submit" id="buttonLogin" value="Login">&nbsp;&nbsp;
+            <input type="reset" id="buttonClear" value="Clear">
+          </td>
+        </tr>
+      </table>
+      </form>
+      <p>&nbsp;</p>
+    </div>
+  </div>
+</div>
+<script language="javascript">
+Monast._buttonLogin = new YAHOO.widget.Button("buttonLogin", {onclick: {fn: Monast.doLogin}});
+Monast._buttonClear = new YAHOO.widget.Button("buttonClear");
+</script>
+<!-- END BLOCK : login -->
+
+<!-- START BLOCK : error -->
+<script language="javascript">
+$('_reqStatus').innerHTML = '<font color="red"><b>MonAst Error</b></font>';
+</script>
+
+<div id="TabPannel" class="yui-navset" >
+  <ul class="yui-nav">
+    <li><a href="#tab0"><em>Error Message</em></a></li>
+  </ul>
+  <div class="yui-content">
+    <div id="error">
+      <p>&nbsp;</p>
+      <table border="0" align="center">
+        <tr>
+          <td>{errorMessage}</td>
+        </tr>
+      </table>
+      <p>&nbsp;</p>
+    </div>
+  </div>
+</div>
+<!-- END BLOCK : error -->
+
+<!-- INCLUDESCRIPT BLOCK : main -->
+
+<div> 
+  <table width="100%"> 
+    <tr>
+      <td align="right">
+        <a href="http://sourceforge.net/donate/index.php?group_id=232812" target="_blank"><img src="image/project-support.jpg" width="88" height="32" border="0" alt="Support This Project" /> </a> 
+      </td> 
+    </tr> 
+  </table> 
+</div> 
+
+<script language="javascript">
+Monast.init();
+</script>
+
+</body>
+</html>
