@@ -200,6 +200,11 @@ class ServerObject(GenericObject):
 			del self._calls[callid]
 		if not df.called:
 			defer.timeout(df)
+			
+	def clearCalls(self):
+		for callid, call in self._calls.items():
+			if call:
+				call.args[1].errback(failure.Failure(AMICommandFailure("Connection closed")))
 	
 
 class MyConfigParser(SafeConfigParser):
@@ -617,6 +622,7 @@ class Monast:
 		if server.connected:
 			log.info("Server %s :: Marking as disconnected..." % servername)
 			log.debug("Server %s :: Stopping Task Check Status..." % servername)
+			server.clearCalls()
 			if server.taskCheckStatus.running:
 				server.taskCheckStatus.stop()
 		server.connected = False
