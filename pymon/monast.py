@@ -655,17 +655,20 @@ class Monast:
 		_log        = kw.get('_log', '')
 		
 		if server.status.peers.has_key(channeltype):
-			peer             = GenericObject("User/Peer")
-			peer.channeltype = channeltype
-			peer.peername    = peername
-			peer.channel     = '%s/%s' % (channeltype, peername)
-			peer.callerid    = kw.get('callerid', '--')
+			peer = server.status.peers[channeltype].get(peername)
+			if not peer:
+				peer = GenericObject("User/Peer")
+				peer.channeltype = channeltype
+				peer.peername    = peername
+				peer.channel     = '%s/%s' % (channeltype, peername)
+				peer.callerid    = kw.get('callerid', '--')
+				peer.forced      = kw.get('forced', False)
+				
 			peer.context     = kw.get('context', server.default_context)
 			peer.variables   = kw.get('variables', [])
 			peer.status      = kw.get('status', '--')
 			peer.time        = kw.get('time', -1)
 			peer.calls       = int(kw.get('calls', 0))
-			peer.forced      = kw.get('forced', False)
 			
 			## Dahdi Specific attributes
 			if channeltype == 'DAHDI':
@@ -673,10 +676,12 @@ class Monast:
 				peer.alarm      = kw.get('alarm')
 				peer.dnd        = kw.get('dnd', 'disabled').lower() == 'enabled'
 				peer.status     = ['--', peer.alarm][peer.status == '--']
-				if peer.peername.isdigit():
-					peer.callerid = [peer.channel, "%s %02d" % (peer.signalling, int(peer.peername))][peer.callerid == '--']
-				else:
-					peer.callerid = [peer.channel, "%s %s" % (peer.signalling, peer.peername)][peer.callerid == '--']
+				
+				if peer.callerid == "--":
+					if peer.peername.isdigit():
+						peer.callerid = [peer.channel, "%s %02d" % (peer.signalling, int(peer.peername))][peer.callerid == '--']
+					else:
+						peer.callerid = [peer.channel, "%s %s" % (peer.signalling, peer.peername)][peer.callerid == '--']
 				
 			## Khomp
 			if channeltype == 'Khomp':
