@@ -676,7 +676,6 @@ class Monast:
 				peer.alarm      = kw.get('alarm')
 				peer.dnd        = kw.get('dnd', 'disabled').lower() == 'enabled'
 				peer.status     = ['--', peer.alarm][peer.status == '--']
-				
 				if peer.callerid == "--":
 					if peer.peername.isdigit():
 						peer.callerid = [peer.channel, "%s %02d" % (peer.signalling, int(peer.peername))][peer.callerid == '--']
@@ -685,8 +684,9 @@ class Monast:
 				
 			## Khomp
 			if channeltype == 'Khomp':
-				peer.callerid = [peer.callerid, peer.channel][peer.callerid == '--']
-				peer.callerid = [peer.channel, "KGSM %s" % peer.peername]['Signal' in peer.status]
+				if peer.callerid == "--":
+					peer.callerid = [peer.callerid, peer.channel][peer.callerid == '--']
+					peer.callerid = [peer.channel, "KGSM %s" % peer.peername]['Signal' in peer.status]
 				
 			log.debug("Server %s :: Adding User/Peer %s %s", servername, peer.channel, _log)
 			server.status.peers[peer.channeltype][peer.peername] = peer
@@ -1134,7 +1134,7 @@ class Monast:
 						del server.status.queueMembers[memberid]
 						self.http._addUpdate(servername = servername, action = 'RemoveQueueMember', location = member.location, queue = member.queue)
 						if logging.DUMPOBJECTS:
-							log.debug("Object Dump:%s", meetme)
+							log.debug("Object Dump:%s", member)
 					else:
 						log.warning("Server %s :: Queue Member does not exists: %s -> %s", servername, queuename, location)
 					return
@@ -1224,7 +1224,7 @@ class Monast:
 						del server.status.queueClients[clientid]
 						self.http._addUpdate(servername = servername, action = 'RemoveQueueClient', uniqueid = client.uniqueid, queue = client.queue)
 						if logging.DUMPOBJECTS:
-							log.debug("Object Dump:%s", meetme)
+							log.debug("Object Dump:%s", client)
 					else:
 						log.warning("Server %s :: Queue Client does not exists: %s -> %s", servername, queuename, uniqueid)
 					return
@@ -1738,14 +1738,14 @@ class Monast:
 		
 		if type == "meetmeInviteUser":
 			application = "Meetme"
-			data        = "%s,d" % destination
+			data        = "%s%sd" % (destination, [",", "|"][server.version == 1.4])
 			originates.append((channel, context, exten, priority, timeout, callerid, account, application, data, variable, async))
 			logs.append("Invite from %s to %s(%s)" % (channel, application, data))
 		
 		if type == "meetmeInviteNumbers":
 			dynamic     = not server.status.meetmes.has_key(destination)
 			application = "Meetme"
-			data        = "%s,d" % destination
+			data        = "%s%sd" % (destination, [",", "|"][server.version == 1.4])
 			numbers     = source.replace('\r', '').split('\n')
 			for number in [i.strip() for i in numbers if i.strip()]:
 				channel     = "Local/%s@%s" % (number, context)
