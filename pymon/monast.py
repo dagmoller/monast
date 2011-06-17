@@ -1780,11 +1780,10 @@ class Monast:
 			exten        = "%s%s" % (server.meetme_prefix, exten)
 			context      = server.meetme_context
 			
-			if server.version == 1.8:
+			if server.version == 1.8: ## Asterisk 1.8 requires some extra params
 				extraExten    = exten
 				extraContext  = context
 				extraPriority = priority
-				
 		
 		log.info("Server %s :: Executting Client Action Transfer: %s -> %s@%s..." % (servername, channel, exten, context))
 		server.pushTask(server.ami.redirect, channel, context, exten, priority, extraChannel, extraContext, extraExten, extraPriority) \
