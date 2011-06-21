@@ -167,44 +167,34 @@ class ServerObject(GenericObject):
 	def pushTask(self, task, *args, **kwargs):
 		if self._runningTasks < self._maxConcurrentTasks:
 			self._runningTasks += 1
-			
 			taskid              = self._getTaskId()
 			taskdf              = task(*args, **kwargs).addBoth(self._onTaskDone, taskid)
 			calltm              = reactor.callLater(5, self._fireTimeout, taskid, taskdf)
 			self._calls[taskid] = calltm
-			
 			return taskdf
-		
 		queuedf = defer.Deferred()
 		self._queuedTasks.append((task, args, kwargs, queuedf))
 		return queuedf
 	
 	def _onTaskDone(self, taskdone, taskid):
 		self._runningTasks -= 1
-		
 		## Remove Call
 		calltm = self._calls.get(taskid)
 		if calltm:
 			del self._calls[taskid]
 			calltm.cancel()
-			
 		## Call next task if exists
 		if self._runningTasks < self._maxConcurrentTasks and self._queuedTasks:
-			self._runningTasks += 1
-			
+			self._runningTasks         += 1
 			task, args, kwargs, queuedf = self._queuedTasks.pop(0)
 			taskid                      = self._getTaskId()
 			taskdf                      = task(*args, **kwargs).addBoth(self._onTaskDone, taskid)
-			
 			taskdf.chainDeferred(queuedf)
-			
-			calltm              = reactor.callLater(5, self._fireTimeout, taskid, taskdf)
-			self._calls[taskid] = calltm
-			
+			calltm                      = reactor.callLater(5, self._fireTimeout, taskid, taskdf)
+			self._calls[taskid]         = calltm
 		## Raize Feilure
 		if isinstance(taskdone, failure.Failure):
 			taskdone.trap()
-			
 		return taskdone
 	
 	def _fireTimeout(self, taskid, taskdf):
