@@ -207,16 +207,15 @@ class ServerObject(GenericObject):
 			defer.timeout(taskdf)
 			
 	def clearCalls(self):
-		## Clear Queue
-		while self._queuedTasks:
-			task, args, kwargs, queuedf = self._queuedTasks.pop(0)
-			queuedf.errback(failure.Failure(AMICommandFailure("Connection closed")))
 		## Clear Pending Calls
 		for taskid, call in self._calls.items():
 			if call:
 				call.args[1].errback(failure.Failure(AMICommandFailure("Connection closed")))
 		self._calls.clear()
-			 
+		## Clear Queue
+		while self._queuedTasks:
+			task, args, kwargs, queuedf = self._queuedTasks.pop(0)
+			queuedf.errback(failure.Failure(AMICommandFailure("Connection closed")))
 
 class MyConfigParser(SafeConfigParser):
 	def optionxform(self, optionstr):
@@ -1683,15 +1682,16 @@ class Monast:
 				.addCallbacks(onQueueStatusComplete, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Queues Status"))
 				
 		## Parked Calls
-		def onParkedCalls(events):
-			log.debug("Server %s :: Processing Parked Calls..." % servername)
+		def onParkedCalls(result):
 			self.isParkedCallStatus = False
+			if isinstance(result, failure.Failure):
+				self._onAmiCommandFailure(result, servername, "Error Requesting Parked Calls")
 			# Parked calls was processed by handlerEventParkedCall
 		
 		log.debug("Server %s :: Requesting Parked Calls..." % servername)
 		self.isParkedCallStatus = True
 		server.pushTask(server.ami.collectDeferred, {'Action': 'ParkedCalls'}, 'ParkedCallsComplete') \
-			.addCallbacks(onParkedCalls, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Parked Calls"))
+			.addBoth(onParkedCalls)
 		
 	##
 	## Client Action Handler
