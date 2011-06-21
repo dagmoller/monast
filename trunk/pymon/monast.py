@@ -665,6 +665,10 @@ class Monast:
 		peername    = kw.get('peername')
 		_log        = kw.get('_log', '')
 		
+		if not server.status.peers.has_key(channeltype) and kw.get('forced', False):
+			log.warning("Server %s :: Adding a not implemented ChannelType %s (forced in config file)", servername, channeltype)
+			server.status.peers[channeltype] = {}
+		
 		if server.status.peers.has_key(channeltype):
 			peer = server.status.peers[channeltype].get(peername)
 			if not peer:
