@@ -160,55 +160,73 @@ class ServerObject(GenericObject):
 	def __init__(self):
 		GenericObject.__init__(self, "Server")
 	
-	def _getNextCallId(self):
+	def _getTaskId(self):
 		self._callid += 1
 		return self._callid
 	
 	def pushTask(self, task, *args, **kwargs):
 		if self._runningTasks < self._maxConcurrentTasks:
 			self._runningTasks += 1
-			callid = self._getNextCallId()
-			df     = task(*args, **kwargs).addBoth(self._try_queued, callid)
-			call   = reactor.callLater(5, self._fireTimeout, callid, df)
-			self._calls[callid] = call
-			return df
-		df = defer.Deferred()
-		self._queuedTasks.append((task, args, kwargs, df))
-		return df
+			
+			taskid              = self._getTaskId()
+			taskdf              = task(*args, **kwargs).addBoth(self._onTaskDone, taskid)
+			calltm              = reactor.callLater(5, self._fireTimeout, taskid, taskdf)
+			self._calls[taskid] = calltm
+			
+			return taskdf
+		
+		queuedf = defer.Deferred()
+		self._queuedTasks.append((task, args, kwargs, queuedf))
+		return queuedf
 	
-	def _try_queued(self, item, callid):
+	def _onTaskDone(self, taskdone, taskid):
 		self._runningTasks -= 1
-		call = self._calls.get(callid)
-		if call:
-			del self._calls[callid]
-			call.cancel()
+		
+		## Remove Call
+		calltm = self._calls.get(taskid)
+		if calltm:
+			del self._calls[taskid]
+			calltm.cancel()
+			
+		## Call next task if exists
 		if self._runningTasks < self._maxConcurrentTasks and self._queuedTasks:
 			self._runningTasks += 1
-			task, args, kwargs, df = self._queuedTasks.pop(0)
-			callid = self._getNextCallId()
-			curdf  = task(*args, **kwargs).addBoth(self._try_queued, callid)
-			curdf.chainDeferred(df)
-			call = reactor.callLater(5, self._fireTimeout, callid, curdf)
-			self._calls[callid] = call
-		if isinstance(item, failure.Failure):
-			item.trap()
-		return item
+			
+			task, args, kwargs, queuedf = self._queuedTasks.pop(0)
+			taskid                      = self._getTaskId()
+			taskdf                      = task(*args, **kwargs).addBoth(self._onTaskDone, taskid)
+			
+			taskdf.chainDeferred(queuedf)
+			
+			calltm              = reactor.callLater(5, self._fireTimeout, taskid, taskdf)
+			self._calls[taskid] = calltm
+			
+		## Raize Feilure
+		if isinstance(taskdone, failure.Failure):
+			taskdone.trap()
+			
+		return taskdone
 	
-	def _fireTimeout(self, callid, df):
-		call = self._calls.get(callid)
-		if call:
-			del self._calls[callid]
-		if not df.called:
-			defer.timeout(df)
+	def _fireTimeout(self, taskid, taskdf):
+		## Remove Call
+		calltm = self._calls.get(taskid)
+		if calltm:
+			del self._calls[taskid]
+		## Fire Timeout
+		if not taskdf.called:
+			defer.timeout(taskdf)
 			
 	def clearCalls(self):
+		## Clear Queue
 		while self._queuedTasks:
-			task, args, kwargs, df = self._queuedTasks.pop(0)
-			df.errback(failure.Failure(AMICommandFailure("Connection closed")))
-		for callid, call in self._calls.items():
+			task, args, kwargs, queuedf = self._queuedTasks.pop(0)
+			queuedf.errback(failure.Failure(AMICommandFailure("Connection closed")))
+		## Clear Pending Calls
+		for taskid, call in self._calls.items():
 			if call:
 				call.args[1].errback(failure.Failure(AMICommandFailure("Connection closed")))
-	
+		self._calls.clear()
+			 
 
 class MyConfigParser(SafeConfigParser):
 	def optionxform(self, optionstr):
