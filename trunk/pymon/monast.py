@@ -202,6 +202,9 @@ class ServerObject(GenericObject):
 			defer.timeout(df)
 			
 	def clearCalls(self):
+		while self._queuedTasks:
+			task, args, kwargs, df = self._queuedTasks.pop(0)
+			df.errback(failure.Failure(AMICommandFailure("Connection closed")))
 		for callid, call in self._calls.items():
 			if call:
 				call.args[1].errback(failure.Failure(AMICommandFailure("Connection closed")))
