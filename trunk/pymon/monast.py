@@ -576,6 +576,8 @@ class Monast:
 			'AntennaLevel'        : self.handlerEventAntennaLevel,
 			'BranchOnHook'        : self.handlerEventBranchOnHook,
 			'BranchOffHook'       : self.handlerEventBranchOffHook,
+			'ChanSpyStart'        : self.handlerEventChanSpyStart,
+			'ChanSpyStop'         : self.handlerEventChanSpyStop,
 		}
 		
 		self.actionHandlers = {
@@ -592,6 +594,7 @@ class Monast:
 			'QueueMemberAdd'     : ('queue', self.clientAction_QueueMemberAdd),
 			'QueueMemberRemove'  : ('queue', self.clientAction_QueueMemberRemove),
 			'MeetmeKick'         : ('originate', self.clientAction_MeetmeKick),
+			'SpyChannel'         : ('spy', self.clientAction_SpyChannel),
 		}
 		
 		self.configFile = configFile
@@ -752,6 +755,7 @@ class Monast:
 			chan.calleridnum  = kw.get('calleridnum', '')
 			chan.calleridname = kw.get('calleridname', '')
 			chan.monitor      = kw.get('monitor', False)
+			chan.spy          = kw.get('spy', False)
 			chan.starttime    = time.time()
 			
 			log.debug("Server %s :: Channel create: %s (%s) %s", servername, uniqueid, channel, _log)
@@ -768,6 +772,14 @@ class Monast:
 			if not kw.get('_isCheckStatus'):
 				log.warning("Server %s :: Channel already exists: %s (%s)", servername, uniqueid, channel)
 		return False
+	
+	def _lookupChannel(self, servername, chan):
+		server  = self.servers.get(servername)
+		channel = None
+		for uniqueid, channel in server.status.channels.items():
+			if channel.channel == chan:
+				break
+		return channel
 	
 	def _updateChannel(self, servername, **kw):
 		uniqueid = kw.get('uniqueid')
@@ -1058,6 +1070,7 @@ class Monast:
 			queue.queue            = queuename
 			queue.calls            = int(kw.get('calls', 0))
 			queue.completed        = int(kw.get('completed', 0))
+			queue.abandoned        = int(kw.get('abandoned', 0))
 			queue.holdtime         = kw.get('holdtime', 0)
 			queue.max              = kw.get('max', 0)
 			queue.servicelevel     = kw.get('servicelevel', 0)
@@ -1767,7 +1780,7 @@ class Monast:
 				callerid    = "MonAst Invited <%s>" % (number)
 				originates.append((channel, context, exten, priority, timeout, callerid, account, application, data, variable, async))
 				logs.append("Invite from %s to %s(%s)" % (channel, application, data))
-
+				
 		for idx, originate in enumerate(originates):
 			channel, context, exten, priority, timeout, callerid, account, application, data, variable, async = originate
 			log.info("Server %s :: Executting Client Action Originate: %s..." % (servername, logs[idx]))
@@ -1925,7 +1938,35 @@ class Monast:
 		server = self.servers.get(servername)
 		server.pushTask(server.ami.command, "meetme kick %s %s" % (meetme, usernum)) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Client Action Meetme Kick: %s -> %s..." % (meetme, usernum))
+			
+	def clientAction_SpyChannel(self, session, action):
+		servername = action['server'][0]
+		server     = self.servers.get(servername)
+		spyer      = action['spyer'][0]
+		spyee      = action['spyee'][0]
+		type       = action['type'][0]
+
+		channel     = None
+		context     = server.default_context
+		exten       = None
+		priority    = None
+		timeout     = None
+		callerid    = "MonAst Spyer"
+		account     = None
+		application = "ChanSpy"
+		data        = spyee
+		variable    = {}
+		async       = True
+
+		if type == "peer":
+			channel = spyer
+			
+		if type == "number":
+			channel = "Local/%s@%s" % (spyer, server.default_context)
 		
+		log.info("Server %s :: Executting Client Action Spy Channel: %s -> %s..." % (servername, spyer, spyee))
+		server.pushTask(server.ami.originate, channel, context, exten, priority, timeout, callerid, account, application, data, variable, async) \
+				.addErrback(self._onAmiCommandFailure, servername, "Error Executting Client Spy Channel: %s -> %s" % (spyer, spyee))
 	
 	##
 	## Event Handlers
@@ -2416,6 +2457,24 @@ class Monast:
 		channel = event.get('channel')
 		channeltype, peername = channel.split('/', 1)
 		self._updatePeer(ami.servername, channeltype = channeltype, peername = peername, status = "Off Hook")
+		
+	def handlerEventChanSpyStart(self, ami, event):
+		log.debug("Server %s :: Processing Event ChanSpyStart..." % ami.servername)
+		spyeechannel = event.get('spyeechannel')
+		spyerchannel = event.get('spyerchannel')
+		channel      = self._lookupChannel(ami.servername, spyeechannel)
+		
+		if channel:
+			self._updateChannel(ami.servername, uniqueid = channel.uniqueid, spy = True)
+		
+	def handlerEventChanSpyStop(self, ami, event):
+		log.debug("Server %s :: Processing Event ChanSpyStop..." % ami.servername)
+		spyeechannel = event.get('spyeechannel')
+		channel      = self._lookupChannel(ami.servername, spyeechannel)
+		
+		if channel:
+			self._updateChannel(ami.servername, uniqueid = channel.uniqueid, spy = False)
+		
 ##
 ## Daemonizer
 ##
