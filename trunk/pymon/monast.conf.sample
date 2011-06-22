@@ -133,6 +133,7 @@ default = show
 ##                originate : user can originate, transfer, park and drop calls
 ##                agent     : user cans add, remove, pause and unpause members on queues
 ##                command   : user can execute asterisk cli commands
+##                spy       : user can start a spy
 
 [user: admin]
 secret  = 12345
