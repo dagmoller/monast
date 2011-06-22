@@ -275,7 +275,7 @@ var Monast = {
 			if (found)
 			{
 				if (Monast._tabPannel.get("activeIndex") == 0 && Monast._stateCookie.buttons["checkBoxTab_chanCallDiv"])
-					new YAHOO.util.Scroll(document.body, {scroll: {to: YAHOO.util.Dom.getXY($('chanCallDiv'))}}, 0.5).animate();
+					new YAHOO.util.Scroll(navigator.userAgent.indexOf("AppleWebKit") != -1 ? document.body : document.documentElement, {scroll: {to: YAHOO.util.Dom.getXY($('chanCallDiv'))}}, 0.5).animate();
 				else
 					Monast._tabPannel.set("activeIndex", 3);
 			}
