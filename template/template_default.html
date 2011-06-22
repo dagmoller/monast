@@ -82,7 +82,10 @@
     <tr>
       <td class='status' width='260'>
         <span monast="monitor">
-          <img src='image/record.png' border='0' width='8' height='8' title="Channel Monitored">&nbsp;&nbsp;
+          <img src='image/stop.png' border='0' width='8' height='8' title="Channel Monitored">&nbsp;&nbsp;
+        </span>
+        <span monast="spy">
+          <img src='image/user_thief.png' border='0' width='8' height='8' title="Channel Spyed">&nbsp;&nbsp;
         </span>
         <span monast="channel">&nbsp;</span>
         <br>
@@ -117,8 +120,12 @@
       <td>#{state}</td>
     </tr>
     <tr>
-      <td class="key">Monitor:</td>
+      <td class="key">Monitored:</td>
       <td>#{monitortext}</td>
+    </tr>
+    <tr>
+      <td class="key">Spy:</td>
+      <td>#{spytext}</td>
     </tr>
   </table>
 </div>
@@ -204,6 +211,42 @@
       <td class="key">Destination Channel:</td>
       <td><input type="radio" name="Template::Bridge::Form::Park::Channel" value="#{bridgedchannel}"></td>
       <td>#{bridgedchannel}<br>#{bridgedcallerid}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Bridge Form Spy Peer -->
+<div style="display: none" id="Template::Bridge::Form::Spy::Peer">
+  <table class="tableInfo">
+    <tr>
+      <td class="key">Source Channel:</td>
+      <td>#{channel}<br>#{callerid}</td>
+    </tr>
+    <tr>
+      <td class="key">Destination Channel:</td>
+      <td>#{bridgedchannel}<br>#{bridgedcallerid}</td>
+    </tr>
+    <tr>
+      <td class="key">Spyer:</td>
+      <td>#{spyer}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Bridge Form Spy Number -->
+<div style="display: none" id="Template::Bridge::Form::Spy::Number">
+  <table class="tableInfo">
+    <tr>
+      <td class="key">Source Channel:</td>
+      <td>#{channel}<br>#{callerid}</td>
+    </tr>
+    <tr>
+      <td class="key">Destination Channel:</td>
+      <td>#{bridgedchannel}<br>#{bridgedcallerid}</td>
+    </tr>
+    <tr>
+      <td class="key">Spyer Number:</td>
+      <td><input type="text" id="Template::Bridge::Form::Spy::Number::Spyer" value="#{spyer}"></td>
     </tr>
   </table>
 </div>

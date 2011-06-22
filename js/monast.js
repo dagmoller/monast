@@ -414,6 +414,7 @@ var Monast = {
 		c.id           = c.uniqueid;
 		c.statecolor   = this.getColor(c.state);
 		c.monitortext  = c.monitor ? "Yes" : "No";
+		c.spytext      = c.spy ? "Yes" : "No";
 		c.channel      = c.channel.replace('<', '&lt;').replace('>', '&gt;');
 		c.calleridname = c.calleridname != null ? c.calleridname.replace('<', '').replace('>', '') : "";
 		c.calleridnum  = c.calleridnum != null ? c.calleridnum.replace('<', '').replace('>', '') : "";
@@ -442,6 +443,10 @@ var Monast = {
 						
 					case "monitor":
 						if (c.monitor) { $(elid).show(); } else { $(elid).hide(); }
+						break;
+						
+					case "spy":
+						if (c.spy) { $(elid).show(); } else { $(elid).hide(); }
 						break;
 						
 					default:
@@ -582,34 +587,73 @@ var Monast = {
 	dd_bridgeDrop: function (e, id)
 	{
 		var bridge = Monast.bridges.get(this.id);
+		var peer   = Monast.userspeers.get(id);
 		switch ($(id).className)
 		{
 			case "peerTable":
-				var peer = Monast.userspeers.get(id);
-				var to   = /\<(\d+)\>/.exec(peer.callerid);
-				if (to == null)
+				Monast._contextMenu.clearContent();
+				Monast._contextMenu.cfg.queueProperty("xy", Monast.getMousePosition());
+				
+				var requestTransfer = function (p_sType, p_aArgs, p_oValue)
 				{
-					Monast.doWarn("This User/Peer does not have a valid callerid number to transfer to.");
-					break;
-				}
-				var obj  = bridge;
-				obj.tocallerid = peer.callerid;
-				obj.tochannel  = peer.channel;
-				obj.toexten    = to[1];
-				Monast.doConfirm(
-					"<div style='text-align: center'>Select Channel to Transfer:</div><br>" + new Template($("Template::Bridge::Form::Transfer::Internal").innerHTML).evaluate(obj),
-					function () {
-						new Ajax.Request('action.php', 
-						{
-							method: 'get',
-							parameters: {
-								reqTime: new Date().getTime(),
-								action: Object.toJSON({action: 'Transfer', from: $$("input[name=Template::Bridge::Form::Transfer::Internal::From]:checked")[0].value, to: obj.toexten, type: 'normal'})
-							}
-						});
+					var peer = p_oValue.peer;
+					var to   = /\<(\d+)\>/.exec(peer.callerid);
+					if (to == null)
+					{
+						Monast.doWarn("This User/Peer does not have a valid callerid number to transfer to.");
+						return;
 					}
-				);
-				Monast.confirmDialog.setHeader('Transfer Call');
+					var obj        = p_oValue.bridge;
+					obj.tocallerid = peer.callerid;
+					obj.tochannel  = peer.channel;
+					obj.toexten    = to[1];
+					Monast.doConfirm(
+						"<div style='text-align: center'>Select Channel to Transfer:</div><br>" + new Template($("Template::Bridge::Form::Transfer::Internal").innerHTML).evaluate(obj),
+						function () {
+							new Ajax.Request('action.php', 
+							{
+								method: 'get',
+								parameters: {
+									reqTime: new Date().getTime(),
+									action: Object.toJSON({action: 'Transfer', from: $$("input[name=Template::Bridge::Form::Transfer::Internal::From]:checked")[0].value, to: obj.toexten, type: 'normal'})
+								}
+							});
+						}
+					);
+					Monast.confirmDialog.setHeader('Transfer Call');
+				};
+				
+				var requestSpyChannel = function (p_sType, p_aArgs, p_oValue)
+				{
+					var obj    = p_oValue.bridge;
+					obj.spyer  = p_oValue.peer.callerid;
+					Monast.doConfirm(
+						"<div style='text-align: center'>Request Spy to this Call?</div><br>" + new Template($("Template::Bridge::Form::Spy::Peer").innerHTML).evaluate(obj),
+						function () {
+							new Ajax.Request('action.php', 
+							{
+								method: 'get',
+								parameters: {
+									reqTime: new Date().getTime(),
+									action: Object.toJSON({action: 'SpyChannel', spyer: p_oValue.peer.channel, spyee: p_oValue.bridge.channel, type: "peer"})
+								}
+							});
+						}
+					);
+				};
+				
+				var m = [
+					[
+					 	{text: "Transfer", onclick: {fn: requestTransfer, obj: {peer: peer, bridge: bridge}}},
+						{text: "Spy", onclick: {fn: requestSpyChannel, obj: {peer: peer, bridge: bridge}}}
+					]
+				];
+				
+				Monast._contextMenu.addItems(m);
+				Monast._contextMenu.setItemGroupTitle("Select Action for Call " + bridge.uniqueid + " -> " + bridge.bridgeduniqueid, 0);
+				Monast._contextMenu.render(document.body);
+				Monast._contextMenu.show();
+				
 				break;
 		}
 	},
@@ -625,6 +669,7 @@ var Monast = {
 		this.removeDragDrop(id);
 		$('countCalls').innerHTML = this.bridges.keys().length;
 	},
+	_lastSpyer: "",
 	showBridgeContextMenu: function (id)
 	{
 		this._contextMenu.clearContent();
@@ -665,6 +710,30 @@ var Monast = {
 				}
 			);
 		};
+		var requestSpy = function (p_sType, p_aArgs, p_oValue)
+		{
+			p_oValue.spyer = Monast._lastSpyer;
+			Monast.doConfirm(
+				"<div style='text-align: center'>Request Spy to this Call?</div><br>" + new Template($("Template::Bridge::Form::Spy::Number").innerHTML).evaluate(p_oValue),
+				function () {
+					var spyer = $("Template::Bridge::Form::Spy::Number::Spyer").value.trim();
+					if (!spyer)
+					{
+						Monast.doWarn("No Spyer Number Specified!");
+						return;
+					}
+					Monast._lastSpyer = spyer;
+					new Ajax.Request('action.php', 
+					{
+						method: 'get',
+						parameters: {
+							reqTime: new Date().getTime(),
+							action: Object.toJSON({action: 'SpyChannel', spyer: spyer, spyee: p_oValue.channel, type: "number"})
+						}
+					});
+				}
+			);
+		};
 		var viewCallInfo = function (p_sType, p_aArgs, p_oValue)
 		{
 			if (p_oValue.status == "Link")
@@ -677,6 +746,7 @@ var Monast = {
 			[
 			 	{text: "Park", onclick: {fn: requestPark, obj: b}},
 				{text: "Hangup", onclick: {fn: requestHangup, obj: b}},
+				{text: "Spy", onclick: {fn: requestSpy, obj: b}},
 				{text: "Source Channel", url: "#SourceChannel", submenu: {id: "SourceChannel", itemdata: Monast.showChannelContextMenu(b.uniqueid, true)}},
 				{text: "Destination Channel", url: "#DestinationChannel", submenu: {id: "DestinationChannel", itemdata: Monast.showChannelContextMenu(b.bridgeduniqueid, true)}},
 				{text: "View Call Info", onclick: {fn: viewCallInfo, obj: b}},
