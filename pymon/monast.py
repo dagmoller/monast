@@ -680,7 +680,13 @@ class Monast:
 				peer.channel     = '%s/%s' % (channeltype, peername)
 				peer.callerid    = kw.get('callerid', '--')
 				peer.forced      = kw.get('forced', False)
-				
+				peer.forcedCid   = kw.get('forcedCid', False)
+				try:
+					peer.peergroup = server.peergroups[channeltype][peername]
+				except:
+					if len(server.peergroups.keys()) > 0:
+						peer.peergroup = "No Group"
+			
 			peer.context     = kw.get('context', server.default_context)
 			peer.variables   = kw.get('variables', [])
 			peer.status      = kw.get('status', '--')
@@ -727,6 +733,10 @@ class Monast:
 							peer.calls += 1
 						elif v == 'decreaseCallCounter':
 							peer.calls -= 1
+					# Ignore callerid on forced peers
+					if k == "callerid" and peer.forcedCid:
+						continue
+					# Update peer
 					if k not in ('_log', '_action'): 
 						if peer.__dict__.has_key(k):
 							peer.__dict__[k] = v
@@ -1318,6 +1328,7 @@ class Monast:
 				'DAHDI': {},
 				'Khomp': {},
 			}
+			self.servers[servername].peergroups          = {}
 			self.servers[servername].displayUsers        = {}
 			self.servers[servername].displayMeetmes      = {}
 			self.servers[servername].displayQueues       = {}
@@ -1326,7 +1337,26 @@ class Monast:
 			self.servers[servername].status.queueClients = {}
 			self.servers[servername].status.queueCalls   = {}
 			self.servers[servername].status.parkedCalls  = {}
+		
+		## Peers Groups
+		for peergroup, peers in config.items('peers'):
+			if peergroup in ('default', 'sortby'):
+				continue
 			
+			if re.match("^[^\/]+\/@group\/[^\/]+", peergroup):
+				servername, peergroup = peergroup.replace('@group/', '').split('/', 1)
+				server = self.servers.get(servername)
+				if server:
+					peergroup = peergroup.strip()
+					peers     = peers.split(',')
+					for peer in peers:
+						tech, peer = peer.split('/', 1)
+						tech = tech.strip()
+						peer = peer.strip()
+						if not server.peergroups.has_key(tech):
+							server.peergroups[tech] = {}
+						server.peergroups[tech][peer] = peergroup
+		
 		## Peers
 		self.displayUsersDefault = config.get('peers', 'default') == 'show'
 		try:
@@ -1342,6 +1372,9 @@ class Monast:
 			if user in ('default', 'sortby'):
 				continue
 			
+			if not re.match("^[^\/]+\/[^\/@]+\/[^\/]+", user):
+				continue
+			
 			servername, user = user.split('/', 1)
 			server = self.servers.get(servername)
 			if not server:
@@ -1354,13 +1387,15 @@ class Monast:
 					server.displayUsers[user] = True
 					
 			if display.startswith('force'):
-				tmp      = display.split(',')
-				display  = tmp[0].strip()
-				status   = '--'
-				callerid = '--'
+				tmp       = display.split(',')
+				display   = tmp[0].strip()
+				status    = '--'
+				callerid  = '--'
+				forcedCid = False
 				if len(tmp) == 2:
-					callerid = tmp[1].strip()
-					
+					callerid  = tmp[1].strip()
+					forcedCid = True
+				
 				self._createPeer(
 					servername, 
 					channeltype = tech, 
@@ -1368,6 +1403,7 @@ class Monast:
 					callerid    = callerid,
 					status      = status,
 					forced      = True,
+					forcedCid   = forcedCid,
 					_log        = '(forced peer)'
 				)
 		
