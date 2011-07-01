@@ -158,10 +158,38 @@ foreach ($techs as $tech)
 		$template->assign('technology', $tech);
 		$template->assign('count', count($peers));
 		
-		foreach ($peers as $peer)
+		$groups = array();
+		
+		foreach ($peers as $idx => $peer)
 		{
 			$template->newBlock('process');
 			$template->assign('json', monast_json_encode($peer));
+			
+			if (array_key_exists("peergroup", $peer))
+			{
+				if (array_key_exists($peer["peergroup"], $groups))
+					$groups[$peer["peergroup"]] += 1;
+				else 
+					$groups[$peer["peergroup"]] = 1;
+			}
+		}
+		
+		foreach ($groups as $group => $count)
+		{
+			if ($group != "No Group")
+			{
+				$template->newBlock('peergroup');
+				$template->assign('technology', $tech);
+				$template->assign('group', $group);
+				$template->assign('count', $count);
+			}
+		}
+		if (array_key_exists("No Group", $groups))
+		{
+			$template->newBlock('peergroup');
+			$template->assign('technology', $tech);
+			$template->assign('group', "No Group");
+			$template->assign('count', $groups["No Group"]);
 		}
 	}
 }

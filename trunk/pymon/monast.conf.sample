@@ -96,6 +96,9 @@ default = show
 # force CallerID (only in forced mode)
 ;<Server Name>/SIP/user-4 = force,Diego Aguirre <5555>
 
+# Create peer groups
+;<Server Name>/@group/Group 1 = Group 1: SIP/user-1,SIP/user-2
+;<Server Name>/@group/Group 2 = SIP/user-3,SIP/user-4
 
 ##
 ## Meetmes / Conferences Definitions

@@ -167,7 +167,12 @@ var Monast = {
 			var clone           = Monast.buildClone("Template::Userpeer", u.id);
 			clone.className     = "peerTable";
 			clone.oncontextmenu = function () { Monast.showUserpeerContextMenu(u.id); return false; };
-			$('fieldset-' + u.channeltype).appendChild(clone);
+			
+			var group = "";
+			if (!Object.isUndefined(u.peergroup))
+				group = "-" + u.peergroup;
+			
+			$('fieldset-' + u.channeltype + group).appendChild(clone);
 			
 			// Drag & Drop
 			this.createDragDrop(u.id, this.dd_userPeerDrop, ['peerTable']);
