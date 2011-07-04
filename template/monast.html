@@ -18,7 +18,7 @@
   <div class="yui-content"> 
     <div id="mixed">
       <fieldset id="pannelsToShow">
-        <legend>Pannels to Show</legend> 
+        <legend><b>Pannels to Show</b></legend> 
         <input id="checkBoxTab_peersDiv" type="checkbox" name="checkBoxTab_peersDiv" value="peersDiv">
         <input id="checkBoxTab_meetmesDiv" type="checkbox" name="checkBoxTab_meetmesDiv" value="meetmesDiv">
         <input id="checkBoxTab_chanCallDiv" type="checkbox" name="checkBoxTab_chanCallDiv" value="chanCallDiv">
@@ -29,17 +29,21 @@
   
     <div id="peersDiv">
     <fieldset>
-      <legend>Peers/Users</legend>
+      <legend><b>Peers/Users</b></legend>
       <div id="peersDivWraper"> 
 
       <!-- START BLOCK : technology -->
-      <fieldset id="fieldset-{technology}">
-        <legend>{technology} ({count})</legend>
-        <!-- START BLOCK : peergroup -->
-        <fieldset id="fieldset-{technology}-{group}">
-          <legend>{group} ({count})</legend>
-        </fieldset>
-        <!-- END BLOCK : peergroup -->
+      <fieldset>
+        <legend><a href="javascript:void(0)" title="Show/Hide" class="a" onclick="$('fieldset-{technology}').visible() ? $('fieldset-{technology}').hide() : $('fieldset-{technology}').show()">{technology} ({count})</a></legend>
+        <div id="fieldset-{technology}">
+          <!-- START BLOCK : peergroup -->
+          <fieldset>
+            <legend><a href="javascript:void(0)" title="Show/Hide" class="a" onclick="$('fieldset-{technology}-{group}').visible() ? $('fieldset-{technology}-{group}').hide() : $('fieldset-{technology}-{group}').show()">{group} ({count})</a></legend>
+            <div id="fieldset-{technology}-{group}">
+            </div>
+          </fieldset>
+          <!-- END BLOCK : peergroup -->
+        </div>
       </fieldset>
       <!-- END BLOCK : technology -->
       
@@ -50,7 +54,7 @@
     
     <div id="meetmesDiv">
     <fieldset>
-      <legend>Meetme Rooms</legend>
+      <legend><b>Meetme Rooms</b></legend>
         <span><input type="button" id="buttonMeemteCreate" value="Create Dynamic Meetme"></span>
         <script language="javascript">
         Monast._buttonMeetmeCreate = new YAHOO.widget.Button("buttonMeemteCreate", {onclick: {fn: Monast._meetmeInviteNumbers, obj: null}});
@@ -62,7 +66,7 @@
     
     <div id="chanCallDiv">
     <fieldset>
-      <legend>Channels/Calls</legend> 
+      <legend><b>Channels/Calls</b></legend> 
       <div id="channelsDiv">
         <div class="channelDiv">
           <table width="330">
@@ -96,7 +100,7 @@
     
     <div id="parkedCallsDiv">
     <fieldset>
-      <legend>Parked Calls</legend>
+      <legend><b>Parked Calls</b></legend>
       <div id="parkedsDiv">
         <div class="parkedDiv">
           <table width="640">
@@ -116,7 +120,7 @@
     
     <div id="queuesDiv">
     <fieldset id="fieldset-queuedual">
-      <legend>Queues</legend>
+      <legend><b>Queues</b></legend>
       
       <!-- <div style="clear: both;"></div> -->
     </fieldset>

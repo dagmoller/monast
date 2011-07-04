@@ -77,11 +77,6 @@ BODY {
 	background-color: #ffffff; 
 	z-index: 5;
 }
-#trash, #record, #park {
-	float: left; 
-	text-align: center; 
-	margin: 5px 10px 5px 10px;
-}
 
 #mixed {
 	margin: 5px;
@@ -225,6 +220,11 @@ BODY {
 .campo {
 	border: 1px solid #dddddd;
 	font-size: 0.9em;
+}
+
+.a {
+	color: black;
+	text-decoration: none;
 }
 
 #cliDiv textarea {
