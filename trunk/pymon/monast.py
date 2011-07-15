@@ -696,7 +696,7 @@ class Monast:
 			## Dahdi Specific attributes
 			if channeltype == 'DAHDI':
 				peer.signalling = kw.get('signalling')
-				peer.alarm      = kw.get('alarm')
+				peer.alarm      = kw.get('alarm', '--')
 				peer.dnd        = kw.get('dnd', 'disabled').lower() == 'enabled'
 				peer.status     = ['--', peer.alarm][peer.status == '--']
 				if peer.callerid == "--":
