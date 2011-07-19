@@ -162,11 +162,18 @@ $('_reqStatus').innerHTML = '<font color="red"><b>MonAst Error</b></font>';
 <!-- INCLUDESCRIPT BLOCK : main -->
 
 <div> 
-  <table width="100%"> 
+  <table> 
     <tr>
-      <td align="right">
+      <td>
         <a href="http://sourceforge.net/donate/index.php?group_id=232812" target="_blank"><img src="image/project-support.jpg" width="88" height="32" border="0" alt="Support This Project" /> </a> 
       </td> 
+      <td>
+        <form target="pagseguro" action="https://pagseguro.uol.com.br/checkout/doacao.jhtml" method="post">
+          <input type="hidden" name="email_cobranca" value="aguirre@infodag.com.br" />
+          <input type="hidden" name="moeda" value="BRL" />
+          <input type="image" src="image/84x35-doar-azul.gif" name="submit" alt="Pague com PagSeguro - é rápido, grátis e seguro!" />
+        </form>
+      </td>
     </tr> 
   </table> 
 </div> 
