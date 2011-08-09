@@ -1109,8 +1109,10 @@ var Monast = {
 	queues: new Hash(),
 	processQueue: function (q)
 	{
-		q.id          = md5("queue-" + q.queue);
-		q.contextmenu = null; // FAKE
+		q.id                = md5("queue-" + q.queue);
+		q.contextmenu       = null; // FAKE
+		q.total_calls       = q.completed + q.abandoned;
+		q.abandoned_percent = parseInt((q.abandoned / q.total_calls) * 100);
 		
 		if (Object.isUndefined(this.queues.get(q.id))) // Queue does not exists
 		{
