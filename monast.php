@@ -124,8 +124,17 @@ switch ($response)
 		break;
 }
 
+$templateContent = ""; 
+$dir = opendir("template");
+while (($file = readdir($dir)))
+{
+	if (strpos($file, "template_") !== false && $file != "template_default.html")
+		$templateContent .= file_get_contents("template/$file");
+} 
+closedir($dir);
+
 $template->prepare();
-$template->assign("templates", file_get_contents("template/template_custom.html") . file_get_contents("template/template_default.html"));
+$template->assign("templates", $templateContent . file_get_contents("template/template_default.html"));
 $template->assign('MONAST_CALL_TIME', MONAST_CALL_TIME ? 'true' : 'false');
 $template->assign('MONAST_BLINK_ONCHANGE', MONAST_BLINK_ONCHANGE ? 'true' : 'false');
 $template->assign('MONAST_BLINK_COUNT', MONAST_BLINK_COUNT);
