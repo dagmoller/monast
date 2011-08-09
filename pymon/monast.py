@@ -1990,7 +1990,7 @@ class Monast:
 		callerid    = "MonAst Spyer"
 		account     = None
 		application = "ChanSpy"
-		data        = spyee
+		data        = "%s%sqs" % (spyee, [",", "|"][server.version == 1.4])
 		variable    = {}
 		async       = True
 
