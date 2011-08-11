@@ -1125,7 +1125,8 @@ class Monast:
 				
 				if event in ("QueueMember", "QueueMemberAdded", "QueueMemberStatus", "QueueMemberPaused"):
 					location = kw.get('location')
-					memberid = (queuename, location)
+					#memberid = (queuename, location)
+					memberid = (queuename, [location, location[:location.rfind('/')]][location.count('/') > 1])
 					member   = server.status.queueMembers.get(memberid)
 					if not member:
 						log.debug("Server %s :: Queue update, member added: %s -> %s %s", servername, queuename, location, _log)
@@ -1164,7 +1165,8 @@ class Monast:
 				
 				if event == "QueueMemberRemoved":
 					location = kw.get('location')
-					memberid = (queuename, location)
+					#memberid = (queuename, location)
+					memberid = (queuename, [location, location[:location.rfind('/')]][location.count('/') > 1])
 					member   = server.status.queueMembers.get(memberid)
 					if member:
 						log.debug("Server %s :: Queue update, member removed: %s -> %s %s", servername, queuename, location, _log)

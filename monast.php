@@ -128,7 +128,7 @@ $templateContent = "";
 $dir = opendir("template");
 while (($file = readdir($dir)))
 {
-	if (strpos($file, "template_") !== false && $file != "template_default.html")
+	if (strpos($file, "template_") === 0 && $file != "template_default.html")
 		$templateContent .= file_get_contents("template/$file");
 } 
 closedir($dir);
