@@ -2602,10 +2602,10 @@ if __name__ == '__main__':
 			pid = open(MONAST_PID_FILE, 'r').read()
 			os.unlink(MONAST_PID_FILE)
 			os.popen("kill -TERM %d" % int(pid))
-			print "Confast stopped..."
+			print "Monast stopped..."
 			sys.exit(0)
 		else:
-			print "Confast is not running as daemon..."
+			print "Monast is not running as daemon..."
 			sys.exit(1)
 		sys.exit(2)
 	
