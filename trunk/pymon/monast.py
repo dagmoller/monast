@@ -1078,6 +1078,7 @@ class Monast:
 		if not queue:
 			queue                  = GenericObject("Queue")
 			queue.queue            = queuename
+			queue.mapname          = kw.get('mapname')
 			queue.calls            = int(kw.get('calls', 0))
 			queue.completed        = int(kw.get('completed', 0))
 			queue.abandoned        = int(kw.get('abandoned', 0))
@@ -1339,6 +1340,8 @@ class Monast:
 			self.servers[servername].status.queueClients = {}
 			self.servers[servername].status.queueCalls   = {}
 			self.servers[servername].status.parkedCalls  = {}
+			
+			self.servers[servername].queueMapName        = {}
 		
 		## Peers Groups
 		for peergroup, peers in config.items('peers'):
@@ -1437,6 +1440,11 @@ class Monast:
 			server = self.servers.get(servername)
 			if not server:
 				continue
+			
+			mapName = None
+			if display.count(",") == 1:
+				display, mapName = [i.strip() for i in display.split(",", 1)]
+				server.queueMapName[queue] = mapName
 			
 			if (self.displayQueuesDefault and display == 'hide') or (not self.displayQueuesDefault and display == 'show'):
 				server.displayQueues[queue] = True
@@ -1621,7 +1629,7 @@ class Monast:
 				if eventType == "QueueParams":
 					queuename = event.get('queue')
 					if (self.displayQueuesDefault and not server.displayQueues.has_key(queuename)) or (not self.displayQueuesDefault and server.displayQueues.has_key(queuename)):
-						self._createQueue(servername, **event)
+						self._createQueue(servername, mapname = server.queueMapName.get(queuename), **event)
 				else:
 					otherEvents.append(event)
 			for event in otherEvents:
