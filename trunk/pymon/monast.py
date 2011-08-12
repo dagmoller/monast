@@ -2592,7 +2592,7 @@ if __name__ == '__main__':
 	opt.add_option('--stop',
 		dest   = "stop",
 		action = "store_true",
-		help   = "stop Confast (only in daemon mode)"
+		help   = "stop Monast (only in daemon mode)"
 	)
 	
 	(options, args) = opt.parse_args()
