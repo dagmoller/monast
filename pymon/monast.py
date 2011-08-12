@@ -2598,9 +2598,9 @@ if __name__ == '__main__':
 	(options, args) = opt.parse_args()
 
 	if options.stop:
-		if os.path.exists(CONFAST_PID_FILE):
-			pid = open(CONFAST_PID_FILE, 'r').read()
-			os.unlink(CONFAST_PID_FILE)
+		if os.path.exists(MONAST_PID_FILE):
+			pid = open(MONAST_PID_FILE, 'r').read()
+			os.unlink(MONAST_PID_FILE)
 			os.popen("kill -TERM %d" % int(pid))
 			print "Confast stopped..."
 			sys.exit(0)
