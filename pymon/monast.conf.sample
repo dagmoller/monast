@@ -127,8 +127,11 @@ default = show
 # show queue queue01
 ;<Server Name>/queue01 = show
 
-# hide queue queue02
-;<Server Name>/queue02 = hide
+# show queue queue02 with display name Support
+;<Server Name>/queue02 = show,Support
+
+# hide queue queue03
+;<Server Name>/queue03 = hide
 
 
 ## Define users and roles to use on auth_required is set to true
