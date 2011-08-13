@@ -391,8 +391,9 @@ class MonastHTTP(resource.Resource):
 		tmp[servername]['queueClients'].sort(lambda x, y: cmp(x.get('seconds'), y.get('seconds')))
 		tmp[servername]['queueClients'].reverse()
 		for uniqueid, call in server.status.queueCalls.items():
-			call.seconds = int(time.time() - call.starttime)  
-			tmp[servername]['queueCalls'].append(call.__dict__)
+			if call.client and call.member:
+				call.seconds = int(time.time() - call.starttime)  
+				tmp[servername]['queueCalls'].append(call.__dict__)
 					 
 		request.write(json.dumps(tmp, encoding = "ISO8859-1"))
 		request.finish()
@@ -1231,8 +1232,8 @@ class Monast:
 					client   = server.status.queueClients.get(clientid)
 					if client:
 						log.debug("Server %s :: Queue update, client marked as abandonned: %s -> %s %s", servername, queuename, uniqueid, _log)
-						client.abandonned == True
-						queue.abandoned   += 1
+						client.abandonned = True
+						queue.abandoned  += 1
 						self.http._addUpdate(servername = servername, subaction = 'Update', **queue.__dict__.copy())
 					else:
 						log.warning("Server %s :: Queue Client does not exists: %s -> %s", servername, queuename, uniqueid)
