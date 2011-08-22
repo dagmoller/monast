@@ -172,7 +172,7 @@ foreach ($techs as $tech)
 		foreach ($peers as $idx => $peer)
 		{
 			$template->newBlock('process');
-			$template->assign('json', monast_json_encode($peer));
+			$template->assign('json', str_replace("'", "\'", monast_json_encode(($peer))));
 			
 			if (array_key_exists("peergroup", $peer))
 			{
@@ -209,7 +209,7 @@ foreach ($status[$server]['channels'] as $channel)
 	$channel['channel'] = htmlentities($channel['channel']);
 	
 	$template->newBlock('process');
-	$template->assign('json', monast_json_encode($channel));
+	$template->assign('json', str_replace("'", "\'", monast_json_encode(($channel))));
 }
 foreach ($status[$server]['bridges'] as $bridge)
 {
@@ -217,43 +217,43 @@ foreach ($status[$server]['bridges'] as $bridge)
 	$bridge['bridgedchannel'] = htmlentities($bridge['bridgedchannel']);
 	
 	$template->newBlock('process');
-	$template->assign('json', monast_json_encode($bridge));
+	$template->assign('json', str_replace("'", "\'", monast_json_encode(($bridge))));
 }
 
 // Meetmes
 foreach ($status[$server]['meetmes'] as $meetme)
 {
 	$template->newBlock('process');
-	$template->assign('json', monast_json_encode($meetme));
+	$template->assign('json', str_replace("'", "\'", monast_json_encode(($meetme))));
 }
 
 // Parked Calls
 foreach ($status[$server]['parkedCalls'] as $parked)
 {
 	$template->newBlock('process');
-	$template->assign('json', monast_json_encode($parked));
+	$template->assign('json', str_replace("'", "\'", monast_json_encode(($parked))));
 }
 
 // Queues
 foreach ($status[$server]['queues'] as $queue)
 {
 	$template->newBlock('process');
-	$template->assign('json', monast_json_encode($queue));
+	$template->assign('json', str_replace("'", "\'", monast_json_encode(($queue))));
 }
 foreach ($status[$server]['queueMembers'] as $queueMember)
 {
 	$template->newBlock('process');
-	$template->assign('json', monast_json_encode($queueMember));
+	$template->assign('json', str_replace("'", "\'", monast_json_encode(($queueMember))));
 }
 foreach ($status[$server]['queueClients'] as $queueClient)
 {
 	$template->newBlock('process');
-	$template->assign('json', monast_json_encode($queueClient));
+	$template->assign('json', str_replace("'", "\'", monast_json_encode(($queueClient))));
 }
 foreach ($status[$server]['queueCalls'] as $queueCall)
 {
 	$template->newBlock('process');
-	$template->assign('json', monast_json_encode($queueCall));
+	$template->assign('json', str_replace("'", "\'", monast_json_encode(($queueCall))));
 }
 
 $template->printToScreen();
