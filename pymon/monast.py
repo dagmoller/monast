@@ -2547,7 +2547,10 @@ def createDaemon():
 ##
 ## Main
 ##
-if __name__ == '__main__':
+def RunMonast(MM):
+
+	global logging
+	global log
 
 	opt = optparse.OptionParser()
 	opt.add_option('--config',
@@ -2646,6 +2649,7 @@ if __name__ == '__main__':
 	_logHandler.setFormatter(_colorFormatter)
 	logging.getLogger("").addHandler(_logHandler)
 	
+	global log
 	log = logging.getLogger("Monast")
 	
 	if not os.path.exists(options.configFile):
@@ -2653,8 +2657,10 @@ if __name__ == '__main__':
 		print '  Run "%s --help" for help.' % sys.argv[0]
 		sys.exit(1)
 		
-	monast = Monast(options.configFile)
+	monast = MM(options.configFile)
 	reactor.run()
 	
 	_logHandler.close()
 
+if __name__ == '__main__':
+	RunMonast(Monast)
