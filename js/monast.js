@@ -350,6 +350,9 @@ var Monast = {
 			case 'Khomp':
 				var bc = u.peername.replace('B', '').replace('C', ' ');
 				m[0].push({text: "Execute 'khomp channels show " + bc + "'", onclick: {fn: Monast.requestInfo, obj: "khomp channels show " + bc}});
+				m[0].push({text: "Send Reset Command to Modem", onclick: {fn: function () {
+					Monast.doConfirm("Do you realy need to reset this channel?", function () { Monast.cliCommand("khomp send command " + bc + " 244", false); }); 
+				}}});
 				break;
 		}
 		
@@ -2040,13 +2043,19 @@ var Monast = {
 		if (e.keyCode == 13 && $('cliCommand').value.trim()) //Enter
 			Monast.cliCommand();
 	},
-	cliCommand: function ()
+	cliCommand: function (command, updatecli)
 	{
-		var command = $('cliCommand').value.trim();
-		$('cliCommand').value = '';
+		if (Object.isUndefined(command))
+		{
+			command = $('cliCommand').value.trim();
+			$('cliCommand').value = '';
+		}
 		
-		$('cliResponse').value += '\r\n> ' + command;
-		new YAHOO.util.Scroll('cliResponse', {scroll: {to: [0, $('cliResponse').scrollHeight]}}, 0.5).animate();
+		if (Object.isUndefined(updatecli) || updatecli)
+		{
+			$('cliResponse').value += '\r\n> ' + command;
+			new YAHOO.util.Scroll('cliResponse', {scroll: {to: [0, $('cliResponse').scrollHeight]}}, 0.5).animate();
+		}
 		
 		if (command)
 		{
