@@ -708,6 +708,7 @@ class Monast:
 				
 			## Khomp
 			if channeltype == 'Khomp':
+				peer.alarm = kw.get('alarm', '--')
 				if peer.callerid == "--":
 					peer.callerid = [peer.callerid, peer.channel][peer.callerid == '--']
 					peer.callerid = [peer.channel, "KGSM %s" % peer.peername]['Signal' in peer.status]
