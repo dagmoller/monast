@@ -351,7 +351,7 @@ var Monast = {
 				var bc = u.peername.replace('B', '').replace('C', ' ');
 				m[0].push({text: "Execute 'khomp channels show " + bc + "'", onclick: {fn: Monast.requestInfo, obj: "khomp channels show " + bc}});
 				m[0].push({text: "Send Reset Command to Modem", onclick: {fn: function () {
-					Monast.doConfirm("Do you realy need to reset this channel?", function () { Monast.cliCommand("khomp send command " + bc + " 244", false); }); 
+					Monast.doConfirm("Do you really need to reset this channel?", function () { Monast.cliCommand("khomp send command " + bc + " 244", false); }); 
 				}}});
 				break;
 		}
