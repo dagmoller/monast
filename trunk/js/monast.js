@@ -434,6 +434,9 @@ var Monast = {
 			clone.className     = "channelDiv";
 			clone.oncontextmenu = function () { Monast.showChannelContextMenu(c.id); return false; };
 			$("channelsDiv").appendChild(clone);
+			
+			// Drag & Drop
+			this.createDragDrop(c.id, this.dd_channelDrop, ['peerTable']);
 		}
 
 		var old = this.channels.get(c.id);
@@ -466,6 +469,79 @@ var Monast = {
 		
 		this.channels.set(c.id, c);
 		$("countChannels").innerHTML = this.channels.keys().length;
+	},
+	dd_channelDrop: function (e, id)
+	{
+		var channel = Monast.channels.get(this.id);
+		var peer    = Monast.userspeers.get(id);
+		switch ($(id).className)
+		{
+			case "peerTable":
+				Monast._contextMenu.clearContent();
+				Monast._contextMenu.cfg.queueProperty("xy", Monast.getMousePosition());
+				
+				var requestTransfer = function (p_sType, p_aArgs, p_oValue)
+				{
+					var peer = p_oValue.peer;
+					var to   = /\<(\d+)\>/.exec(peer.callerid);
+					if (to == null)
+					{
+						Monast.doWarn("This User/Peer does not have a valid callerid number to transfer to.");
+						return;
+					}
+					var obj        = p_oValue.channel;
+					obj.tocallerid = peer.callerid;
+					obj.tochannel  = peer.channel;
+					obj.toexten    = to[1];
+					Monast.doConfirm(
+						"Do you really want to transfer channel '" + obj.channel + "' to '" + peer.callerid + "'?",
+						function () {
+							new Ajax.Request('action.php', 
+							{
+								method: 'get',
+								parameters: {
+									reqTime: new Date().getTime(),
+									action: Object.toJSON({action: 'Transfer', from: obj.channel, to: obj.toexten, type: 'normal'})
+								}
+							});
+						}
+					);
+					Monast.confirmDialog.setHeader('Transfer Call');
+				};
+				
+				var requestSpyChannel = function (p_sType, p_aArgs, p_oValue)
+				{
+					var obj    = p_oValue.channel;
+					obj.spyer  = p_oValue.peer.callerid;
+					Monast.doConfirm(
+						"<div style='text-align: center'>Request Spy to this Channel?</div><br>" + new Template($("Template::Channel::Form::Spy::Peer").innerHTML).evaluate(obj),
+						function () {
+							new Ajax.Request('action.php', 
+							{
+								method: 'get',
+								parameters: {
+									reqTime: new Date().getTime(),
+									action: Object.toJSON({action: 'SpyChannel', spyer: p_oValue.peer.channel, spyee: p_oValue.channel.channel, type: "peer"})
+								}
+							});
+						}
+					);
+				};
+				
+				var m = [
+					[
+					 	{text: "Transfer", onclick: {fn: requestTransfer, obj: {peer: peer, channel: channel}}},
+						{text: "Spy", onclick: {fn: requestSpyChannel, obj: {peer: peer, channel: channel}}}
+					]
+				];
+				
+				Monast._contextMenu.addItems(m);
+				Monast._contextMenu.setItemGroupTitle("Select Action for Channel " + channel.uniqueid + " (" + channel.channel + ")", 0);
+				Monast._contextMenu.render(document.body);
+				Monast._contextMenu.show();
+				
+				break;
+		}
 	},
 	removeChannel: function (c)
 	{
@@ -500,6 +576,30 @@ var Monast = {
 				}
 			);
 		};
+		var requestSpy = function (p_sType, p_aArgs, p_oValue)
+		{
+			p_oValue.spyer = Monast._lastSpyer;
+			Monast.doConfirm(
+				"<div style='text-align: center'>Request Spy to this Channel?</div><br>" + new Template($("Template::Channel::Form::Spy::Number").innerHTML).evaluate(p_oValue),
+				function () {
+					var spyer = $("Template::Channel::Form::Spy::Number::Spyer").value.trim();
+					if (!spyer)
+					{
+						Monast.doWarn("No Spyer Number Specified!");
+						return;
+					}
+					Monast._lastSpyer = spyer;
+					new Ajax.Request('action.php', 
+					{
+						method: 'get',
+						parameters: {
+							reqTime: new Date().getTime(),
+							action: Object.toJSON({action: 'SpyChannel', spyer: spyer, spyee: p_oValue.channel, type: "number"})
+						}
+					});
+				}
+			);
+		};
 		var requestHangup = function (p_sType, p_aArgs, p_oValue)
 		{
 			Monast.doConfirm(
@@ -521,6 +621,7 @@ var Monast = {
 		var m = [
 			[
 				{text: c.monitor ? "Stop Monitor" : "Start Monitor", onclick: {fn: requestMonitor, obj: c}},
+				{text: "Spy", onclick: {fn: requestSpy, obj: c}},
 				{text: "Hangup", onclick: {fn: requestHangup, obj: c}},
 				{text: "View Channel Info", onclick: {fn: viewChannelInfo, obj: c}},
 				{text: "Execute 'core show channel " + c.channel + "'", onclick: {fn: Monast.requestInfo, obj: "core show channel " + c.channel}}
@@ -1634,7 +1735,7 @@ var Monast = {
 					}
 					catch (e)
 					{
-						console.log(e, event);
+						console.log(e.toString(), e, event);
 					}
 				});
 			},
