@@ -1,0 +1,29 @@
+#!/sbin/runscript
+# Copyright 1999-2007 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+# $Id: rc.gentoo.monast 239270 2011-09-01 02:50:36Z anest $
+
+MONARGS=--daemon
+MONLOG=/var/log/monast.log
+pidfile=/var/run/monast.pid
+MONAST=/opt/monast/monast.py
+
+
+depend() {
+        after apache2
+}
+
+start() {
+        ebegin "Starting MonAst daemon"
+        start-stop-daemon --start --oknodo --exec $MONAST -- $MONARGS  > /dev/null 2> /dev/null
+        eend $? "Failed to start MonAst"
+}
+
+stop() {
+        ebegin "Stopping MonAst daemon"
+        start-stop-daemon --stop --pidfile "$pidfile" --quiet $MONAST
+        sleep 1
+        rm -f $pidfile
+        eend $? "Failed to stop MonAst"
+}
+
