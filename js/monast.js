@@ -308,14 +308,30 @@ var Monast = {
 		var addQueueMember = function (p_sType, p_aArgs, p_oValue)
 		{
 			Monast.doConfirm(
-				"<div style='text-align: center'>Turn this User Member of Queue \"" + p_oValue.queue + "\"?</div><br>" + new Template($("Template::Userpeer::Info").innerHTML).evaluate(p_oValue.peer),
+				"<div style='text-align: center'>Turn this User Member of Queue \"" + p_oValue.queue.queuename + "\"?</div><br>" + new Template($("Template::Userpeer::Info").innerHTML).evaluate(p_oValue.peer),
 				function () {
 					new Ajax.Request('action.php', 
 					{
 						method: 'get',
 						parameters: {
 							reqTime: new Date().getTime(),
-							action: Object.toJSON({action: 'QueueMemberAdd', queue: p_oValue.queue, location: p_oValue.peer.channel})
+							action: Object.toJSON({action: 'QueueMemberAdd', queue: p_oValue.queue.queue, location: p_oValue.peer.channel})
+						}
+					});
+				}
+			);
+		};
+		var delQueueMember = function (p_sType, p_aArgs, p_oValue)
+		{
+			Monast.doConfirm(
+				"<div style='text-align: center'>Remove this User Member from Queue \"" + p_oValue.queue.queuename + "\"?</div><br>" + new Template($("Template::Userpeer::Info").innerHTML).evaluate(p_oValue.peer),
+				function () {
+					new Ajax.Request('action.php', 
+					{
+						method: 'get',
+						parameters: {
+							reqTime: new Date().getTime(),
+							action: Object.toJSON({action: 'QueueMemberRemove', queue: p_oValue.queue.queue, location: p_oValue.peer.channel})
 						}
 					});
 				}
@@ -359,16 +375,24 @@ var Monast = {
 		var queueIdx = 0;
 		if (addQueue)
 		{
-			var queueList = [];
+			var queueOptions = [];
+			var queueAddList = [];
+			var queueDelList = [];
 			Monast.queues.keys().each(function (id) {
 				var q = Monast.queues.get(id);
 				var m = q.members.get(md5("queueMember-" + q.queue + '::' + u.channel));
 				if (Object.isUndefined(m))
-					queueList.push({text: q.queue, onclick: {fn: addQueueMember, obj: {peer: u, queue: q.queue}}});
+					queueAddList.push({text: q.queuename, onclick: {fn: addQueueMember, obj: {peer: u, queue: q}}});
+				else
+					queueDelList.push({text: q.queuename, onclick: {fn: delQueueMember, obj: {peer: u, queue: q}}});
 			});
-			if (queueList.length > 0)
+			if (queueAddList.length > 0)
+				queueOptions.push({text: "Turn Member of", url: "#addQueue", submenu: { id: "addQueue", itemdata: queueAddList}});
+			if (queueDelList.length > 0)
+				queueOptions.push({text: "Remove Member from", url: "#delQueue", submenu: { id: "delQueue", itemdata: queueDelList}});
+			if (queueOptions.length > 0)
 			{
-				m.push([{text: "Turn Member of", url: "#addQueue", submenu: { id: "addQueue", itemdata: queueList}}]);
+				m.push(queueOptions);
 				queueIdx = 1;
 			}
 		}
