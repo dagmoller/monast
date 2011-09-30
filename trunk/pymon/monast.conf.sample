@@ -133,6 +133,9 @@ default = show
 # hide queue queue03
 ;<Server Name>/queue03 = hide
 
+# Map Member name
+;<Server Name>/@member/SIP/user-1 = Diego Aguirre <5555>
+
 
 ## Define users and roles to use on auth_required is set to true
 ## roles must be:

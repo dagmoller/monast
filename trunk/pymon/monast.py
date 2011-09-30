@@ -1127,7 +1127,10 @@ class Monast:
 					return
 				
 				if event in ("QueueMember", "QueueMemberAdded", "QueueMemberStatus", "QueueMemberPaused"):
-					location = kw.get('location')
+					location   = kw.get('location')
+					membername = kw.get('name', kw.get('membername'))
+					if server.queueMapMember.has_key(location):
+						membername = server.queueMapMember[location]
 					#memberid = (queuename, location)
 					memberid = (queuename, [location, location[:location.rfind('/')]][location.count('/') > 1])
 					member   = server.status.queueMembers.get(memberid)
@@ -1135,7 +1138,7 @@ class Monast:
 						log.debug("Server %s :: Queue update, member added: %s -> %s %s", servername, queuename, location, _log)
 						member            = GenericObject("QueueMember")
 						member.location   = location
-						member.name       = kw.get('name', kw.get('membername'))
+						member.name       = membername
 						member.queue      = kw.get('queue')
 						member.callstaken = kw.get('callstaken', 0)
 						member.lastcall   = kw.get('lastcall', 0)
@@ -1149,7 +1152,7 @@ class Monast:
 						self.http._addUpdate(servername = servername, **member.__dict__.copy())
 					else:
 						log.debug("Server %s :: Queue update, member updated: %s -> %s %s", servername, queuename, location, _log)
-						member.name       = kw.get('name', kw.get('membername'))
+						member.name       = membername
 						member.queue      = kw.get('queue')
 						member.callstaken = kw.get('callstaken', 0)
 						member.lastcall   = kw.get('lastcall', 0)
@@ -1344,6 +1347,7 @@ class Monast:
 			self.servers[servername].status.parkedCalls  = {}
 			
 			self.servers[servername].queueMapName        = {}
+			self.servers[servername].queueMapMember      = {}
 		
 		## Peers Groups
 		for peergroup, peers in config.items('peers'):
@@ -1441,6 +1445,11 @@ class Monast:
 			servername, queue = queue.split('/', 1)
 			server = self.servers.get(servername)
 			if not server:
+				continue
+			
+			if "@member" in queue:
+				peer = queue.replace("@member/", "").strip()
+				self.servers[servername].queueMapMember[peer] = display
 				continue
 			
 			mapName = None
@@ -2271,6 +2280,10 @@ class Monast:
 				self.http._addUpdate(servername = ami.servername, subaction = 'Update', **queue.__dict__.copy())
 			if logging.DUMPOBJECTS:
 				log.debug("Object Dump:%s", queueCall)
+		# Detect QueueClient
+		for qname, clientuniqueid in server.status.queueClients.items():
+			if clientuniqueid == uniqueid:
+				self._updateQueue(ami.servername, queue = qname, event = "Leave", uniqueid = uniqueid, _log = "By Channel Hangup")
 		
 	def handlerEventDial(self, ami, event):
 		log.debug("Server %s :: Processing Event Dial..." % ami.servername)
