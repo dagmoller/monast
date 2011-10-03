@@ -2357,7 +2357,8 @@ class Monast:
 		queueCall = server.status.queueCalls.get(uniqueid)
 		if queueCall:
 			queuename = queueCall.client.get('queue')
-			location  = bridgedchannel[:bridgedchannel.rfind('-')]
+			#location  = bridgedchannel[:bridgedchannel.rfind('-')]
+			location  = bridgedchannel.rsplit('-', 1)[0]
 			member    = server.status.queueMembers.get((queuename, location))
 			if member:
 				log.debug("Server %s :: Queue update, client -> member call link: %s -> %s -> %s", ami.servername, queuename, uniqueid, location)
