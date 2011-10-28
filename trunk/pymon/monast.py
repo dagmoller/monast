@@ -626,7 +626,7 @@ class Monast:
 				server.ami.registerEvent(event, handler)
 			log.debug("Server %s :: Starting Task Check Status..." % servername)
 			server.taskCheckStatus.start(TASK_CHECK_STATUS_INTERVAL, False)
-			self.__requestAsteriskConfig(servername)
+			self._requestAsteriskConfig(servername)
 			
 		server.pushTask(server.ami.command, 'core show version') \
 			.addCallbacks(_onCoreShowVersion, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Asterisk Version"))
@@ -1509,7 +1509,7 @@ class Monast:
 		
 		log.error("Server %s :: %s, reason: %s" % (servername, message, errorMessage))
 		
-	def __requestAsteriskConfig(self, servername):
+	def _requestAsteriskConfig(self, servername):
 		log.info("Server %s :: Requesting Asterisk Configuration..." % servername)
 		server = self.servers.get(servername)
 		
@@ -2034,7 +2034,7 @@ class Monast:
 		server = self.servers.get(ami.servername)
 		if time.time() - server.lastReload > 5:
 			server.lastReload = time.time()
-			self.__requestAsteriskConfig(ami.servername)
+			self._requestAsteriskConfig(ami.servername)
 		
 	def handlerEventChannelReload(self, ami, event):
 		log.debug("Server %s :: Processing Event ChannelReload..." % ami.servername)
@@ -2042,7 +2042,7 @@ class Monast:
 		server = self.servers.get(ami.servername)
 		if time.time() - server.lastReload > 5:
 			server.lastReload = time.time()
-			self.__requestAsteriskConfig(ami.servername)
+			self._requestAsteriskConfig(ami.servername)
 	
 	def handlerEventAlarm(self, ami, event):
 		log.debug("Server %s :: Processing Event Alarm..." % ami.servername)
@@ -2482,14 +2482,17 @@ class Monast:
 		server   = self.servers.get(ami.servername)
 		queue    = event.get('queue')
 		location = event.get('location')
-		member   = server.status.queueMembers.get((queue, location))
+		memberid = (queue, [location, location[:location.rfind('/')]][location.count('/') > 1])
+		member   = server.status.queueMembers.get(memberid)
 		
-		event['callstaken'] = member.callstaken
-		event['lastcall']   = member.lastcall
-		event['penalty']    = member.penalty
-		event['status']     = member.status
-		
-		self._updateQueue(ami.servername, **event)
+		if member:
+			event['callstaken'] = member.callstaken
+			event['lastcall']   = member.lastcall
+			event['penalty']    = member.penalty
+			event['status']     = member.status
+			self._updateQueue(ami.servername, **event)
+		else:
+			log.warning("Server %s :: Queue Member does not exists: %s -> %s", ami.servername, queue, memberid[1])
 	
 	## Monitor
 	def handlerEventMonitorStart(self, ami, event):
