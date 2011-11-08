@@ -85,9 +85,7 @@ fi
 #Defines
 LOGFILE="/var/log/monast.log"
 PIDFILE="/var/run/monast.pid"
-MONASTARGS=" -c ${MONAST_CONF} -l ${LOGFILE} -d"
-
-
+MONASTARGS=" --config=${MONAST_CONF} --logfile=${LOGFILE} --daemon"
 
 case "$1" in
 	start)
