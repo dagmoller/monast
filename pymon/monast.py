@@ -1131,8 +1131,7 @@ class Monast:
 					membername = kw.get('name', kw.get('membername'))
 					if server.queueMapMember.has_key(location):
 						membername = server.queueMapMember[location]
-					#memberid = (queuename, location)
-					memberid = (queuename, [location, location[:location.rfind('/')]][location.count('/') > 1])
+					memberid = (queuename, location)
 					member   = server.status.queueMembers.get(memberid)
 					if not member:
 						log.debug("Server %s :: Queue update, member added: %s -> %s %s", servername, queuename, location, _log)
@@ -1171,8 +1170,7 @@ class Monast:
 				
 				if event == "QueueMemberRemoved":
 					location = kw.get('location')
-					#memberid = (queuename, location)
-					memberid = (queuename, [location, location[:location.rfind('/')]][location.count('/') > 1])
+					memberid = (queuename, location)
 					member   = server.status.queueMembers.get(memberid)
 					if member:
 						log.debug("Server %s :: Queue update, member removed: %s -> %s %s", servername, queuename, location, _log)
@@ -1247,7 +1245,7 @@ class Monast:
 					uniqueid = kw.get('uniqueid', None)
 					if not uniqueid:
 						# try to found uniqueid based on channel name
-						channel  = kw.get('channel')
+						channel = kw.get('channel')
 						for uniqueid, chan in server.status.channels.items():
 							if channel == chan:
 								break
@@ -2357,17 +2355,19 @@ class Monast:
 		queueCall = server.status.queueCalls.get(uniqueid)
 		if queueCall:
 			queuename = queueCall.client.get('queue')
-			#location  = bridgedchannel[:bridgedchannel.rfind('-')]
 			location  = bridgedchannel.rsplit('-', 1)[0]
-			member    = server.status.queueMembers.get((queuename, location))
-			if member:
-				log.debug("Server %s :: Queue update, client -> member call link: %s -> %s -> %s", ami.servername, queuename, uniqueid, location)
-				queueCall.member  = member.__dict__
-				queueCall.link    = True
-				queueCall.seconds = int(time.time() - queueCall.starttime) 
-				self.http._addUpdate(servername = ami.servername, **queueCall.__dict__.copy())
-				if logging.DUMPOBJECTS:
-					log.debug("Object Dump:%s", queueCall)
+			member    = None
+			for location in [location, "%s/n" % location]:
+				member = server.status.queueMembers.get((queuename, location))
+				if member:
+					log.debug("Server %s :: Queue update, client -> member call link: %s -> %s -> %s", ami.servername, queuename, uniqueid, location)
+					queueCall.member  = member.__dict__
+					queueCall.link    = True
+					queueCall.seconds = int(time.time() - queueCall.starttime) 
+					self.http._addUpdate(servername = ami.servername, **queueCall.__dict__.copy())
+					if logging.DUMPOBJECTS:
+						log.debug("Object Dump:%s", queueCall)
+					break
 		
 	def handlerEventUnlink(self, ami, event):
 		log.debug("Server %s :: Processing Event Unlink..." % ami.servername)
@@ -2482,7 +2482,7 @@ class Monast:
 		server   = self.servers.get(ami.servername)
 		queue    = event.get('queue')
 		location = event.get('location')
-		memberid = (queue, [location, location[:location.rfind('/')]][location.count('/') > 1])
+		memberid = (queue, location)
 		member   = server.status.queueMembers.get(memberid)
 		
 		if member:
