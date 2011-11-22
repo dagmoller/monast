@@ -111,7 +111,7 @@ while (!$complete)
 			    		$action['server'] = $server;
 			    		$tmp      = doGet('doAction', $action);
 			    		$complete = true;
-			    		break;
+			    		//break;
 			    	}
 			    }
 			    session_start();
