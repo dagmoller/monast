@@ -549,6 +549,7 @@ class Monast:
 			'PeerEntry'           : self.handlerEventPeerEntry,
 			'PeerStatus'          : self.handlerEventPeerStatus,
 			'Newchannel'          : self.handlerEventNewchannel,
+			'DAHDIChannel'        : self.handlerEventDAHDIChannel,
 			'Newstate'            : self.handlerEventNewstate,
 			'Rename'              : self.handlerEventRename,
 			'Masquerade'          : self.handlerEventMasquerade,
@@ -763,6 +764,8 @@ class Monast:
 			chan              = GenericObject("Channel")
 			chan.uniqueid     = uniqueid
 			chan.channel      = channel
+			chan.dahdispan    = None
+			chan.dahdichannel = None
 			chan.state        = kw.get('state', 'Unknown')
 			chan.calleridnum  = kw.get('calleridnum', '')
 			chan.calleridname = kw.get('calleridname', '')
@@ -809,6 +812,8 @@ class Monast:
 						else:
 							log.warning("Server %s :: Channel %s (%s) does not have attribute %s", servername, uniqueid, chan.channel, k)
 				self.http._addUpdate(servername = servername, subaction = 'Update', **chan.__dict__.copy())
+				if kw.get("_action") == "updateDahdiCallsCounter":
+					self._updatePeer(servername, channeltype = "DAHDI", peername = kw.get("dahdichannel"), _action = 'increaseCallCounter')
 				if logging.DUMPOBJECTS:
 					log.debug("Object Dump:%s", chan)
 			else:
@@ -835,6 +840,8 @@ class Monast:
 				self.http._addUpdate(servername = servername, action = 'RemoveChannel', uniqueid = uniqueid)
 				
 				channeltype, peername = channel.rsplit('-', 1)[0].split('/', 1)
+				if channeltype == "DAHDI" and chan.dahdichannel is not None:
+					peername = chan.dahdichannel
 				self._updatePeer(servername, channeltype = channeltype, peername = peername, _action = 'decreaseCallCounter')
 				
 				if logging.DUMPOBJECTS:
@@ -2179,6 +2186,24 @@ class Monast:
 			_log         = "-- Newchannel"
 		)
 		
+	def handlerEnvetDAHDIChannel(self, ami, event):
+		log.debug("Server %s :: Processing Event DAHDIChannel..." % ami.servername)
+		server       = self.servers.get(ami.servername)
+		uniqueid     = event.get('uniqueid')
+		channel      = event.get('channel')
+		dahdispan    = event.get('dahdispan')
+		dahdichannel = event.get('dahdichannel')
+		
+		self._updateChannel(
+			ami.servername,
+			uniqueid     = uniqueid,
+			channel      = channel,
+			dahdispan    = dahdispan,
+			dahdichannel = dahdichannel,
+			_action      = "updateDahdiCallsCounter",
+			_log         = "Setting DAHDISpan and DAHDIChannel: %s/%s" % (dahdispan, dahdichannel)
+		)
+		
 	def handlerEventNewstate(self, ami, event):
 		log.debug("Server %s :: Processing Event Newstate..." % ami.servername)
 		server       = self.servers.get(ami.servername)		
@@ -2219,7 +2244,7 @@ class Monast:
 		
 		if not cloneUniqueid:
 			log.warn("Server %s :: Detected BUG on Asterisk. Masquerade Event does not have cloneuniqueid and originaluniqueid properties. " % ami.servername \
-				+ "See https://issues.asterisk.org/view.php?id=16555 for more informations.")
+				+ "See https://issues.asterisk.org/jira/browse/16555 for more informations.")
 			return
 		
 		clone = server.status.channels.get(cloneUniqueid)
