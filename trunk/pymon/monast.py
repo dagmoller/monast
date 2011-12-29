@@ -806,7 +806,7 @@ class Monast:
 			if chan:
 				log.debug("Server %s :: Channel update: %s (%s) %s", servername, uniqueid, chan.channel, _log)
 				for k, v in kw.items():
-					if k not in ('_log'):
+					if k not in ('_log', '_action'):
 						if chan.__dict__.has_key(k):
 							chan.__dict__[k] = v
 						else:
@@ -2186,7 +2186,7 @@ class Monast:
 			_log         = "-- Newchannel"
 		)
 		
-	def handlerEnvetDAHDIChannel(self, ami, event):
+	def handlerEventDAHDIChannel(self, ami, event):
 		log.debug("Server %s :: Processing Event DAHDIChannel..." % ami.servername)
 		server       = self.servers.get(ami.servername)
 		uniqueid     = event.get('uniqueid')
