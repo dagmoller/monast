@@ -36,6 +36,7 @@ setValor('LastReload', time());
 $servers   = array();
 $server    = getValor('Server', 'session');
 $errors    = array();
+$username  = getValor('username', 'session');
 session_write_close();
 
 $template = new TemplatePower('template/monast.html');
@@ -141,6 +142,7 @@ $template->assign('MONAST_BLINK_COUNT', MONAST_BLINK_COUNT);
 $template->assign('MONAST_BLINK_INTERVAL', MONAST_BLINK_INTERVAL);
 $template->assign('MONAST_KEEP_CALLS_SORTED', MONAST_KEEP_CALLS_SORTED ? 'true' : 'false');
 $template->assign('MONAST_KEEP_PARKEDCALLS_SORTED', MONAST_KEEP_PARKEDCALLS_SORTED ? 'true' : 'false');
+$template->assign('MONAST_USERNAME', $username);
 
 if (MONAST_CLI_TAB)
 {
