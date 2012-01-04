@@ -152,15 +152,27 @@ var Monast = {
 		}
 	},
 	
+	// Translation
+	translateStatus: function (status)
+	{
+		if (Monast.LANGUAGE == "en")
+			return status;
+		
+		if (!Object.isUndefined(Language._statusMap) && !Object.isUndefined(Language._statusMap[status.toLowerCase().trim()]))
+			return Language._statusMap[status.toLowerCase().trim()];
+		return status;
+	},
+	
 	// Users/Peers
 	userspeers: new Hash(),
 	processUserpeer: function (u)
 	{
-		u.id          = md5(u.channel);
-		u.status      = u.dnd && u.status == "No Alarm" ? "DND Enabled" : u.status;
-		u.statuscolor = this.getColor(u.status);
-		u.callscolor  = u.calls > 0 ? this.getColor('in use') : this.getColor('not in use');
-		u.latency     = u.time == -1 ? "--" : u.time + " ms";
+		u.id               = md5(u.channel);
+		u.status           = u.dnd && u.status == "No Alarm" ? "DND Enabled" : u.status;
+		u.statusTranslated = Monast.translateStatus(u.status);
+		u.statuscolor      = this.getColor(u.status);
+		u.callscolor       = u.calls > 0 ? this.getColor('in use') : this.getColor('not in use');
+		u.latency          = u.time == -1 ? "--" : u.time + " ms";
 		
 		if (Object.isUndefined(this.userspeers.get(u.id)))
 		{
@@ -187,16 +199,20 @@ var Monast = {
 				{
 					case "statuscolor":
 						$(elid).style.backgroundColor = u[key];
-						$(elid).title = "Status: " + u.status + " :: Latency: " + u.time + " ms";
+						$(elid).title = Language.status + ": " + Monast.translateStatus(u.status) + " :: " + Language.latency + ": " + u.time + " ms";
 						if (old && old.status != u.status)
 							Monast.blinkBackground(elid, u.statuscolor);
 						break;
 						
 					case "callscolor":
 						$(elid).style.backgroundColor = u[key];
-						$(elid).title = u.calls + " call(s)";
+						$(elid).title = u.calls + " " + Language.calls;
 						if (old && old.calls != u.calls)
 							Monast.blinkBackground(elid, u.callscolor);
+						break;
+						
+					case "status":
+						$(elid).innerHTML = Monast.translateStatus(u.status); 
 						break;
 	
 					default:
@@ -229,7 +245,7 @@ var Monast = {
 						});
 					}
 				);
-				Monast.confirmDialog.setHeader('Originate Call');
+				Monast.confirmDialog.setHeader(Language.originateCall);
 				break;
 		}
 	},
@@ -253,7 +269,7 @@ var Monast = {
 					});
 				}
 			);
-			Monast.confirmDialog.setHeader('Originate Call');
+			Monast.confirmDialog.setHeader(Language.originateCall);
 		};
 		var viewUserpeerCalls = function (p_sType, p_aArgs, p_oValue)
 		{
@@ -285,7 +301,7 @@ var Monast = {
 					Monast._tabPannel.set("activeIndex", 3);
 			}
 			else
-				Monast.doAlert("No Active Channels/Calls for this User/Peer.");
+				Monast.doAlert(Language.noActivePeerCalls);
 		};
 		var viewUserpeerInfo = function (p_sType, p_aArgs, p_oValue)
 		{
@@ -294,7 +310,7 @@ var Monast = {
 			if (p_oValue.variables.length > 0)
 			{
 				p_oValue.channelVariables.push('<tr><td colspan="2"><hr></td></tr>');
-				p_oValue.channelVariables.push('<tr><td colspan="2" class="key" style="text-align: center;">Channel Variables</td></tr>');
+				p_oValue.channelVariables.push('<tr><td colspan="2" class="key" style="text-align: center;">' + Language.channelVariables + '</td></tr>');
 			} 
 			
 			p_oValue.variables.each(function (v) {
@@ -308,7 +324,7 @@ var Monast = {
 		var addQueueMember = function (p_sType, p_aArgs, p_oValue)
 		{
 			Monast.doConfirm(
-				"<div style='text-align: center'>Turn this User Member of Queue \"" + p_oValue.queue.queuename + "\"?</div><br>" + new Template($("Template::Userpeer::Info").innerHTML).evaluate(p_oValue.peer),
+				"<div style='text-align: center'>" + new Template(Language.turnMemberOfQueue).evaluate({QUEUENAME: p_oValue.queue.queuename}) + "</div><br>" + new Template($("Template::Userpeer::Info").innerHTML).evaluate(p_oValue.peer),
 				function () {
 					new Ajax.Request('action.php', 
 					{
@@ -324,7 +340,7 @@ var Monast = {
 		var delQueueMember = function (p_sType, p_aArgs, p_oValue)
 		{
 			Monast.doConfirm(
-				"<div style='text-align: center'>Remove this User Member from Queue \"" + p_oValue.queue.queuename + "\"?</div><br>" + new Template($("Template::Userpeer::Info").innerHTML).evaluate(p_oValue.peer),
+				"<div style='text-align: center'>" + new Template(Language.removeMemberFromQueue).evaluate({QUEUENAME: p_oValue.queue.queuename}) + "\"?</div><br>" + new Template($("Template::Userpeer::Info").innerHTML).evaluate(p_oValue.peer),
 				function () {
 					new Ajax.Request('action.php', 
 					{
@@ -341,33 +357,33 @@ var Monast = {
 		var u = this.userspeers.get(id);
 		var m = [
 			[
-				{text: "Originate Call", onclick: {fn: originateCall, obj: u}},
-				{text: "View User/Peer Channels/Calls", onclick: {fn: viewUserpeerCalls, obj: u}},
-				{text: "View User/Peer Info", onclick: {fn: viewUserpeerInfo, obj: u}}
+				{text: Language.originateCall, onclick: {fn: originateCall, obj: u}},
+				{text: Language.viewPeerCalls, onclick: {fn: viewUserpeerCalls, obj: u}},
+				{text: Language.viewPeerInfo, onclick: {fn: viewUserpeerInfo, obj: u}}
 			],
 		];
 		var addQueue = false;
 		switch (u.channeltype)
 		{
 			case 'SIP':
-				m[0].push({text: "Execute 'sip show peer " + u.peername + "'", onclick: {fn: Monast.requestInfo, obj: "sip show peer " + u.peername}});
+				m[0].push({text: Language.execute + " 'sip show peer " + u.peername + "'", onclick: {fn: Monast.requestInfo, obj: "sip show peer " + u.peername}});
 				addQueue = true;
 				break;
 				
 			case 'IAX2':
-				m[0].push({text: "Execute 'iax2 show peer " + u.peername + "'", onclick: {fn: Monast.requestInfo, obj: "iax2 show peer " + u.peername}});
+				m[0].push({text: Language.execute + " 'iax2 show peer " + u.peername + "'", onclick: {fn: Monast.requestInfo, obj: "iax2 show peer " + u.peername}});
 				addQueue = true;
 				break;
 				
 			case 'DAHDI':
-				m[0].push({text: "Execute 'dahdi show channel " + u.peername + "'", onclick: {fn: Monast.requestInfo, obj: "dahdi show channel " + u.peername}});
+				m[0].push({text: Language.execute + " 'dahdi show channel " + u.peername + "'", onclick: {fn: Monast.requestInfo, obj: "dahdi show channel " + u.peername}});
 				break;
 				
 			case 'Khomp':
 				var bc = u.peername.replace('B', '').replace('C', ' ');
-				m[0].push({text: "Execute 'khomp channels show " + bc + "'", onclick: {fn: Monast.requestInfo, obj: "khomp channels show " + bc}});
-				m[0].push({text: "Send Reset Command to Modem", onclick: {fn: function () {
-					Monast.doConfirm("Do you really need to reset this channel?", function () { Monast.cliCommand("khomp send command " + bc + " 244", false); }); 
+				m[0].push({text: Language.execute + " 'khomp channels show " + bc + "'", onclick: {fn: Monast.requestInfo, obj: "khomp channels show " + bc}});
+				m[0].push({text: Language.sendResetToModem, onclick: {fn: function () {
+					Monast.doConfirm(Language.reallyResetModem, function () { Monast.cliCommand("khomp send command " + bc + " 244", false); }); 
 				}}});
 				break;
 		}
@@ -387,9 +403,9 @@ var Monast = {
 					queueDelList.push({text: q.queuename, onclick: {fn: delQueueMember, obj: {peer: u, queue: q}}});
 			});
 			if (queueAddList.length > 0)
-				queueOptions.push({text: "Turn Member of", url: "#addQueue", submenu: { id: "addQueue", itemdata: queueAddList}});
+				queueOptions.push({text: Language.turnMemberOf, url: "#addQueue", submenu: { id: "addQueue", itemdata: queueAddList}});
 			if (queueDelList.length > 0)
-				queueOptions.push({text: "Remove Member from", url: "#delQueue", submenu: { id: "delQueue", itemdata: queueDelList}});
+				queueOptions.push({text: Language.removeMemberFrom, url: "#delQueue", submenu: { id: "delQueue", itemdata: queueDelList}});
 			if (queueOptions.length > 0)
 			{
 				m.push(queueOptions);
@@ -400,7 +416,7 @@ var Monast = {
 		var inviteMeetme = function (p_sType, p_aArgs, p_oValue)
 		{
 			Monast.doConfirm(
-				"<div style='text-align: center'>Invite this User/Peer to Meetme \"" + p_oValue.meetme + "\"?</div><br>" + new Template($("Template::Userpeer::Info").innerHTML).evaluate(p_oValue.peer),
+				"<div style='text-align: center'>" + new Template(Language.inviteToMeetme).evaluate({MEETME: p_oValue.meetme}) + "</div><br>" + new Template($("Template::Userpeer::Info").innerHTML).evaluate(p_oValue.peer),
 				function () {
 					new Ajax.Request('action.php', 
 					{
@@ -412,7 +428,7 @@ var Monast = {
 					});
 				}
 			);
-			Monast.confirmDialog.setHeader('Meetme Invite');
+			Monast.confirmDialog.setHeader(Language.meetmeInvite);
 		};
 		var meetmeIdx  = 0;
 		var meetmeList = [];
@@ -423,17 +439,17 @@ var Monast = {
 		});
 		if (meetmeList.length > 0)
 		{
-			m.push([{text: "Invite to", url: "#meetme", submenu: { id: "meetme", itemdata: meetmeList}}]);
+			m.push([{text: Language.inviteTo, url: "#meetme", submenu: { id: "meetme", itemdata: meetmeList}}]);
 			meetmeIdx = queueIdx + 1;
 		}
 		
 		this._contextMenu.addItems(m);
-		this._contextMenu.setItemGroupTitle("User/Peer: " + u.channel, 0);
+		this._contextMenu.setItemGroupTitle(Language.peerUser + ": " + u.channel, 0);
 		
 		if (queueIdx > 0)
-			this._contextMenu.setItemGroupTitle("Queues", queueIdx);
+			this._contextMenu.setItemGroupTitle(Language.queues, queueIdx);
 		if (meetmeIdx > 0)
-			this._contextMenu.setItemGroupTitle("Meetme", meetmeIdx);
+			this._contextMenu.setItemGroupTitle(Language.meetme, meetmeIdx);
 		
 		this._contextMenu.render(document.body);
 		this._contextMenu.show();
@@ -443,14 +459,15 @@ var Monast = {
 	channels: new Hash(),
 	processChannel: function (c)
 	{
-		c.id           = c.uniqueid;
-		c.statecolor   = this.getColor(c.state);
-		c.monitortext  = c.monitor ? "Yes" : "No";
-		c.spytext      = c.spy ? "Yes" : "No";
-		c.channel      = c.channel.replace('<', '&lt;').replace('>', '&gt;');
-		c.calleridname = c.calleridname != null ? c.calleridname.replace('<', '').replace('>', '') : "";
-		c.calleridnum  = c.calleridnum != null ? c.calleridnum.replace('<', '').replace('>', '') : "";
-		c.callerid     = new Template("#{calleridname} &lt;#{calleridnum}&gt;").evaluate(c);
+		c.id              = c.uniqueid;
+		c.statecolor      = this.getColor(c.state);
+		c.stateTranslated = Monast.translateStatus(c.state);
+		c.monitortext     = c.monitor ? Language.yes : Language.no;
+		c.spytext         = c.spy ? Language.yes : Language.no;
+		c.channel         = c.channel.replace('<', '&lt;').replace('>', '&gt;');
+		c.calleridname    = c.calleridname != null ? c.calleridname.replace('<', '').replace('>', '') : "";
+		c.calleridnum     = c.calleridnum != null ? c.calleridnum.replace('<', '').replace('>', '') : "";
+		c.callerid        = new Template("#{calleridname} &lt;#{calleridnum}&gt;").evaluate(c);
 		
 		if (Object.isUndefined(this.channels.get(c.id)))
 		{
@@ -470,6 +487,10 @@ var Monast = {
 			{
 				switch (key)
 				{
+					case "state":
+						$(elid).innerHTML = Monast.translateStatus(c.state);
+						break;
+				
 					case "statecolor":
 						$(elid).style.backgroundColor = c[key];
 						if (c.subaction == "Update")
@@ -510,7 +531,7 @@ var Monast = {
 					var to   = /\<(\d+)\>/.exec(peer.callerid);
 					if (to == null)
 					{
-						Monast.doWarn("This User/Peer does not have a valid callerid number to transfer to.");
+						Monast.doWarn(Language.notValidCalleridNumber);
 						return;
 					}
 					var obj        = p_oValue.channel;
@@ -518,7 +539,7 @@ var Monast = {
 					obj.tochannel  = peer.channel;
 					obj.toexten    = to[1];
 					Monast.doConfirm(
-						"Do you really want to transfer channel '" + obj.channel + "' to '" + peer.callerid + "'?",
+						new Template(Language.reallyTransferChannelTo).evaluate({CHANNEL: obj.channel, CALLERID: peer.callerid}),
 						function () {
 							new Ajax.Request('action.php', 
 							{
@@ -530,7 +551,7 @@ var Monast = {
 							});
 						}
 					);
-					Monast.confirmDialog.setHeader('Transfer Call');
+					Monast.confirmDialog.setHeader(Language.transferCall);
 				};
 				
 				var requestSpyChannel = function (p_sType, p_aArgs, p_oValue)
@@ -538,7 +559,7 @@ var Monast = {
 					var obj    = p_oValue.channel;
 					obj.spyer  = p_oValue.peer.callerid;
 					Monast.doConfirm(
-						"<div style='text-align: center'>Request Spy to this Channel?</div><br>" + new Template($("Template::Channel::Form::Spy::Peer").innerHTML).evaluate(obj),
+						"<div style='text-align: center'>" + Language.requestSpyChannel + "</div><br>" + new Template($("Template::Channel::Form::Spy::Peer").innerHTML).evaluate(obj),
 						function () {
 							new Ajax.Request('action.php', 
 							{
@@ -554,13 +575,13 @@ var Monast = {
 				
 				var m = [
 					[
-					 	{text: "Transfer", onclick: {fn: requestTransfer, obj: {peer: peer, channel: channel}}},
-						{text: "Spy", onclick: {fn: requestSpyChannel, obj: {peer: peer, channel: channel}}}
+					 	{text: Language.transfer, onclick: {fn: requestTransfer, obj: {peer: peer, channel: channel}}},
+						{text: Language.spy, onclick: {fn: requestSpyChannel, obj: {peer: peer, channel: channel}}}
 					]
 				];
 				
 				Monast._contextMenu.addItems(m);
-				Monast._contextMenu.setItemGroupTitle("Select Action for Channel " + channel.uniqueid + " (" + channel.channel + ")", 0);
+				Monast._contextMenu.setItemGroupTitle(new Template(Language.selectActionForChannel).evaluate({UNIQUEID: channel.uniqueid, CHANNEL: channel.channel}), 0);
 				Monast._contextMenu.render(document.body);
 				Monast._contextMenu.show();
 				
@@ -587,7 +608,7 @@ var Monast = {
 		{
 			var action = p_oValue.monitor ? "Stop" : "Start";
 			Monast.doConfirm(
-				"<div style='text-align: center'>" + action + " Monitor to this Channel?</div><br>" + new Template($("Template::Channel::Info").innerHTML).evaluate(p_oValue),
+				"<div style='text-align: center'>" + (action == "Start" ? Language.start : Language.stop) + " " + Language.monitorToThisChannel + "</div><br>" + new Template($("Template::Channel::Info").innerHTML).evaluate(p_oValue),
 				function () {
 					new Ajax.Request('action.php', 
 					{
@@ -604,12 +625,12 @@ var Monast = {
 		{
 			p_oValue.spyer = Monast._lastSpyer;
 			Monast.doConfirm(
-				"<div style='text-align: center'>Request Spy to this Channel?</div><br>" + new Template($("Template::Channel::Form::Spy::Number").innerHTML).evaluate(p_oValue),
+				"<div style='text-align: center'>" + Language.requestSpyChannel + "</div><br>" + new Template($("Template::Channel::Form::Spy::Number").innerHTML).evaluate(p_oValue),
 				function () {
 					var spyer = $("Template::Channel::Form::Spy::Number::Spyer").value.trim();
 					if (!spyer)
 					{
-						Monast.doWarn("No Spyer Number Specified!");
+						Monast.doWarn(Language.noSpyerNumber);
 						return;
 					}
 					Monast._lastSpyer = spyer;
@@ -627,7 +648,7 @@ var Monast = {
 		var requestHangup = function (p_sType, p_aArgs, p_oValue)
 		{
 			Monast.doConfirm(
-				"<div style='text-align: center'>Request Hangup to this Channel?</div><br>" + new Template($("Template::Channel::Info").innerHTML).evaluate(p_oValue),
+				"<div style='text-align: center'>" + Language.requestHangupChannel + "</div><br>" + new Template($("Template::Channel::Info").innerHTML).evaluate(p_oValue),
 				function () {
 					new Ajax.Request('action.php', 
 					{
@@ -644,11 +665,11 @@ var Monast = {
 		var c = this.channels.get(id);
 		var m = [
 			[
-				{text: c.monitor ? "Stop Monitor" : "Start Monitor", onclick: {fn: requestMonitor, obj: c}},
-				{text: "Spy", onclick: {fn: requestSpy, obj: c}},
-				{text: "Hangup", onclick: {fn: requestHangup, obj: c}},
-				{text: "View Channel Info", onclick: {fn: viewChannelInfo, obj: c}},
-				{text: "Execute 'core show channel " + c.channel + "'", onclick: {fn: Monast.requestInfo, obj: "core show channel " + c.channel}}
+				{text: c.monitor ? Language.monitorStop : Language.monitorStart, onclick: {fn: requestMonitor, obj: c}},
+				{text: Language.spy, onclick: {fn: requestSpy, obj: c}},
+				{text: Language.hangup, onclick: {fn: requestHangup, obj: c}},
+				{text: Language.viewChannelInfo, onclick: {fn: viewChannelInfo, obj: c}},
+				{text: Language.execute + " 'core show channel " + c.channel + "'", onclick: {fn: Monast.requestInfo, obj: "core show channel " + c.channel}}
 			]
 		];
 		
@@ -671,12 +692,13 @@ var Monast = {
 			return;
 		}
 		
-		b.id              = md5(b.uniqueid + "+++" + b.bridgeduniqueid);
-		b.statuscolor     = this.getColor(b.status);
-		b.channel         = b.channel.replace('<', '&lt;').replace('>', '&gt;');
-		b.bridgedchannel  = b.bridgedchannel.replace('<', '&lt;').replace('>', '&gt;');
-		b.callerid        = new Template("#{calleridname} &lt;#{calleridnum}&gt;").evaluate(this.channels.get(b.uniqueid));
-		b.bridgedcallerid = new Template("#{calleridname} &lt;#{calleridnum}&gt;").evaluate(this.channels.get(b.bridgeduniqueid));
+		b.id               = md5(b.uniqueid + "+++" + b.bridgeduniqueid);
+		b.statuscolor      = this.getColor(b.status);
+		b.statusTranslated = Monast.translateStatus(b.status);
+		b.channel          = b.channel.replace('<', '&lt;').replace('>', '&gt;');
+		b.bridgedchannel   = b.bridgedchannel.replace('<', '&lt;').replace('>', '&gt;');
+		b.callerid         = new Template("#{calleridname} &lt;#{calleridnum}&gt;").evaluate(this.channels.get(b.uniqueid));
+		b.bridgedcallerid  = new Template("#{calleridname} &lt;#{calleridnum}&gt;").evaluate(this.channels.get(b.bridgeduniqueid));
 		
 		if (Object.isUndefined(this.bridges.get(b.id)))
 		{
@@ -696,6 +718,10 @@ var Monast = {
 			{
 				switch (key)
 				{
+					case "status":
+						$(elid).innerHTML = Monast.translateStatus(b.status);
+						break;
+				
 					case "statuscolor":
 						$(elid).style.backgroundColor = b[key];
 						if (b.subaction == "Update")
@@ -733,7 +759,7 @@ var Monast = {
 					var to   = /\<(\d+)\>/.exec(peer.callerid);
 					if (to == null)
 					{
-						Monast.doWarn("This User/Peer does not have a valid callerid number to transfer to.");
+						Monast.doWarn(Language.notValidCalleridNumber);
 						return;
 					}
 					var obj        = p_oValue.bridge;
@@ -741,7 +767,7 @@ var Monast = {
 					obj.tochannel  = peer.channel;
 					obj.toexten    = to[1];
 					Monast.doConfirm(
-						"<div style='text-align: center'>Select Channel to Transfer:</div><br>" + new Template($("Template::Bridge::Form::Transfer::Internal").innerHTML).evaluate(obj),
+						"<div style='text-align: center'>" + Language.selectChannelToTransfer + ":</div><br>" + new Template($("Template::Bridge::Form::Transfer::Internal").innerHTML).evaluate(obj),
 						function () {
 							new Ajax.Request('action.php', 
 							{
@@ -753,7 +779,7 @@ var Monast = {
 							});
 						}
 					);
-					Monast.confirmDialog.setHeader('Transfer Call');
+					Monast.confirmDialog.setHeader(Language.transferCall);
 				};
 				
 				var requestSpyChannel = function (p_sType, p_aArgs, p_oValue)
@@ -761,7 +787,7 @@ var Monast = {
 					var obj    = p_oValue.bridge;
 					obj.spyer  = p_oValue.peer.callerid;
 					Monast.doConfirm(
-						"<div style='text-align: center'>Request Spy to this Call?</div><br>" + new Template($("Template::Bridge::Form::Spy::Peer").innerHTML).evaluate(obj),
+						"<div style='text-align: center'>" + Language.requestSpyCall + "</div><br>" + new Template($("Template::Bridge::Form::Spy::Peer").innerHTML).evaluate(obj),
 						function () {
 							new Ajax.Request('action.php', 
 							{
@@ -777,13 +803,13 @@ var Monast = {
 				
 				var m = [
 					[
-					 	{text: "Transfer", onclick: {fn: requestTransfer, obj: {peer: peer, bridge: bridge}}},
-						{text: "Spy", onclick: {fn: requestSpyChannel, obj: {peer: peer, bridge: bridge}}}
+					 	{text: Language.transfer, onclick: {fn: requestTransfer, obj: {peer: peer, bridge: bridge}}},
+						{text: Language.spy, onclick: {fn: requestSpyChannel, obj: {peer: peer, bridge: bridge}}}
 					]
 				];
 				
 				Monast._contextMenu.addItems(m);
-				Monast._contextMenu.setItemGroupTitle("Select Action for Call " + bridge.uniqueid + " -> " + bridge.bridgeduniqueid, 0);
+				Monast._contextMenu.setItemGroupTitle(new Template(Language.selectActionForCall).evaluate({UNIQUEID: bridge.uniqueid, BRIDGEDUNIQUEID: bridge.bridgeduniqueid}), 0);
 				Monast._contextMenu.render(document.body);
 				Monast._contextMenu.show();
 				
@@ -811,7 +837,7 @@ var Monast = {
 		var requestPark = function (p_sType, p_aArgs, p_oValue)
 		{
 			Monast.doConfirm(
-				"<div style='text-align: center'>Select Channel to Park:</div><br>" + new Template($("Template::Bridge::Form::Park").innerHTML).evaluate(p_oValue),
+				"<div style='text-align: center'>" + Language.selectChannelToPark + ":</div><br>" + new Template($("Template::Bridge::Form::Park").innerHTML).evaluate(p_oValue),
 				function () {
 					var channel  = $$("input[name=Template::Bridge::Form::Park::Channel]:checked")[0].value;
 					var announce = p_oValue.channel == channel ? p_oValue.bridgedchannel : p_oValue.channel;
@@ -830,7 +856,7 @@ var Monast = {
 		{
 			p_oValue._duration = $(p_oValue.id + '-chrono').innerHTML;
 			Monast.doConfirm(
-				"<div style='text-align: center'>Request Hangup to this Call?</div><br>" + new Template($("Template::Bridge::Info").innerHTML).evaluate(p_oValue),
+				"<div style='text-align: center'>" + Language.requestHangupCall + "</div><br>" + new Template($("Template::Bridge::Info").innerHTML).evaluate(p_oValue),
 				function () {
 					new Ajax.Request('action.php', 
 					{
@@ -847,12 +873,12 @@ var Monast = {
 		{
 			p_oValue.spyer = Monast._lastSpyer;
 			Monast.doConfirm(
-				"<div style='text-align: center'>Request Spy to this Call?</div><br>" + new Template($("Template::Bridge::Form::Spy::Number").innerHTML).evaluate(p_oValue),
+				"<div style='text-align: center'>" + Language.requestSpyCall + "</div><br>" + new Template($("Template::Bridge::Form::Spy::Number").innerHTML).evaluate(p_oValue),
 				function () {
 					var spyer = $("Template::Bridge::Form::Spy::Number::Spyer").value.trim();
 					if (!spyer)
 					{
-						Monast.doWarn("No Spyer Number Specified!");
+						Monast.doWarn(Language.noSpyerNumber);
 						return;
 					}
 					Monast._lastSpyer = spyer;
@@ -877,12 +903,12 @@ var Monast = {
 		var b = this.bridges.get(id);
 		var m = [
 			[
-			 	{text: "Park", onclick: {fn: requestPark, obj: b}},
-				{text: "Hangup", onclick: {fn: requestHangup, obj: b}},
-				{text: "Spy", onclick: {fn: requestSpy, obj: b}},
-				{text: "Source Channel", url: "#SourceChannel", submenu: {id: "SourceChannel", itemdata: Monast.showChannelContextMenu(b.uniqueid, true)}},
-				{text: "Destination Channel", url: "#DestinationChannel", submenu: {id: "DestinationChannel", itemdata: Monast.showChannelContextMenu(b.bridgeduniqueid, true)}},
-				{text: "View Call Info", onclick: {fn: viewCallInfo, obj: b}},
+			 	{text: Language.park, onclick: {fn: requestPark, obj: b}},
+				{text: Language.hangup, onclick: {fn: requestHangup, obj: b}},
+				{text: Language.spy, onclick: {fn: requestSpy, obj: b}},
+				{text: Language.sourceChannel, url: "#SourceChannel", submenu: {id: "SourceChannel", itemdata: Monast.showChannelContextMenu(b.uniqueid, true)}},
+				{text: Language.destinationChannel, url: "#DestinationChannel", submenu: {id: "DestinationChannel", itemdata: Monast.showChannelContextMenu(b.bridgeduniqueid, true)}},
+				{text: Language.viewCallInfo, onclick: {fn: viewCallInfo, obj: b}},
 			]
 		];
 		
@@ -890,7 +916,7 @@ var Monast = {
 		{
 			p_oValue.bridge._duration = $(p_oValue.bridge.id + '-chrono').innerHTML;
 			Monast.doConfirm(
-				"<div style='text-align: center'>Invite this Call to Meetme \"" + p_oValue.meetme + "\"?</div><br>" + new Template($("Template::Bridge::Info").innerHTML).evaluate(p_oValue.bridge),
+				"<div style='text-align: center'>" + new Template(Language.inviteCallToMeetme).evaluate({MEETME: p_oValue.meetme}) + "</div><br>" + new Template($("Template::Bridge::Info").innerHTML).evaluate(p_oValue.bridge),
 				function () {
 					new Ajax.Request('action.php', 
 					{
@@ -902,7 +928,7 @@ var Monast = {
 					});
 				}
 			);
-			Monast.confirmDialog.setHeader('Meetme Invite');
+			Monast.confirmDialog.setHeader(Language.meetmeInvite);
 		};
 		var meetmeList = [];
 		Monast.meetmes.keys().each(function (id) {
@@ -912,12 +938,12 @@ var Monast = {
 		});
 		if (meetmeList.length > 0)
 		{
-			m.push([{text: "Invite to", url: "#meetme", submenu: {id: "meetme", itemdata: meetmeList}}]);
-			this._contextMenu.setItemGroupTitle("Meetme", 1);
+			m.push([{text: Language.inviteTo, url: "#meetme", submenu: {id: "meetme", itemdata: meetmeList}}]);
+			this._contextMenu.setItemGroupTitle(Language.meetme, 1);
 		}
 		
 		this._contextMenu.addItems(m);
-		this._contextMenu.setItemGroupTitle("Call:  " + b.uniqueid + " -> " + b.bridgeduniqueid, 0);
+		this._contextMenu.setItemGroupTitle(Language.call + ":  " + b.uniqueid + " -> " + b.bridgeduniqueid, 0);
 		this._contextMenu.render(document.body);
 		this._contextMenu.show();
 	},
@@ -1038,7 +1064,7 @@ var Monast = {
 				});
 			}
 		);
-		Monast.confirmDialog.setHeader('Invite Numbers to Meetme');
+		Monast.confirmDialog.setHeader(Language.inviteNumbersToMeetme);
 	},
 	showMeetmeContextMenu: function (id)
 	{
@@ -1053,11 +1079,11 @@ var Monast = {
 		var meetme = this.meetmes.get(id);
 		var m = [
 			[
-				{text: "Invite Numbers", onclick: {fn: inviteNumbers, obj: meetme}},
+				{text: Language.inviteNumbers, onclick: {fn: inviteNumbers, obj: meetme}},
 			]
 		];
 		this._contextMenu.addItems(m);
-		this._contextMenu.setItemGroupTitle("Meetme:  " + meetme.meetme, 0);
+		this._contextMenu.setItemGroupTitle(Language.meetme + ":  " + meetme.meetme, 0);
 		this._contextMenu.render(document.body);
 		this._contextMenu.show();
 	},
@@ -1073,7 +1099,7 @@ var Monast = {
 		var kickUser = function (p_sType, p_aArgs, p_oValue)
 		{
 			Monast.doConfirm(
-				"<div style='text-align: center'>Request Kick to this User from Meetme \"" + p_oValue.meetme + "\"?</div><br>" + new Template($("Template::Meetme::User::Info").innerHTML).evaluate(p_oValue.user),
+				"<div style='text-align: center'>" + new Template(Language.requestMeetmeKickFrom).evaluate({MEETME: p_oValue.meetme}) + "</div><br>" + new Template($("Template::Meetme::User::Info").innerHTML).evaluate(p_oValue.user),
 				function () {
 					new Ajax.Request('action.php', 
 					{
@@ -1090,12 +1116,12 @@ var Monast = {
 		var meetme = this.meetmes.get(id);
 		var m = [
 			[
-				{text: "Kick User", onclick: {fn: kickUser, obj: {meetme: meetme.meetme, user: user}}},
-				{text: "View User Info", onclick: {fn: viewUserInfo, obj: user}}
+				{text: Language.kickUser, onclick: {fn: kickUser, obj: {meetme: meetme.meetme, user: user}}},
+				{text: Language.viewMeetmeUserInfo, onclick: {fn: viewUserInfo, obj: user}}
 			]
 		];
 		this._contextMenu.addItems(m);
-		this._contextMenu.setItemGroupTitle("Meetme User:  " + user.userinfo, 0);
+		this._contextMenu.setItemGroupTitle(Language.meetmeUser + ": " + user.userinfo, 0);
 		this._contextMenu.render(document.body);
 		this._contextMenu.show();
 	},
@@ -1145,11 +1171,11 @@ var Monast = {
 				var to   = /\<(\d+)\>/.exec(peer.callerid);
 				if (to == null)
 				{
-					Monast.doWarn("This User/Peer does not have a valid callerid number to transfer to.");
+					Monast.doWarn(Language.notValidCalleridNumber);
 					break;
 				}
 				Monast.doConfirm(
-					"<div style='text-align: center'>Request Transfer this Parked Call to User/Peer \"" + peer.callerid + "\"?</div><br>" + new Template($("Template::ParkedCall::Info").innerHTML).evaluate(parked),
+					"<div style='text-align: center'>" + new Template(Language.requestTransferParkedCallTo).evaluate({CALLERID: peer.callerid}) + "</div><br>" + new Template($("Template::ParkedCall::Info").innerHTML).evaluate(parked),
 					function () {
 						new Ajax.Request('action.php', 
 						{
@@ -1161,7 +1187,7 @@ var Monast = {
 						});
 					}
 				);
-				Monast.confirmDialog.setHeader('Transfer Parked Call');
+				Monast.confirmDialog.setHeader(Language.transferParkedCall);
 				break;
 		}
 	},
@@ -1187,7 +1213,7 @@ var Monast = {
 		var requestHangup = function (p_sType, p_aArgs, p_oValue)
 		{
 			Monast.doConfirm(
-				"<div style='text-align: center'>Request Hangup to this Parked Call?</div><br>" + new Template($("Template::ParkedCall::Info").innerHTML).evaluate(p_oValue),
+				"<div style='text-align: center'>" + Language.requestHangupParkedCall + "</div><br>" + new Template($("Template::ParkedCall::Info").innerHTML).evaluate(p_oValue),
 				function () {
 					new Ajax.Request('action.php', 
 					{
@@ -1204,12 +1230,12 @@ var Monast = {
 		var parked = this.parkedCalls.get(id);
 		var m = [
 			[
-				{text: "Hangup", onclick: {fn: requestHangup, obj: parked}},
-				{text: "View Parked Call Info", onclick: {fn: viewParkedCallInfo, obj: parked}}
+				{text: Language.hangup, onclick: {fn: requestHangup, obj: parked}},
+				{text: Language.viewParkedCallInfo, onclick: {fn: viewParkedCallInfo, obj: parked}}
 			]
 		];
 		this._contextMenu.addItems(m);
-		this._contextMenu.setItemGroupTitle("Parked Call:  " + parked.exten, 0);
+		this._contextMenu.setItemGroupTitle(Language.parkedCallAt + ":  " + parked.exten, 0);
 		this._contextMenu.render(document.body);
 		this._contextMenu.show();
 	},
@@ -1333,18 +1359,18 @@ var Monast = {
 					});
 				}
 			);
-			Monast.confirmDialog.setHeader("Add External Member");
+			Monast.confirmDialog.setHeader(Language.addExternalMember);
 		};
 		
 		var q = this.queues.get(id);
 		var m = [
 			[
-			 	{text: "Add External Member", onclick: {fn: addExternalMember, obj: q}},
-				{text: "View Queue Info", onclick: {fn: viewQueueInfo, obj: q}}
+			 	{text: Language.addExternalMember, onclick: {fn: addExternalMember, obj: q}},
+				{text: Language.viewQueueInfo, onclick: {fn: viewQueueInfo, obj: q}}
 			]
 		];
 		this._contextMenu.addItems(m);
-		this._contextMenu.setItemGroupTitle("Queue:  " + q.queue, 0);
+		this._contextMenu.setItemGroupTitle(Language.queue + ":  " + q.queue, 0);
 		this._contextMenu.render(document.body);
 		this._contextMenu.show();
 	},
@@ -1352,9 +1378,10 @@ var Monast = {
 	{
 		m.id          = md5("queueMember-" + m.queue + '::' + m.location);
 		m.queueid     = md5("queue-" + m.queue);
-		m.statustext_nochrono = m.paused == '1' ? 'Paused' : m.statustext;
-		m.statustext  = m.paused == '1' ? 'Paused<br><span style="font-family: monospace;" id="' + m.id + '-chrono"></span>' : m.statustext;
-		m.pausedtext  = m.paused == "1" ? "Yes" : "No";
+		m.statustext_nochrono = m.paused == '1' ? Language.paused : m.statustext;
+		m.statustext_nochrono_translated = Monast.translateStatus(m.statustext_nochrono);
+		m.statustext  = m.paused == '1' ? Language.paused + '<br><span style="font-family: monospace;" id="' + m.id + '-chrono"></span>' : m.statustext;
+		m.pausedtext  = m.paused == "1" ? Language.yes : Language.no;
 		m.statuscolor = this.getColor(m.statustext); 
 				
 		if (Object.isUndefined(this.queues.get(m.queueid).members.get(m.id))) // Queue Member does not exists
@@ -1372,6 +1399,10 @@ var Monast = {
 			{
 				switch (key)
 				{
+					case "statustext":
+						$(elid).innerHTML = Monast.translateStatus(m.statustext);
+						break;
+				
 					case "statuscolor":
 						$(elid).style.backgroundColor = m.statuscolor;
 						if (old && old.paused != m.paused)
@@ -1424,7 +1455,7 @@ var Monast = {
 		{
 			var action = p_oValue.paused == "0" ? "Pause" : "Unpause";
 			Monast.doConfirm(
-				"<div style='text-align: center'>" + action + " this Queue Member?</div><br>" + new Template($("Template::Queue::Member::Info").innerHTML).evaluate(p_oValue),
+				"<div style='text-align: center'>" + (action == "Pause" ? Language.pauseThisMember : Language.unpauseThisMember) + "</div><br>" + new Template($("Template::Queue::Member::Info").innerHTML).evaluate(p_oValue),
 				function () {
 					new Ajax.Request('action.php', 
 					{
@@ -1440,7 +1471,7 @@ var Monast = {
 		var requestMemberRemove = function (p_sType, p_aArgs, p_oValue)
 		{
 			Monast.doConfirm(
-				"<div style='text-align: center'>Remove this Member from Queue \"" + p_oValue.queue + "\"?</div><br>" + new Template($("Template::Queue::Member::Info").innerHTML).evaluate(p_oValue),
+				"<div style='text-align: center'>" + new Template(Language.removeMemberFromQueue).evaluate({QUEUENAME: p_oValue.queue}) + "</div><br>" + new Template($("Template::Queue::Member::Info").innerHTML).evaluate(p_oValue),
 				function () {
 					new Ajax.Request('action.php', 
 					{
@@ -1462,13 +1493,13 @@ var Monast = {
 		var qm = this.queues.get(queueid).members.get(id);
 		var m = [
 			[
-				{text: qm.paused == "0" ? "Pause Member" : "Unpause Member", onclick: {fn: requestMemberPause, obj: qm}},
-				{text: "Remove Member", disabled: qm.membership == "static", onclick: {fn: requestMemberRemove, obj: qm}},
-				{text: "View Member Info", onclick: {fn: viewMemberInfo, obj: qm}}
+				{text: qm.paused == "0" ? Language.pauseMember : Language.unpauseMember, onclick: {fn: requestMemberPause, obj: qm}},
+				{text: Language.removeMember, disabled: qm.membership == "static", onclick: {fn: requestMemberRemove, obj: qm}},
+				{text: Language.viewMemberInfo, onclick: {fn: viewMemberInfo, obj: qm}}
 			]
 		];
 		this._contextMenu.addItems(m);
-		this._contextMenu.setItemGroupTitle("Queue Member:  " + qm.name, 0);
+		this._contextMenu.setItemGroupTitle(Language.queueMember + ":  " + qm.name, 0);
 		this._contextMenu.render(document.body);
 		this._contextMenu.show();
 	},
@@ -1527,7 +1558,7 @@ var Monast = {
 		var requestHangup = function (p_sType, p_aArgs, p_oValue)
 		{
 			Monast.doConfirm(
-				"<div style='text-align: center'>Drop this Queue Client?</div><br>" + new Template($("Template::Queue::Client::Info").innerHTML).evaluate(p_oValue),
+				"<div style='text-align: center'>" + Language.dropThisQueueClient + "</div><br>" + new Template($("Template::Queue::Client::Info").innerHTML).evaluate(p_oValue),
 				function () {
 					new Ajax.Request('action.php', 
 					{
@@ -1542,7 +1573,7 @@ var Monast = {
 		};
 		var viewClientInfo = function (p_sType, p_aArgs, p_oValue)
 		{
-			p_oValue.pausedtext = p_oValue.paused == "1" ? "True" : "False";
+			//p_oValue.pausedtext = p_oValue.paused == "1" ? Language.yes : Language.no;
 			p_oValue.waittime   = new Date(p_oValue.jointime * 1000).toLocaleString();
 			Monast.doAlert(new Template($("Template::Queue::Client::Info").innerHTML).evaluate(p_oValue));
 		};
@@ -1550,12 +1581,12 @@ var Monast = {
 		var qc = this.queues.get(queueid).clients.get(id);
 		var c = [
 			[
-				{text: "Drop Client (Hangup)", onclick: {fn: requestHangup, obj: qc}},
-				{text: "View Client Info", onclick: {fn: viewClientInfo, obj: qc}}
+				{text: Language.dropClient, onclick: {fn: requestHangup, obj: qc}},
+				{text: Language.viewClientInfo, onclick: {fn: viewClientInfo, obj: qc}}
 			]
 		];
 		this._contextMenu.addItems(c);
-		this._contextMenu.setItemGroupTitle("Queue Client:  " + qc.callerid, 0);
+		this._contextMenu.setItemGroupTitle(Language.queueClient + ":  " + qc.callerid, 0);
 		this._contextMenu.render(document.body);
 		this._contextMenu.show();
 	},
@@ -1663,6 +1694,7 @@ var Monast = {
 				case "Error":
 					this._statusError = true;
 					this.doError(event.message);
+					//this.doError(new Template(event.errorTemplate).evaluate(event.errorVars));
 					return;
 					
 				case "Reload":
@@ -1725,12 +1757,12 @@ var Monast = {
 	{
 		if (this._statusError)
 		{
-			$('_reqStatus').innerHTML = "<font color='red'>Reload needed, Press F5.</font>";
+			$('_reqStatus').innerHTML = "<font color='red'>" + Language.reloadNeeded + "</font>";
 			return;
 		}
 		if (this._statusReload)
 		{
-			$('_reqStatus').innerHTML = "Reloading, please wait...";
+			$('_reqStatus').innerHTML = Language.reloadingPleaseWait;
 			return;
 		}
 			
@@ -1741,12 +1773,12 @@ var Monast = {
 				reqTime: new Date().getTime()
 			},
 			
-			onCreate:        function() { $('_reqStatus').innerHTML = 'Create'; },
-			onUninitialized: function() { $('_reqStatus').innerHTML = 'Uninitialized'; },
-			onLoading:       function() { $('_reqStatus').innerHTML = 'On Line'; },
-			onLoaded:        function() { $('_reqStatus').innerHTML = 'Loaded'; },
-			onInteractive:   function() { $('_reqStatus').innerHTML = 'Interactive'; },
-			onComplete:      function() { $('_reqStatus').innerHTML = 'Complete'; Monast.requestStatus(); },
+			onCreate:        function() { $('_reqStatus').innerHTML = Language.create; },
+			onUninitialized: function() { $('_reqStatus').innerHTML = Language.uninitialized; },
+			onLoading:       function() { $('_reqStatus').innerHTML = Language.online; },
+			onLoaded:        function() { $('_reqStatus').innerHTML = Language.loaded; },
+			onInteractive:   function() { $('_reqStatus').innerHTML = Language.interactive; },
+			onComplete:      function() { $('_reqStatus').innerHTML = Language.complete; Monast.requestStatus(); },
 			
 			onSuccess: function(transport)
 			{
@@ -1766,7 +1798,7 @@ var Monast = {
 			onFailure: function()
 			{
 				this._statusError = true;
-				doError('!! MonAst ERROR !!\n\nAn error ocurred while requesting status!\nPlease press F5 to reload MonAst.');
+				doError(Language.requestStatusError);
 			}
 		});
 	},
@@ -1774,7 +1806,7 @@ var Monast = {
 	// Alerts & Messages
 	doAlert: function (message)
 	{
-		Monast.alertDialog.setHeader('Information');
+		Monast.alertDialog.setHeader(Language.informarion);
 		Monast.alertDialog.setBody("<table><tr><td valign='top'><span class='yui-icon infoicon'></span></td><td>" + message + "</td></tr></table>");
 		Monast.alertDialog.cfg.setProperty("fixedcenter", true);
 		Monast.alertDialog.cfg.setProperty("constraintoviewport", true);
@@ -1783,7 +1815,7 @@ var Monast = {
 	},
 	doError: function (message)
 	{
-		Monast.alertDialog.setHeader('Error');
+		Monast.alertDialog.setHeader(Language.error);
 		Monast.alertDialog.setBody("<table><tr><td valign='top'><span class='yui-icon blckicon'></span></td><td>" + message + "</td></tr></table>");
 		Monast.alertDialog.cfg.setProperty("fixedcenter", true);
 		Monast.alertDialog.cfg.setProperty("constraintoviewport", true);
@@ -1792,7 +1824,7 @@ var Monast = {
 	},
 	doWarn: function (message)
 	{
-		Monast.alertDialog.setHeader('Warning');
+		Monast.alertDialog.setHeader(Language.warning);
 		Monast.alertDialog.setBody("<table><tr><td valign='top'><span class='yui-icon warnicon'></span></td><td>" + message + "</td></tr></table>");
 		Monast.alertDialog.cfg.setProperty("fixedcenter", true);
 		Monast.alertDialog.cfg.setProperty("constraintoviewport", true);
@@ -1805,11 +1837,11 @@ var Monast = {
 			handleNo = function () { };
 	
 		var buttons = [
-			{text: "Yes", handler: function () { this.hide(); handleYes(); }},
-			{text: "No", handler: function () { this.hide(); handleNo(); }}
+			{text: Language.yes, handler: function () { this.hide(); handleYes(); }},
+			{text: Language.no, handler: function () { this.hide(); handleNo(); }}
 		];
 		
-		Monast.confirmDialog.setHeader('Confirmation');
+		Monast.confirmDialog.setHeader(Language.confirmation);
 		Monast.confirmDialog.setBody("<table><tr><td valign='top'><span class='yui-icon hlpicon'></span></td><td>" + message + "</td></tr></table>");
 		Monast.confirmDialog.cfg.setProperty("buttons", buttons); 
 		Monast.confirmDialog.render();
@@ -1851,11 +1883,11 @@ var Monast = {
 		// CheckBox Buttons for Mixed Pannels
 		Monast._checkBoxTabButtons = [];
 		var tabs = [
-		    ["peersDiv", "Peers/Users"],
-		    ["meetmesDiv", "Meetme Rooms"],
-		    ["chanCallDiv", "Channels/Calls"],
-		    ["parkedCallsDiv", "Parked Calls"],
-		    ["queuesDiv", "Queues"]
+		    ["peersDiv", Language.peersUsers],
+		    ["meetmesDiv", Language.meetmeRooms],
+		    ["chanCallDiv", Language.channelsCalls],
+		    ["parkedCallsDiv", Language.parkedCalls],
+		    ["queuesDiv", Language.queues]
 		];
 		tabs.each(function (tab) {
 			var name  = tab[0];
@@ -1951,6 +1983,26 @@ var Monast = {
 					setTimeout("$('checkBoxTab_" + tabs[tabName] + "').hide()", 1000);
 			}
 		}
+		
+		var map = {
+			"mixed"          : Language.mixedPannels,
+			"peersDiv"       : Language.usersPeers,
+			"meetmesDiv"     : Language.meetmeRooms,
+			"chanCallDiv"    : Language.channelsCalls,
+			"parkedCallsDiv" : Language.parkedCalls,
+			"queuesDiv"      : Language.queues,
+			"cliDiv"         : Language.asteriskCli,
+			"debugDiv"       : Language.debug
+		};
+		Object.keys(map).each(function (k) {
+			if (tabName == map[k])
+			{
+				$(k).hide();
+				$("liTab_" + k).hide();
+				if ($('checkBoxTab_' + k))
+					setTimeout("$('checkBoxTab_" + k + "').hide()", 1000);
+			}
+		});
 	},
 	
 	buildClone: function (id, newid)
@@ -2085,8 +2137,8 @@ var Monast = {
 		
 		if (!username)
 		{
-			Monast.doAlert('You must define an user.');
-			$('_reqStatus').innerHTML = "<font color='red'>User not defined!</font>";
+			Monast.doAlert(Language.youMustDefineAnUser);
+			$('_reqStatus').innerHTML = "<font color='red'>" + Language.userNotDefined + "</font>";
 		}
 		else
 		{
@@ -2098,18 +2150,18 @@ var Monast = {
 					secret: secret
 				},
 				onCreate: function () {
-					$('_reqStatus').innerHTML = 'Authenticating, please wait...';
+					$('_reqStatus').innerHTML = Language.authenticatingPleaseWait;
 				},
 				onSuccess: function (r) {
 					var json = r.responseJSON;
-					if (json['error'])
+					if (json['errorTemplate'])
 					{
-						$('_reqStatus').innerHTML = "<font color='red'>Monast Error!</font>";;
-						Monast.doError(json['error']);
+						$('_reqStatus').innerHTML = "<font color='red'>" + Language.monastError + "</font>";
+						Monast.doError(new Template(Language[json['errorTemplate']]).evaluate(json['errorVars']));
 					}
 					if (json['success'])
 					{
-						$('_reqStatus').innerHTML = "Authenticated, reloading...";
+						$('_reqStatus').innerHTML = Language.authenticatedReloading;
 						setTimeout("location.href = 'index.php'", 1000);
 					}
 				}
@@ -2119,7 +2171,7 @@ var Monast = {
 	},
 	doLogout: function ()
 	{
-		$('_reqStatus').innerHTML = "Logging out, please wait...";
+		$('_reqStatus').innerHTML = Language.loggingOutPleaseWait;
 		new Ajax.Request('action.php', 
 		{
 			method: 'get',
@@ -2133,8 +2185,8 @@ var Monast = {
 	_reloadTimeout: null,
 	doReload: function ()
 	{
-		this._reloadTimeout = setTimeout("$('_reqStatus').innerHTML = 'Reloading, please wait...'; location.href = 'index.php';", 5000);
-		$('_reqStatus').innerHTML = "Reload requested, please wait...";
+		this._reloadTimeout = setTimeout("$('_reqStatus').innerHTML = Language.reloadingPleaseWait; location.href = 'index.php';", 5000);
+		$('_reqStatus').innerHTML = Language.reloadRequestedPleaseWait;
 		new Ajax.Request('action.php', 
 		{
 			method: 'get',
@@ -2149,10 +2201,10 @@ var Monast = {
 	{
 		if (this._statusError)
 		{
-			this.doError("Can not change server, Monast is offline...<br>Please reload...");
+			this.doError(Language.cannotChangeServerOfflineReload);
 			return;
 		}
-		$('_reqStatus').innerHTML = "Changing Server...";
+		$('_reqStatus').innerHTML = Language.changingServer;
 		new Ajax.Request('action.php', 
 		{
 			method: 'get',
