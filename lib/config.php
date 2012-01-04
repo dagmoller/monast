@@ -31,7 +31,7 @@
 define("HOSTNAME", "localhost"); // monast.py hostname
 define("HOSTPORT", 5039); // monast.py port
 
-define("MONAST_LANGUAGE", "pt_BR"); // Language
+define("MONAST_LANGUAGE", "en"); // Language
 
 define("MONAST_SOCKET_DURATION", 20); // 20 seconds
 define("MONAST_BROWSER_REFRESH", 60 * 10); // 10 minutes
