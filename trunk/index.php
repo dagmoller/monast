@@ -37,7 +37,8 @@ header("Expires: -1");
 session_start();
 $login    = getValor('login', 'session');
 $username = getValor('username', 'session');
-$error    = "";
+$errorTemplate = "";
+$errorVars     = array();
 setValor('Actions', array());
 setValor('Servers', array());
 session_write_close();
@@ -50,18 +51,18 @@ if (!$login)
 	switch ($response)
 	{
 		case "ERROR :: Connection Refused":
-			$error  = "Could not connect to http://" . HOSTNAME . ":" . HOSTPORT . " ($response).<br>";
-			$error .= "Make sure monast.py is running so the panel can connect to its port properly.";
+			$errorTemplate = "Language.connectionError";
+			$errorVars     = array("HOSTNAME" => HOSTNAME, "HOSTPORT" => HOSTPORT, "RESPONSE" => $response);
 			break;
 			
 		case "ERROR :: Request Not Found":
-			$error  = "The request to http://" . HOSTNAME . ":" . HOSTPORT . "/isAuthenticated was not found.<br>";
-			$error .= "Make sure monast.py is running so the panel can connect to its port properly.";
+			$errorTemplate = "Language.requestError";
+			$errorVars     = array("HOSTNAME" => HOSTNAME, "HOSTPORT" => HOSTPORT);
 			break;
 			
 		case "ERROR :: Internal Server Error":
-			$error  = "We got an \"Internal Server Error\" connecting to http://" . HOSTNAME . ":" . HOSTPORT . "/isAuthenticated.<br>";
-			$error .= "Please lookup log file and report errors at http://monast.sf.net";
+			$errorTemplate = "Language.internalServerError";
+			$errorVars     = array("HOSTNAME" => HOSTNAME, "HOSTPORT" => HOSTPORT);
 			break;
 		
 		case "ERROR: Authentication Required":
@@ -80,19 +81,22 @@ if (!$login)
 	}
 }
 
-if (!$error)
+if (!$errorTemplate)
 {
 	session_start();
-	$error = getValor('error', 'session');
-	setValor('error', "");
+	$errorTemplate = getValor('errorTemplate', 'session');
+	$errorVars     = getValor('errorVars', 'session');
+	setValor('errorTemplate', "");
+	setValor('errorVars', "");
 	session_write_close();
 }
 
-if ($error)
+if ($errorTemplate)
 {
 	$template->prepare();
 	$template->newBlock('error');
-	$template->assign('errorMessage', $error);
+	$template->assign('errorTemplate', $errorTemplate);
+	$template->assign('errorVars', monast_json_encode($errorVars, false));
 }
 else
 {
@@ -131,6 +135,11 @@ else
 			$template->newBlock('buttonLogout');
 	}
 }
+
+if (defined("MONAST_LANGUAGE"))
+	$template->assign("_ROOT.MONAST_LANGUAGE", MONAST_LANGUAGE);
+else 
+	$template->assign("_ROOT.MONAST_LANGUAGE", "en");
 
 $template->printToScreen();
 

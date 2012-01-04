@@ -54,6 +54,8 @@
 <script type="text/javascript" src="lib/yui-2.9.0/build/cookie/cookie-min.js"></script> 
 <script type="text/javascript" src="lib/yui-2.9.0/build/tabview/tabview-min.js"></script> 
 
+<script type="text/javascript" src="js/lang.{MONAST_LANGUAGE}.js"></script>
+
 <script type="text/javascript" src="js/prototype-1.7.0.0.js"></script>
 <script type="text/javascript" src="js/md5.js"></script>
 <script type="text/javascript" src="js/monast.js"></script>
@@ -68,10 +70,10 @@
   <span class="monast-text">The Asterisk Monitor Web Panel</span>
   <span class="monast-serverlist">
     <!-- START BLOCK : singleServer -->
-    Server: {server}
+    <script language="javascript">document.write(Language.server);</script>: {server}
     <!-- END BLOCK : singleServer -->
     <!-- START BLOCK : serverList -->
-    Server:
+    <script language="javascript">document.write(Language.server);</script>:
     <select id="serverlist" onchange="Monast.changeServer(this.options[this.selectedIndex].value)">
       <!-- START BLOCK : optionServer -->
       <option value="{server}" {selected}>{server}</option>
@@ -79,14 +81,16 @@
     </select>
     <!-- END BLOCK : serverList -->
   </span>
-  <span class="monast-status" id="_reqStatus">Initializing...</span>
+  <span class="monast-status" id="_reqStatus"><script language="javascript">document.write(Language.initializing);</script>...</span>
   <span><input type="button" id="buttonReload" value="Reload"></span>
   <script language="javascript">
+  $("buttonReload").value = Language.reload;
   Monast._buttonReload = new YAHOO.widget.Button("buttonReload", {onclick: {fn: Monast.doReload}});
   </script>
   <!-- START BLOCK : buttonLogout -->
   <span><input type="button" id="buttonLogout" value="Logout"></span>
   <script language="javascript">
+  $("buttonLogout").value = Language.logout;
   Monast._buttonLogout = new YAHOO.widget.Button("buttonLogout", {onclick: {fn: Monast.doLogout}});
   </script>
   <!-- END BLOCK : buttonLogout -->
@@ -94,12 +98,12 @@
 
 <!-- START BLOCK : login -->
 <script language="javascript">
-$('_reqStatus').innerHTML = 'Authentication Required';
+$('_reqStatus').innerHTML = Language.authenticationRequired;
 </script>
 
 <div id="TabPannel" class="yui-navset" >
   <ul class="yui-nav">
-    <li><a href="#tab0"><em>Authentication</em></a></li>
+    <li><a href="#tab0"><em><script language="javascript">document.write(Language.authentication);</script></em></a></li>
   </ul>
   <div class="yui-content">
     <div id="authentication">
@@ -107,11 +111,11 @@ $('_reqStatus').innerHTML = 'Authentication Required';
       <form onsubmit="return false">
       <table border="0" cellpadding="2px" cellspacing="2px" align="center">
         <tr>
-          <td align="right">User:</td>
+          <td align="right"><script language="javascript">document.write(Language.user);</script>:</td>
           <td><input type="text" name="_username" id="_username" size="15"></td>
         </tr>
         <tr>
-          <td align="right">Secret:</td>
+          <td align="right"><script language="javascript">document.write(Language.secret);</script>:</td>
           <td><input type="password" name="_secret" id="_secret" size="15"></td>
         </tr>
         <tr>
@@ -131,6 +135,9 @@ $('_reqStatus').innerHTML = 'Authentication Required';
   </div>
 </div>
 <script language="javascript">
+$("buttonLogin").value = Language.login;
+$("buttonClear").value = Language.clear;
+
 Monast._buttonLogin = new YAHOO.widget.Button("buttonLogin", {onclick: {fn: Monast.doLogin}});
 Monast._buttonClear = new YAHOO.widget.Button("buttonClear");
 </script>
@@ -138,19 +145,24 @@ Monast._buttonClear = new YAHOO.widget.Button("buttonClear");
 
 <!-- START BLOCK : error -->
 <script language="javascript">
-$('_reqStatus').innerHTML = '<font color="red"><b>MonAst Error</b></font>';
+$('_reqStatus').innerHTML = '<font color="red"><b>' + Language.monastError + '</b></font>';
 </script>
 
 <div id="TabPannel" class="yui-navset" >
   <ul class="yui-nav">
-    <li><a href="#tab0"><em>Error Message</em></a></li>
+    <li><a href="#tab0"><em><script language="javascript">document.write(Language.errorMessage);</script></em></a></li>
   </ul>
   <div class="yui-content">
     <div id="error">
       <p>&nbsp;</p>
       <table border="0" align="center">
         <tr>
-          <td>{errorMessage}</td>
+          <!-- <td>{errorMessage}</td> -->
+          <td>
+            <script language="javascript">
+            document.write(new Template({errorTemplate}).evaluate({errorVars}));
+            </script>
+          </td>
         </tr>
       </table>
       <p>&nbsp;</p>
@@ -179,6 +191,7 @@ $('_reqStatus').innerHTML = '<font color="red"><b>MonAst Error</b></font>';
 </div> 
 
 <script language="javascript">
+Monast.LANGUAGE = "{MONAST_LANGUAGE}";
 Monast.init();
 </script>
 

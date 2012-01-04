@@ -5,24 +5,24 @@ Monast.USERNAME = "{MONAST_USERNAME}";
 
 <div id="TabPannel" class="yui-navset" >
   <ul class="yui-nav">
-    <li id="liTab_mixed"><a href="#tab_mixed"><em>Mixed Pannels</em></a></li>
-    <li id="liTab_peersDiv"><a href="#tab_peersDiv"><em>Peers/Users</em></a></li>
-    <li id="liTab_meetmesDiv"><a href="#tab_meetmesDiv"><em>Meetme Rooms</em></a></li>
-    <li id="liTab_chanCallDiv"><a href="#tab_chanCallDiv"><em>Channels/Calls</em></a></li>
-    <li id="liTab_parkedCallsDiv"><a href="#tab_parkedCallsDiv"><em>Parked Calls</em></a></li>
-    <li id="liTab_queuesDiv"><a href="#tab_queuesDiv"><em>Queues</em></a></li>
+    <li id="liTab_mixed"><a href="#tab_mixed"><em><script language="javascript">document.write(Language.mixedPannels);</script></em></a></li>
+    <li id="liTab_peersDiv"><a href="#tab_peersDiv"><em><script language="javascript">document.write(Language.peersUsers);</script></em></a></li>
+    <li id="liTab_meetmesDiv"><a href="#tab_meetmesDiv"><em><script language="javascript">document.write(Language.meetmeRooms);</script></em></a></li>
+    <li id="liTab_chanCallDiv"><a href="#tab_chanCallDiv"><em><script language="javascript">document.write(Language.channelsCalls);</script></em></a></li>
+    <li id="liTab_parkedCallsDiv"><a href="#tab_parkedCallsDiv"><em><script language="javascript">document.write(Language.parkedCalls);</script></em></a></li>
+    <li id="liTab_queuesDiv"><a href="#tab_queuesDiv"><em><script language="javascript">document.write(Language.queues);</script></em></a></li>
     <!-- START BLOCK : cli_tab -->
-    <li id="liTab_cliDiv"><a href="#tab_cliDiv"><em>Asterisk CLI</em></a></li>
+    <li id="liTab_cliDiv"><a href="#tab_cliDiv"><em><script language="javascript">document.write(Language.asteriskCli);</script></em></a></li>
     <!-- END BLOCK : cli_tab -->
     <!-- START BLOCK : debug_tab -->
-    <li id="liTab_debugDiv"><a href="#tab_debugDiv"><em>Debug</em></a></li>
+    <li id="liTab_debugDiv"><a href="#tab_debugDiv"><em><script language="javascript">document.write(Language.debug);</script></em></a></li>
     <!-- END BLOCK : debug_tab -->
   </ul>
   
   <div class="yui-content"> 
     <div id="mixed">
       <fieldset id="pannelsToShow">
-        <legend><b>Pannels to Show</b></legend> 
+        <legend><b><script language="javascript">document.write(Language.pannelsToShow);</script></b></legend> 
         <input id="checkBoxTab_peersDiv" type="checkbox" name="checkBoxTab_peersDiv" value="peersDiv">
         <input id="checkBoxTab_meetmesDiv" type="checkbox" name="checkBoxTab_meetmesDiv" value="meetmesDiv">
         <input id="checkBoxTab_chanCallDiv" type="checkbox" name="checkBoxTab_chanCallDiv" value="chanCallDiv">
@@ -33,7 +33,7 @@ Monast.USERNAME = "{MONAST_USERNAME}";
   
     <div id="peersDiv">
     <fieldset>
-      <legend><b>Peers/Users</b></legend>
+      <legend><b><script language="javascript">document.write(Language.peersUsers);</script></b></legend>
       <div id="peersDivWraper"> 
 
       <!-- START BLOCK : technology -->
@@ -58,9 +58,10 @@ Monast.USERNAME = "{MONAST_USERNAME}";
     
     <div id="meetmesDiv">
     <fieldset>
-      <legend><b>Meetme Rooms</b></legend>
+      <legend><b><script language="javascript">document.write(Language.meetmeRooms);</script></b></legend>
         <span><input type="button" id="buttonMeemteCreate" value="Create Dynamic Meetme"></span>
         <script language="javascript">
+        $("buttonMeemteCreate").value = Language.createDynamicMeetme;
         Monast._buttonMeetmeCreate = new YAHOO.widget.Button("buttonMeemteCreate", {onclick: {fn: Monast._meetmeInviteNumbers, obj: null}});
         </script>
       <div id="meetmeDivWrapper">
@@ -70,16 +71,16 @@ Monast.USERNAME = "{MONAST_USERNAME}";
     
     <div id="chanCallDiv">
     <fieldset>
-      <legend><b>Channels/Calls</b></legend> 
+      <legend><b><script language="javascript">document.write(Language.channelsCalls);</script></b></legend> 
       <div id="channelsDiv">
         <div class="channelDiv">
           <table width="330">
             <tr>
-              <td class="tableTitle" align="center" colspan="2">Channels (<span id="countChannels">0</span>)</td>
+              <td class="tableTitle" align="center" colspan="2"><script language="javascript">document.write(Language.channels);</script> (<span id="countChannels">0</span>)</td>
             </tr>
             <tr>
-              <td class="statusHeader" align="center" width="260">Channel</td>
-              <td class="statusHeader" align="center" width="70">Status</td>
+              <td class="statusHeader" align="center" width="260"><script language="javascript">document.write(Language.channel);</script></td>
+              <td class="statusHeader" align="center" width="70"><script language="javascript">document.write(Language.status);</script></td>
             </tr>
           </table>
         </div>
@@ -88,12 +89,12 @@ Monast.USERNAME = "{MONAST_USERNAME}";
         <div class="callDiv">
           <table width="570">
             <tr>
-              <td class="tableTitle" align="center" colspan="3">Calls (<span id="countCalls">0</span>)</td>
+              <td class="tableTitle" align="center" colspan="3"><script language="javascript">document.write(Language.calls2);</script> (<span id="countCalls">0</span>)</td>
             </tr>
             <tr>
-              <td class="statusHeader" align="center" width="250">SRC Channel</td>
-              <td class="statusHeader" align="center" width="70">Status</td>
-              <td class="statusHeader" align="center" width="250">DST Channel</td>
+              <td class="statusHeader" align="center" width="250"><script language="javascript">document.write(Language.sourceChannel);</script></td>
+              <td class="statusHeader" align="center" width="70"><script language="javascript">document.write(Language.status);</script></td>
+              <td class="statusHeader" align="center" width="250"><script language="javascript">document.write(Language.destinationChannel);</script></td>
             </tr>
           </table>
         </div>
@@ -104,17 +105,17 @@ Monast.USERNAME = "{MONAST_USERNAME}";
     
     <div id="parkedCallsDiv">
     <fieldset>
-      <legend><b>Parked Calls</b></legend>
+      <legend><b><script language="javascript">document.write(Language.parkedCalls);</script></b></legend>
       <div id="parkedsDiv">
         <div class="parkedDiv">
           <table width="640">
             <tr>
-              <td class="tableTitle" align="center" colspan="3">Parked Calls (<span id="countParked">0</span>)</td>
+              <td class="tableTitle" align="center" colspan="3"><script language="javascript">document.write(Language.parkedCalls2);</script> (<span id="countParked">0</span>)</td>
             </tr>
             <tr>
-              <td class="statusHeader" align="center" width="80">Exten</td>
-              <td class="statusHeader" align="center" width="280">Parked From</td>
-              <td class="statusHeader" align="center" width="280">Parked Channel</td>
+              <td class="statusHeader" align="center" width="80"><script language="javascript">document.write(Language.exten);</script></td>
+              <td class="statusHeader" align="center" width="280"><script language="javascript">document.write(Language.parkedFrom);</script></td>
+              <td class="statusHeader" align="center" width="280"><script language="javascript">document.write(Language.parkedChannel);</script></td>
             </tr>
           </table>
         </div>
@@ -124,7 +125,7 @@ Monast.USERNAME = "{MONAST_USERNAME}";
     
     <div id="queuesDiv">
     <fieldset id="fieldset-queuedual">
-      <legend><b>Queues</b></legend>
+      <legend><b><script language="javascript">document.write(Language.queues);</script></b></legend>
       
       <!-- <div style="clear: both;"></div> -->
     </fieldset>
@@ -134,7 +135,7 @@ Monast.USERNAME = "{MONAST_USERNAME}";
 	<div id="cliDiv">
 	  <textarea id="cliResponse" rows="40" cols="160" readonly="readonly"></textarea><br>
 	  <input id="cliCommand" type="text" size="60" onkeypress="Monast.onKeyPressCliCommand(event)">
-	  &nbsp;<button onclick="Monast.cliCommand()">Send</button>&nbsp;<button onclick="$('cliResponse').value=''">Clear</button>
+	  &nbsp;<button onclick="Monast.cliCommand()"><script language="javascript">document.write(Language.send);</script></button>&nbsp;<button onclick="$('cliResponse').value=''"><script language="javascript">document.write(Language.clear);</script></button>
 	</div>
 	<!-- END BLOCK : cli_tab_div -->
 
