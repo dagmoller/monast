@@ -251,6 +251,7 @@ var Language = {
 		"not in use": "not in use",
 		"logged in": "logged in",
 		"no alarm": "no alarm",
-		"on hook": "on hook"
+		"on hook": "on hook",
+		"signal": "signal"
 	}
 };

@@ -160,6 +160,10 @@ var Monast = {
 		
 		if (!Object.isUndefined(Language._statusMap) && !Object.isUndefined(Language._statusMap[status.toLowerCase().trim()]))
 			return Language._statusMap[status.toLowerCase().trim()];
+		
+		if (status.toLowerCase().trim().indexOf("signal:") != -1 && !Object.isUndefined(Language._statusMap) && !Object.isUndefined(Language._statusMap["signal"]))
+			return status.toLowerCase().replace("signal", Language._statusMap["signal"]);
+		
 		return status;
 	},
 	
