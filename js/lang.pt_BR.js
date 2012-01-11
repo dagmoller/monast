@@ -78,7 +78,7 @@ var Language = {
 	inviteCallToMeetme: "Convidar esta Chamada para a Confer&ecirc;ncia \"#{MEETME}\"?",
 	numbers: "N&uacute;meros",
 	onePerLine: "um por linha",
-	ifNotExistsCreateDynamic: "caso esta confer&ecirc;ncia n&atilde;o exista,<br>uma nova confer&ecirc;ncia dinâmica ser&aacute; criada",
+	ifNotExistsCreateDynamic: "caso esta confer&ecirc;ncia n&atilde;o exista,<br>uma nova confer&ecirc;ncia din&acirc;mica ser&aacute; criada",
 	meetmeUser: "Usu&aacute;rio",
 	kickUser: "Excluir Usu&aacute;rio",
 	viewMeetmeUserInfo: "Exibir Informa&ccedil;&otilde;es deste Usu&aacute;rio",
@@ -250,6 +250,7 @@ var Language = {
 		"not in use": "Dispon&iacute;vel",
 		"logged in": "Logado",
 		"no alarm": "Sem Alarmes",
-		"on hook": "No Gancho"
+		"on hook": "No Gancho",
+		"signal": "Sinal"
 	}
 };
