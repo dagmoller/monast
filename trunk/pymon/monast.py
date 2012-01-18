@@ -1968,6 +1968,8 @@ class Monast:
 		location   = action['location'][0]
 		external   = action.get('external', [False])[0]
 		membername = action.get('membername', [location])[0]
+		penalty    = action.get('penalty', [0])[0]
+		stateIface = action.get('stateInterface', [None])[0]
 		
 		if not external:
 			tech, peer = location.split('/')
@@ -1977,7 +1979,7 @@ class Monast:
 		
 		log.info("Server %s :: Executting Client Action Queue Member Add: %s -> %s..." % (servername, queue, location))
 		server = self.servers.get(servername)
-		server.pushTask(server.ami.queueAdd, queue, location, 0, False, membername) \
+		server.pushTask(server.ami.queueAdd, queue, location, penalty, False, membername, stateIface) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Queue Member Add: %s -> %s" % (queue, location))
 
 			

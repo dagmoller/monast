@@ -202,6 +202,7 @@ var Language = {
 	memberLocation: "Local do Membro",
 	membership: "Tipo de Membro",
 	locationFormat: "Formato: Local/&lt;numero_externo&gt;@&lt;contexto&gt;",
+	stateInterface: "Interface de Estado (BLF)",
 	answered: "Em Atendimento",
 	paused: "Em Pausa",
 	pauseMember: "Colocar em Pausa",

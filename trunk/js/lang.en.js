@@ -202,6 +202,7 @@ var Language = {
 	memberLocation: "Member Location",
 	membership: "Membership",
 	locationFormat: "Format: Local/&lt;external_number&gt;@&lt;context&gt;",
+	stateInterface: "State Interface",
 	answered: "Answered",
 	paused: "Paused",
 	pauseMember: "Pause Member",
