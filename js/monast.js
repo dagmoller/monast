@@ -1358,7 +1358,7 @@ var Monast = {
 						method: 'get',
 						parameters: {
 							reqTime: new Date().getTime(),
-							action: Object.toJSON({action: 'QueueMemberAdd', queue: p_oValue.queue, membername: $("Template::Queue::Form::ExternalMember::Name").value, location: $("Template::Queue::Form::ExternalMember::Location").value, external: true})
+							action: Object.toJSON({action: 'QueueMemberAdd', queue: p_oValue.queue, membername: $("Template::Queue::Form::ExternalMember::Name").value, location: $("Template::Queue::Form::ExternalMember::Location").value, penalty: $("Template::Queue::Form::ExternalMember::Penalty").value, stateInterface: $("Template::Queue::Form::ExternalMember::StateInterface").value, external: true})
 						}
 					});
 				}
