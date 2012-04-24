@@ -236,6 +236,7 @@ var Language = {
 		"ring, in use": "Chamando, em uso",
 		"in use": "Em Uso",
 		"dial": "Discando",
+		"dialing": "Discagem",
 		"lagged": "Defasado",
 		"on hold": "Em Espera",
 		"off hook": "Fora do Gancho",

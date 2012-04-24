@@ -237,6 +237,7 @@ var Language = {
 		"ring, in use": "ring, in use",
 		"in use": "in use",
 		"dial": "dial",
+		"dialing": "dialing",
 		"lagged": "lagged",
 		"on hold": "on hold",
 		"off hook": "off hook",
