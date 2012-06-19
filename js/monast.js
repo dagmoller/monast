@@ -85,6 +85,7 @@ var Monast = {
 			case 'off hook':
 			case 'yellow alarm':
 			case 'dnd enabled':
+			case 'dnd':
 				return Monast.COLORS.YELLOW;
 			
 			// BLUE
@@ -172,7 +173,7 @@ var Monast = {
 	processUserpeer: function (u)
 	{
 		u.id               = md5(u.channel);
-		u.status           = u.dnd && u.status == "No Alarm" ? "DND Enabled" : u.status;
+		u.status           = u.dnd && u.status == "No Alarm" ? "DND Enabled" : (u.customStatus != "" ? u.customStatus : u.status);
 		u.statusTranslated = Monast.translateStatus(u.status);
 		u.statuscolor      = this.getColor(u.status);
 		u.callscolor       = u.calls > 0 ? this.getColor('in use') : this.getColor('not in use');
