@@ -541,6 +541,7 @@ class Monast:
 		log.log(logging.NOTICE, "Initializing Monast AMI Interface...")
 		
 		self.eventHandlers = {
+			'UserEvent'           : self.handlerEventUserEvent,
 			'Reload'              : self.handlerEventReload,
 			'ChannelReload'       : self.handlerEventChannelReload,
 			'Alarm'               : self.handlerEventAlarm,
@@ -689,11 +690,12 @@ class Monast:
 					if len(server.peergroups.keys()) > 0:
 						peer.peergroup = "No Group"
 			
-			peer.context     = kw.get('context', server.default_context)
-			peer.variables   = kw.get('variables', [])
-			peer.status      = kw.get('status', '--')
-			peer.time        = kw.get('time', -1)
-			peer.calls       = int(kw.get('calls', 0))
+			peer.context      = kw.get('context', server.default_context)
+			peer.variables    = kw.get('variables', [])
+			peer.status       = kw.get('status', '--')
+			peer.customStatus = kw.get('customStatus', '')
+			peer.time         = kw.get('time', -1)
+			peer.calls        = int(kw.get('calls', 0))
 			
 			## Dahdi Specific attributes
 			if channeltype == 'DAHDI':
@@ -1655,6 +1657,19 @@ class Monast:
 		server.pushTask(server.ami.collectDeferred, {'Action': 'QueueStatus'}, 'QueueStatusComplete') \
 			.addCallbacks(onQueueStatus, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Queue Status"))
 		
+		## Custom Peer Status on ASTDB
+		def onCustomPeerStatus(events):
+			log.debug("Server %s :: Processing Custom Peer Status from ASTDB..." % servername)
+			for line in events:
+				if line.lower().startswith("/monast/peerstatus/"):
+					key, value = [i.strip() for i in line.split(":", 1)]
+					tech, peer = key.replace("/Monast/PeerStatus/", "").split("/")
+					self._updatePeer(servername, channeltype = tech, peername = peer, customStatus = value, _log = "Custom Peer Status on ASTDB")
+			
+		log.debug("Server %s :: Requesting Custom Peer Status from ASTDB..." % servername)
+		server.pushTask(server.ami.command, "database show") \
+			.addCallbacks(onCustomPeerStatus, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Custom Peer Status from ASTDB"))
+		
 		## Run Task Channels Status
 		reactor.callWhenRunning(self.taskCheckStatus, servername)
 	
@@ -2035,6 +2050,17 @@ class Monast:
 	##
 	## Event Handlers
 	##
+	def handlerEventUserEvent (self, ami, event):
+		log.debug("Server %s :: Processing Event UserEvent..." % ami.servername)
+		
+		UserEvent = event.get("userevent", None)
+		if UserEvent == "MonastEvent":
+			MonastEvent = event.get("monastevent", None)
+			if MonastEvent == "PeerStatus":
+				tech, peer = event.get("peer", "/").split("/")
+				status     = event.get("status", "")
+				self._updatePeer(ami.servername, channeltype = tech, peername = peer, customStatus = status, _log = "change status by UserEvent")
+	
 	def handlerEventReload(self, ami, event):
 		log.debug("Server %s :: Processing Event Reload..." % ami.servername)
 		
