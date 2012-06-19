@@ -2057,6 +2057,15 @@ class Monast:
 		if UserEvent == "MonastEvent":
 			MonastEvent = event.get("monastevent", None)
 			if MonastEvent == "PeerStatus":
+				"""
+				* To Set Custom Peer Status:
+				Set(DB(Monast/PeerStatus/${CHANNEL(channeltype)}/${CHANNEL(peername)})=DND);
+				UserEvent(MonastEvent,MonastEvent: PeerStatus, Peer: ${CHANNEL(channeltype)}/${CHANNEL(peername)}, Status: DND);
+				
+				* To Clear Custom Peer Status:
+				Set(tmp=${DB_DELETE(Monast/PeerStatus/${CHANNEL(channeltype)}/${CHANNEL(peername)})});
+				UserEvent(MonastEvent,MonastEvent: PeerStatus, Peer: ${CHANNEL(channeltype)}/${CHANNEL(peername)}, Status:);
+				"""
 				tech, peer = event.get("peer", "/").split("/")
 				status     = event.get("status", "")
 				self._updatePeer(ami.servername, channeltype = tech, peername = peer, customStatus = status, _log = "change status by UserEvent")
