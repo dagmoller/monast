@@ -699,14 +699,14 @@ class Monast:
 			
 			## Dahdi Specific attributes
 			if channeltype == 'DAHDI':
-				peer.signalling = kw.get('signalling')
+				peer.signalling = kw.get('signalling', "")
 				peer.alarm      = kw.get('alarm', '--')
 				peer.dnd        = kw.get('dnd', 'disabled').lower() == 'enabled'
 				peer.status     = ['--', peer.alarm][peer.status == '--']
 				if peer.callerid == "--":
 					if peer.peername.isdigit():
 						peer.callerid = [peer.channel, "%s %02d" % (peer.signalling, int(peer.peername))][peer.callerid == '--']
-					else:
+					elif peer.signalling:
 						peer.callerid = [peer.channel, "%s %s" % (peer.signalling, peer.peername)][peer.callerid == '--']
 				
 			## Khomp
