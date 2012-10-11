@@ -395,7 +395,8 @@ class MonastHTTP(resource.Resource):
 				call.seconds = int(time.time() - call.starttime)  
 				tmp[servername]['queueCalls'].append(call.__dict__)
 					 
-		request.write(json.dumps(tmp, encoding = "ISO8859-1"))
+		#request.write(json.dumps(tmp, encoding = "ISO8859-1"))
+		request.write(json.dumps(tmp))
 		request.finish()
 	
 	def getUpdates(self, request):
@@ -406,7 +407,8 @@ class MonastHTTP(resource.Resource):
 			updates         = [u for u in session.updates if u.get('servername') == servername]
 			session.updates = []
 		if len(updates) > 0:
-			request.write(json.dumps(updates, encoding = "ISO8859-1"))
+			#request.write(json.dumps(updates, encoding = "ISO8859-1"))
+			request.write(json.dumps(updates))
 		else:
 			request.write("NO UPDATES")
 		request.finish()
@@ -417,7 +419,8 @@ class MonastHTTP(resource.Resource):
 		if self.monast.authRequired and session.isAuthenticated and session.username:
 			servers = self.monast.authUsers[session.username].servers.keys()
 		servers.sort()		
-		request.write(json.dumps(servers, encoding = "ISO8859-1"))
+		#request.write(json.dumps(servers, encoding = "ISO8859-1"))
+		request.write(json.dumps(servers))
 		request.finish()
 	
 	def doAction(self, request):
