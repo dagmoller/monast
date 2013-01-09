@@ -125,12 +125,18 @@ switch ($response)
 		break;
 }
 
-$templateContent = ""; 
+$templateContent = "";
 $dir = opendir("template");
 while (($file = readdir($dir)))
 {
 	if (preg_match("/^template_.*\.html$/", $file) && $file != "template_default.html")
 		$templateContent .= file_get_contents("template/$file");
+	
+	if ($file == "user_template_$username.html")
+	{
+		$templateContent = file_get_contents("template/user_template_$username.html");
+		break;
+	}
 } 
 closedir($dir);
 
