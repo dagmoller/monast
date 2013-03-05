@@ -435,6 +435,9 @@ class MonastHTTP(resource.Resource):
 ##
 class MonastAMIProtocol(manager.AMIProtocol):
 	"""Class Extended to solve some issues on original methods"""
+	
+	MAX_LENGTH = 1024 * 1024 * 8
+	
 	def connectionLost(self, reason):
 		"""Connection lost, clean up callbacks"""
 		for key,callable in self.actionIDCallbacks.items():

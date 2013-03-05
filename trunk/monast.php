@@ -134,7 +134,7 @@ while (($file = readdir($dir)))
 	
 	if ($file == "user_template_$username.html")
 	{
-		$templateContent = file_get_contents("template/user_template_$username.html"); 
+		$templateContent = file_get_contents("template/user_template_$username.html");
 		break;
 	}
 } 
