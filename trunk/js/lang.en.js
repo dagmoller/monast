@@ -182,6 +182,7 @@ var Language = {
 	max: "Max",
 	maxCalls: "Max Calls",
 	holdtime: "Holdtime",
+	talktime: "Talktime",
 	completed: "Completed",
 	completedCalls: "Completed Calls",
 	abandoned: "Abandoned",
