@@ -182,6 +182,7 @@ var Language = {
 	max: "Max",
 	maxCalls: "Qtd. Max. de Chamadas",
 	holdtime: "Tempo de Espera",
+	talktime: "Tempo de Atendimento",
 	completed: "Completadas",
 	completedCalls: "Chamadas Completadas",
 	abandoned: "Abandonadas",
