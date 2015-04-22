@@ -164,21 +164,24 @@ if (MONAST_DEBUG_TAB || getValor('debug'))
 }
 
 // Users/Peers
-$techs = array("MonAst");
+$serverPeers = array("MonAst" => $status[$server]['peers']);
 if (MONAST_GROUP_BY_TECH)
-	$techs = array_keys($status[$server]['peers']);
+{
+	$serverPeers = array();
+	foreach ($status[$server]['peers'] as $peer)
+	{
+		if (!array_key_exists($peer['channeltype'], $serverPeers))
+			$serverPeers[$peer['channeltype']] = array();
+		
+		$serverPeers[$peer['channeltype']][] = $peer;
+	}
+}
 
+$techs = array_keys($serverPeers);
 sort($techs);
 foreach ($techs as $tech)
 {
-	if (MONAST_GROUP_BY_TECH)
-		$peers = $status[$server]['peers'][$tech];
-	else 
-	{
-		$peers = array();
-		foreach (array_keys($status[$server]['peers']) as $t)
-			$peers = array_merge($peers, $status[$server]['peers'][$t]);
-	}
+	$peers = $serverPeers[$tech];
 	
 	if (count($peers) > 0)
 	{

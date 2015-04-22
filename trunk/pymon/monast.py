@@ -342,7 +342,7 @@ class MonastHTTP(resource.Resource):
 		session.updates = []
 		
 		tmp[servername] = {
-			'peers': {},
+			'peers': [],
 			'channels': [],
 			'bridges': [],
 			'meetmes': [],
@@ -354,10 +354,9 @@ class MonastHTTP(resource.Resource):
 		}
 		## Peers
 		for tech, peerlist in server.status.peers.items():
-			tmp[servername]['peers'][tech] = []
 			for peername, peer in peerlist.items():
-				tmp[servername]['peers'][tech].append(peer.__dict__)
-			tmp[servername]['peers'][tech].sort(lambda x, y: cmp(x.get(self.monast.sortPeersBy), y.get(self.monast.sortPeersBy)))
+				tmp[servername]['peers'].append(peer.__dict__)
+			tmp[servername]['peers'].sort(lambda x, y: cmp(x.get(self.monast.sortPeersBy), y.get(self.monast.sortPeersBy)))
 		## Channels
 		for uniqueid, channel in server.status.channels.items():
 			tmp[servername]['channels'].append(channel.__dict__)
