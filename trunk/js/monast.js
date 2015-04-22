@@ -189,7 +189,11 @@ var Monast = {
 			if (!Object.isUndefined(u.peergroup))
 				group = "-" + u.peergroup;
 			
-			$('fieldset-' + u.channeltype + group).appendChild(clone);
+			var tech = u.channeltype;
+			if (!Monast.MONAST_GROUP_BY_TECH)
+				tech = "MonAst";
+			
+			$('fieldset-' + tech + group).appendChild(clone);
 			
 			// Drag & Drop
 			this.createDragDrop(u.id, this.dd_userPeerDrop, ['peerTable']);
