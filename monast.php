@@ -148,6 +148,7 @@ $template->assign('MONAST_BLINK_COUNT', MONAST_BLINK_COUNT);
 $template->assign('MONAST_BLINK_INTERVAL', MONAST_BLINK_INTERVAL);
 $template->assign('MONAST_KEEP_CALLS_SORTED', MONAST_KEEP_CALLS_SORTED ? 'true' : 'false');
 $template->assign('MONAST_KEEP_PARKEDCALLS_SORTED', MONAST_KEEP_PARKEDCALLS_SORTED ? 'true' : 'false');
+$template->assign('MONAST_GROUP_BY_TECH', MONAST_GROUP_BY_TECH ? 'true' : 'false');
 $template->assign('MONAST_USERNAME', $username);
 
 if (MONAST_CLI_TAB)
@@ -163,11 +164,21 @@ if (MONAST_DEBUG_TAB || getValor('debug'))
 }
 
 // Users/Peers
-$techs = array_keys($status[$server]['peers']);
+$techs = array("MonAst");
+if (MONAST_GROUP_BY_TECH)
+	$techs = array_keys($status[$server]['peers']);
+
 sort($techs);
 foreach ($techs as $tech)
 {
-	$peers = $status[$server]['peers'][$tech];
+	if (MONAST_GROUP_BY_TECH)
+		$peers = $status[$server]['peers'][$tech];
+	else 
+	{
+		$peers = array();
+		foreach (array_keys($status[$server]['peers']) as $t)
+			$peers = array_merge($peers, $status[$server]['peers'][$t]);
+	}
 	
 	if (count($peers) > 0)
 	{

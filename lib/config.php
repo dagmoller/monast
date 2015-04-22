@@ -36,6 +36,8 @@ define("MONAST_LANGUAGE", "en"); // Language
 define("MONAST_SOCKET_DURATION", 20); // 20 seconds
 define("MONAST_BROWSER_REFRESH", 60 * 10); // 10 minutes
 
+define("MONAST_GROUP_BY_TECH", true); // group peers by channel technology
+
 define("MONAST_CALL_TIME", true); // enable or disable call timer
 
 define("MONAST_BLINK_ONCHANGE", true); // enable or disable blinking status changes
