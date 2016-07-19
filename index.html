@@ -1,0 +1,352 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+
+<!--
+/*
+* Copyright (c) 2008-2011, Diego Aguirre
+* All rights reserved.
+* 
+* Redistribution and use in source and binary forms, with or without modification,
+* are permitted provided that the following conditions are met:
+* 
+*     * Redistributions of source code must retain the above copyright notice, 
+*       this list of conditions and the following disclaimer.
+*     * Redistributions in binary form must reproduce the above copyright notice, 
+*       this list of conditions and the following disclaimer in the documentation 
+*       and/or other materials provided with the distribution.
+*     * Neither the name of the DagMoller nor the names of its contributors
+*       may be used to endorse or promote products derived from this software 
+*       without specific prior written permission.
+* 
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
+* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
+* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+* OF THE POSSIBILITY OF SUCH DAMAGE.
+*/ 
+ -->
+
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>MonAst: The Asterisk Monitor Web Panel</title>
+
+<!-- Individual YUI CSS files --> 
+<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.9.0/build/fonts/fonts-min.css"> 
+<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.9.0/build/tabview/assets/skins/sam/tabview.css"> 
+<!-- Individual YUI JS files --> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.9.0/build/yahoo/yahoo-min.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.9.0/build/dom/dom-min.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.9.0/build/event/event-min.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.9.0/build/element/element-min.js"></script> 
+<script type="text/javascript" src="http://yui.yahooapis.com/2.9.0/build/tabview/tabview-min.js"></script> 
+
+<link rel="stylesheet" href="css/lightbox.css" type="text/css" media="screen" />
+
+<script language="javascript" src="js/prototype-1.7.0.0.js"></script>
+<script language="javascript" src="js/lightbox/scriptaculous.js?load=effects,builder"></script>
+<script language="javascript" src="js/lightbox/lightbox.js"></script>
+
+<style type="text/css">
+BODY {
+	font-family: verdana,arial,helvetica,sans-serif;
+	margin: 20px 15% 5% 15%;
+}
+pre {
+	font-family: monospace;
+	border: 1px solid #CCCCCC;
+	background-color: #F9F9F9;
+	padding: 1%;
+}
+a {
+	color: black;
+}
+sup {
+	font-size: 50%;
+}
+.monast-logo {
+	height: 45px;
+}
+.monast-logo .monast-name {
+	font-family: sans-serif; 
+	font-size: 2.3em; 
+	font-weight: bold; 
+	border-bottom: 2px solid #000000;
+}
+.monast-logo .monast-text {
+	font-family: sans-serif; 
+	font-size: 1.0em; 
+	border-top: 2px solid #000000;
+}
+.monast-logo .monast-status {
+	margin-left: 25px; 
+	padding-left: 5px; 
+	border-left: 2px solid #000000
+}
+.content {
+	margin: 5% 10% 5% 10%;
+}
+</style>
+
+</head>
+
+<body class="yui-skin-sam">
+  
+  <div class="monast-logo">
+    <span class="monast-name">MonAst</span>&nbsp;
+    <span class="monast-text">The Asterisk Monitor Web Panel</span>
+    <span class="monast-status">Current Version: 3.0b4</span>
+  </div>
+
+  <div id="TabPannel" class="yui-navset" >
+    <ul class="yui-nav">
+      <li class="selected"><a href="#about"><em>About</em></a></li>
+      <li><a href="#tab-documentation"><em>Documentation</em></a></li>
+      <li><a href="#tab-discussion"><em>Discussion</em></a></li>
+      <li><a href="#tab-contribute"><em>Contribute</em></a></li>
+      <li><a href="#tab-screenshots"><em>Screenshots</em></a></li>
+      <li><a href="#tab-downloads"><em>Downloads</em></a></li>
+    </ul>
+    <div class="yui-content">
+      
+      <div id="tab-about" class="content">
+          <p>Monast is a monitoring interface which acts as an operator panel for Asterisk<sup>TM</sup>.</p>
+          <p>What Monast can display (in realtime)?</p>
+          <ul>
+            <li>Multiple Servers</li>
+            <li>Users and Peers (SIP, IAX, DAHDI, Khomp, etc...)</li>
+            <li>Channels and Calls (with channel name and callerid)</li>
+            <li>Meetmes (with connected users)</li>
+            <li>Parked Calls</li>
+            <li>Queues (with all statistics, members and waiting clients)</li>
+          </ul>
+          <p>What Monast can do (in realtime)?</p>
+          <ul>
+            <li>Originate Calls</li>
+            <li>Transfer Calls</li>
+            <li>Hangup Calls</li>
+            <li>Park Calls</li>
+            <li>Spy Calls</li>
+            <li>Invite Users or Numbers to Meetme</li>
+            <li>Kick Users on Meetme</li>
+            <li>Add User/Peer as Member of any Queue</li>
+            <li>Remove Member from Queues</li>
+            <li>Pause/Unpause Members in Queues</li>
+            <li>Execute CLI Commands</li>
+          </ul>
+          
+          <p>Monast was develop in Python (Starpy + Twisted), PHP (for integration of Web interface with Python) and uses prototype.js to handle AJAX calls and YUI (Yahoo User Interface) for the interface.</p> 
+          <p>Licensed under BSD, it has been created by Diego Aguirre (DagMoller).</p>
+          <p>You may find <a href="http://sourceforge.net/projects/monast/">extra information about it on its Sourceforge.net project page, just click here</a>.</p>
+      </div>
+
+      <div id="tab-documentation" class="content">
+        <p>Instalation Instructions:</p>
+<pre>
+1 - Configure the asterisk manager to create an user to use with monast.
+    - Sample manager.conf user:
+      [monast_user]
+      secret=monast_secret
+      writetimeout=100
+      read=system,call,log,verbose,command,agent,user,config,originate,reporting
+      write=system,call,log,verbose,command,agent,user,config,originate,reporting
+
+2 - Configure apache to point to location where you extracted monast.
+    - Sample:
+      Alias /monast /path/to/monast
+      <Directory /path/to/monast>
+          Order allow,deny
+          Allow from all
+      </Directory>
+
+3 - Copy pymon/monast.conf.sampe to /etc/monast.conf and edit it 
+    properly as documented inside of this file.
+
+4 - Install dependencies:
+    Twisted Python 10.1+ (http://twistedmatrix.com)
+    zope.interface 3.6+ (http://pypi.python.org/pypi/zope.interface#download)
+    Starpy SVN-Trunk (http://sourceforge.net/projects/starpy/) 
+      - Trunk tarball: http://starpy.svn.sourceforge.net/viewvc/starpy/trunk/?view=tar
+    PHP PEAR Packages: (HTTP_Client)
+
+5 - Run monast.py:
+    # cd pymon
+
+    - Verify if is everything OK.
+    # ./monast.py
+
+    - If no ERRORS, stop monast.py pressing ctrl+c and run it as daemon.
+    # ./monast.py --daemon
+
+6 - Edit lib/config.php as documented inside this file.
+
+7 - Point your browser to location that was configured in apache.
+    http://server_addr/monast/index.php
+</pre>
+      </div>
+
+      <div id="tab-discussion" class="content">
+        <p>Currently there is just one mailing list for both support and development of Monast. <br>
+          <a href="http://sourceforge.net/mail/?group_id=232812">You can subscribe to monast-users by clicking here</a>.</p>
+        <p>If you want to file a bug on Monast <a href="http://sourceforge.net/tracker/?group_id=232812">you can do so using the integrated bug tracker from Sourceforge.net available here</a>.</p>
+        <p>Or access #monast IRC channel on Freenode.</p>
+      </div>
+
+      <div id="tab-contribute" class="content">
+        <p>In case you do not want any stable release and prefer to obtain the newest features and bells, so that you can send your patches or suggestions on how to make Monast better, you can checkout the latest code of Monast by running the following command. </p>
+        <pre>svn checkout http://svn.code.sf.net/p/monast/code/trunk monast</pre>
+        <p>Just keep in mind that it is permanently in a beta state and unstable.</p>
+      </div>
+
+      <div id="tab-screenshots" class="content">
+        <fieldset>
+          <legend>Users/Peers</legend>
+          <div style="margin: 10px; float: left;">
+            <a href="images/screenshots/users-peers-01.png" rel="lightbox[roadtrip]" title="Users/Peers Pannel"><img src="images/thumbs/users-peers-01.png" border="0"></a>  
+          </div>
+          <div style="margin: 10px; float: left;">
+            <a href="images/screenshots/users-peers-contextmenu-01.png" rel="lightbox[roadtrip]" title="Users/Peers Context Menu"><img src="images/thumbs/users-peers-contextmenu-01.png" border="0"></a>
+          </div>
+          <div style="margin: 10px; float: left;">
+            <a href="images/screenshots/users-peers-originate-dialog-01.png" rel="lightbox[roadtrip]" title="Users/Peers Originate Dialog"><img src="images/thumbs/users-peers-originate-dialog-01.png" border="0"></a>
+          </div>
+          <div style="clear: both;"></div>
+        </fieldset>
+        <br>
+        <fieldset>
+          <legend>Meetmes</legend>
+          <div style="margin: 10px; float: left;">
+            <a href="images/screenshots/meetme-01.png" rel="lightbox[roadtrip]" title="Meetme Pannel"><img src="images/thumbs/meetme-01.png" border="0"></a>
+          </div>
+          <div style="margin: 10px; float: left;"> 
+            <a href="images/screenshots/meetme-invite-numbers.png" rel="lightbox[roadtrip]" title="Meetme Invite Dialog"><img src="images/thumbs/meetme-invite-numbers.png" border="0"></a>
+          </div>
+          <div style="margin: 10px; float: left;">
+            <a href="images/screenshots/meetme-contextmenu-01.png" rel="lightbox[roadtrip]" title="Meetme Context Menu"><img src="images/thumbs/meetme-contextmenu-01.png" border="0"></a>
+          </div>
+          <div style="margin: 10px; float: left;">
+            <a href="images/screenshots/meetme-user-contextmenu-01.png" rel="lightbox[roadtrip]" title="Meetme User Context Menu"><img src="images/thumbs/meetme-user-contextmenu-01.png" border="0"></a>
+          </div>
+          <div style="clear: both;"></div>
+        </fieldset>
+        <br>
+        <fieldset>
+          <legend>Channels/Calls</legend>
+          <div style="margin: 10px; float: left;">
+            <a href="images/screenshots/channels-calls-01.png" rel="lightbox[roadtrip]" title="Channels/Calls Pannel"><img src="images/thumbs/channels-calls-01.png" border="0"></a>
+          </div>
+          <div style="margin: 10px; float: left;">
+            <a href="images/screenshots/call-contextmenu-01.png" rel="lightbox[roadtrip]" title="Call Context menu"><img src="images/thumbs/call-contextmenu-01.png" border="0"></a>
+          </div>
+          <div style="clear: both;"></div>
+        </fieldset>
+        <br>
+        <fieldset>
+          <legend>Parked Calls</legend>
+          <div style="margin: 10px; float: left;">
+            <a href="images/screenshots/parked-calls-01.png" rel="lightbox[roadtrip]" title="Parked Calls Pannel"><img src="images/thumbs/parked-calls-01.png" border="0"></a>
+          </div>
+          <div style="margin: 10px; float: left;">
+            <a href="images/screenshots/parked-calls-contextmenu-01.png" rel="lightbox[roadtrip]" title="Parked Call Context menu"><img src="images/thumbs/parked-calls-contextmenu-01.png" border="0"></a>
+          </div>
+          <div style="clear: both;"></div>
+        </fieldset>
+        <br>
+        <fieldset>
+          <legend>Queues</legend>
+          <div style="margin: 10px; float: left;">
+            <a href="images/screenshots/queues-01.png" rel="lightbox[roadtrip]" title="Queues Pannel"><img src="images/thumbs/queues-01.png" border="0"></a>
+          </div>
+          <div style="margin: 10px; float: left;">
+            <a href="images/screenshots/queues-contextmenu-01.png" rel="lightbox[roadtrip]" title="Queues Context Menu"><img src="images/thumbs/queues-contextmenu-01.png" border="0"></a>
+          </div>
+          <div style="margin: 10px; float: left;">
+            <a href="images/screenshots/queues-external-member-dialog-01.png" rel="lightbox[roadtrip]" title="Queues External Member Dialog"><img src="images/thumbs/queues-external-member-dialog-01.png" border="0"></a>
+          </div>
+          <div style="margin: 10px; float: left;">
+            <a href="images/screenshots/queues-member-contextmenu-01.png" rel="lightbox[roadtrip]" title="Queue Member Context Menu"><img src="images/thumbs/queues-member-contextmenu-01.png" border="0"></a>
+          </div>
+          <div style="margin: 10px; float: left;">
+            <a href="images/screenshots/queues-member-info-01.png" rel="lightbox[roadtrip]" title="Queue Member Information"><img src="images/thumbs/queues-member-info-01.png" border="0"></a>
+          </div>
+          <div style="clear: both;"></div>
+        </fieldset>
+        <br>
+        <fieldset>
+          <legend>Asterisk CLI</legend>
+          <div style="margin: 10px; float: left;">
+            <a href="images/screenshots/cli-command-01.png" rel="lightbox[roadtrip]" title="Asterisk CLI Pannel"><img src="images/thumbs/cli-command-01.png" border="0"></a>
+          </div>
+          <div style="clear: both;"></div>
+        </fieldset>
+      </div>
+
+      <div id="tab-downloads" class="content">
+        <p>You can get the most recent version of Monast by downloading <a href="http://sourceforge.net/project/showfiles.php?group_id=232812">one of these official release packages</a>:</p>
+        <ul>
+          <li><a href="http://sourceforge.net/projects/monast/files/Monast%20for%20Asterisk%201.4%2C%201.6%20and%201.8/3.0b4/" target="_blank">Monast 3.0b4 (for Asterisk 1.4, 1.6 and 1.8)</a></li>
+          <li><a href="https://sourceforge.net/projects/monast/files/MonAst%20for%20Asterisk%201.6/2.0/" target="_blank">Monast 2.0 (for Asterisk 1.6)</a></li>
+          <li><a href="https://sourceforge.net/projects/monast/files/MonAst%20for%20Asterisk%201.4_1.6/1.4/" target="_blank">Monast 1.4 (for Asterisk 1.4/1.6)</a></li>
+          <li><a href="https://sourceforge.net/project/showfiles.php?group_id=232812&package_id=327406&release_id=690974" target="_blank">Monast 1.2 (for Asterisk 1.4/1.6)</a></li>
+          <li><a href="https://sourceforge.net/project/showfiles.php?group_id=232812&package_id=282382&release_id=664453" target="_blank">Monast 1.0 (for Asterisk 1.4)</a></li>
+        </ul>
+        <br>
+        <p>SVN Trunk</p>
+        <pre>svn checkout http://svn.code.sf.net/p/monast/code/trunk monast</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <div>
+    <table width="100%">
+      <tr>
+        <td align="left">
+          <table>
+            <tr>
+              <td>
+                <a href="http://sourceforge.net/donate/index.php?group_id=232812"><img src="http://images.sourceforge.net/images/project-support.jpg" width="88" height="32" border="0" alt="Support This Project" /> </a>
+              </td>
+              <td>
+                <!-- INICIO FORMULARIO BOTAO PAGSEGURO -->
+                <form target="pagseguro" action="https://pagseguro.uol.com.br/checkout/doacao.jhtml" method="post">
+                  <input type="hidden" name="email_cobranca" value="aguirre@infodag.com.br" />
+                  <input type="hidden" name="moeda" value="BRL" />
+                  <input type="image" src="https://p.simg.uol.com.br/out/pagseguro/i/botoes/doacoes/84x35-doar-azul.gif" name="submit" alt="Pague com PagSeguro - é rápido, grátis e seguro!" />
+                </form>
+                <!-- FINAL FORMULARIO BOTAO PAGSEGURO -->
+              </td>
+            </tr>
+          </table>
+        </td>
+        <td align="right">
+          <a href="http://sourceforge.net"><img src="http://sflogo.sourceforge.net/sflogo.php?group_id=232812&amp;type=2" width="125" height="37" border="0" alt="SourceForge.net Logo" /></a>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+<script language="javascript">
+var _tabPannel = new YAHOO.widget.TabView('TabPannel');
+
+_tabPannel.addListener('beforeActiveTabChange', function(e) {
+	location.href = e.newValue.get("href").replace("tab-", "");
+});
+
+var href = /(#.*$)/.exec(location.href)[0];
+if (href)
+{
+	_tabPannel.get('tabs').each(function (tab, idx) {
+		if (tab.get("href").replace("#", "") == "tab-" + href.replace("#", ""))
+			_tabPannel.set("activeIndex", idx);
+	});
+}
+
+</script>
+
+</body>
+</html>
