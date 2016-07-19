@@ -141,7 +141,7 @@ sup {
           
           <p>Monast was develop in Python (Starpy + Twisted), PHP (for integration of Web interface with Python) and uses prototype.js to handle AJAX calls and YUI (Yahoo User Interface) for the interface.</p> 
           <p>Licensed under BSD, it has been created by Diego Aguirre (DagMoller).</p>
-          <p>You may find <a href="http://sourceforge.net/projects/monast/">extra information about it on its Sourceforge.net project page, just click here</a>.</p>
+          <p>You may find <a href="https://github.com/dagmoller/monast">extra information about it on its Github.com project page, just click here</a>.</p>
       </div>
 
       <div id="tab-documentation" class="content">
@@ -192,13 +192,13 @@ sup {
       <div id="tab-discussion" class="content">
         <p>Currently there is just one mailing list for both support and development of Monast. <br>
           <a href="http://sourceforge.net/mail/?group_id=232812">You can subscribe to monast-users by clicking here</a>.</p>
-        <p>If you want to file a bug on Monast <a href="http://sourceforge.net/tracker/?group_id=232812">you can do so using the integrated bug tracker from Sourceforge.net available here</a>.</p>
+        <p>If you want to file a bug on Monast <a href="https://github.com/dagmoller/monast/issues">you can do so using the integrated issue tracker from Github.com available here</a>.</p>
         <p>Or access #monast IRC channel on Freenode.</p>
       </div>
 
       <div id="tab-contribute" class="content">
         <p>In case you do not want any stable release and prefer to obtain the newest features and bells, so that you can send your patches or suggestions on how to make Monast better, you can checkout the latest code of Monast by running the following command. </p>
-        <pre>svn checkout http://svn.code.sf.net/p/monast/code/trunk monast</pre>
+        <pre>git clone https://github.com/dagmoller/monast.git</pre>
         <p>Just keep in mind that it is permanently in a beta state and unstable.</p>
       </div>
 
@@ -286,17 +286,17 @@ sup {
       </div>
 
       <div id="tab-downloads" class="content">
-        <p>You can get the most recent version of Monast by downloading <a href="http://sourceforge.net/project/showfiles.php?group_id=232812">one of these official release packages</a>:</p>
+        <p>You can get the most recent version of Monast by downloading <a href="https://github.com/dagmoller/monast/releases">one of these official release packages</a>:</p>
         <ul>
-          <li><a href="http://sourceforge.net/projects/monast/files/Monast%20for%20Asterisk%201.4%2C%201.6%20and%201.8/3.0b4/" target="_blank">Monast 3.0b4 (for Asterisk 1.4, 1.6 and 1.8)</a></li>
-          <li><a href="https://sourceforge.net/projects/monast/files/MonAst%20for%20Asterisk%201.6/2.0/" target="_blank">Monast 2.0 (for Asterisk 1.6)</a></li>
-          <li><a href="https://sourceforge.net/projects/monast/files/MonAst%20for%20Asterisk%201.4_1.6/1.4/" target="_blank">Monast 1.4 (for Asterisk 1.4/1.6)</a></li>
-          <li><a href="https://sourceforge.net/project/showfiles.php?group_id=232812&package_id=327406&release_id=690974" target="_blank">Monast 1.2 (for Asterisk 1.4/1.6)</a></li>
-          <li><a href="https://sourceforge.net/project/showfiles.php?group_id=232812&package_id=282382&release_id=664453" target="_blank">Monast 1.0 (for Asterisk 1.4)</a></li>
+          <li><a href="https://github.com/dagmoller/monast/archive/3.0b4.zip" target="_blank">Monast 3.0b4 (for Asterisk 1.4, 1.6 and 1.8)</a></li>
+          <li><a href="https://github.com/dagmoller/monast/archive/2.0.zip" target="_blank">Monast 2.0 (for Asterisk 1.6)</a></li>
+          <li><a href="https://github.com/dagmoller/monast/archive/1.4.zip" target="_blank">Monast 1.4 (for Asterisk 1.4/1.6)</a></li>
+          <li><a href="https://github.com/dagmoller/monast/archive/1.2.zip" target="_blank">Monast 1.2 (for Asterisk 1.4/1.6)</a></li>
+          <li><a href="https://github.com/dagmoller/monast/archive/1.0.zip" target="_blank">Monast 1.0 (for Asterisk 1.4)</a></li>
         </ul>
         <br>
-        <p>SVN Trunk</p>
-        <pre>svn checkout http://svn.code.sf.net/p/monast/code/trunk monast</pre>
+        <p>GIT Master</p>
+        <pre>git clone https://github.com/dagmoller/monast.git</pre>
       </div>
 
     </div>
@@ -309,7 +309,13 @@ sup {
           <table>
             <tr>
               <td>
-                <a href="http://sourceforge.net/donate/index.php?group_id=232812"><img src="http://images.sourceforge.net/images/project-support.jpg" width="88" height="32" border="0" alt="Support This Project" /> </a>
+		      <!-- <a href="http://sourceforge.net/donate/index.php?group_id=232812"><img src="http://images.sourceforge.net/images/project-support.jpg" width="88" height="32" border="0" alt="Support This Project" /> </a> -->
+                <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
+		  <input type="hidden" name="cmd" value="_s-xclick">
+		  <input type="hidden" name="encrypted" value="-----BEGIN PKCS7-----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-----END PKCS7-----">
+		  <input type="image" src="https://www.paypalobjects.com/en_GB/i/btn/btn_donate_LG.gif" border="0" name="submit" alt="PayPal ¿ The safer, easier way to pay online!">
+		  <img alt="" border="0" src="https://www.paypalobjects.com/pt_BR/i/scr/pixel.gif" width="1" height="1">
+		</form>
               </td>
               <td>
                 <!-- INICIO FORMULARIO BOTAO PAGSEGURO -->
