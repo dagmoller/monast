@@ -1115,7 +1115,7 @@ var Monast = {
 						method: 'get',
 						parameters: {
 							reqTime: new Date().getTime(),
-							action: Object.toJSON({action: 'MeetmeKick', meetme: p_oValue.meetme, usernum: p_oValue.user.usernum})
+							action: Object.toJSON({action: 'MeetmeKick', meetme: p_oValue.meetme, usernum: p_oValue.user.usernum, channel: p_oValue.user.channel})
 						}
 					});
 				}

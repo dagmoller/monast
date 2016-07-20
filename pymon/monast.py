@@ -583,6 +583,10 @@ class Monast:
 			
 			'MeetmeJoin'          : self.handlerEventMeetmeJoin,
 			'MeetmeLeave'         : self.handlerEventMeetmeLeave,
+			
+			'ConfbridgeJoin'      : self.handlerEventConfbridgeJoin,
+			'ConfbridgeLeave'     : self.handlerEventConfbridgeLeave,
+			
 			'ParkedCall'          : self.handlerEventParkedCall,
 			'UnParkedCall'        : self.handlerEventUnParkedCall,
 			'ParkedCallTimeOut'   : self.handlerEventParkedCallTimeOut,
@@ -1353,6 +1357,7 @@ class Monast:
 			self.servers[servername].transfer_context = config.get(server, 'transfer_context')
 			self.servers[servername].meetme_context   = config.get(server, 'meetme_context')
 			self.servers[servername].meetme_prefix    = config.get(server, 'meetme_prefix')
+			self.servers[servername].meetmeType       = None
 			
 			self.servers[servername].connected        = False
 			self.servers[servername].factory          = MonastAMIFactory(servername, username, password, self)
@@ -1652,18 +1657,38 @@ class Monast:
 			.addCallbacks(onKhompChannelsShow, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Khomp Channels"))
 		
 		# Meetme
-		def onGetMeetmeConfig(result):
-			log.debug("Server %s :: Processing meetme.conf..." % servername)
-			for k, v in result.items():
-				if v.startswith("conf="):
-					meetmeroom = v.replace("conf=", "")
-					if (self.displayMeetmesDefault and not server.displayMeetmes.has_key(meetmeroom)) or (not self.displayMeetmesDefault and server.displayMeetmes.has_key(meetmeroom)):
-						self._createMeetme(servername, meetme = meetmeroom)
-
-		log.debug("Server %s :: Requesting meetme.conf..." % servername)
-		server.pushTask(server.ami.getConfig, 'meetme.conf') \
-			.addCallbacks(onGetMeetmeConfig, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting meetme.conf"))
-		
+		def onGetHelpMeetme(result):
+			log.debug("Server %s :: Processing core show help meetme..." % servername)
+			result = "\n".join(result)
+			if not "no such command" in result.lower():
+				server.meetmeType = "meetme"
+				def onGetMeetmeConfig(result):
+					log.debug("Server %s :: Processing meetme.conf..." % servername)
+					for k, v in result.items():
+						if v.startswith("conf="):
+							meetmeroom = v.replace("conf=", "")
+							if (self.displayMeetmesDefault and not server.displayMeetmes.has_key(meetmeroom)) or (not self.displayMeetmesDefault and server.displayMeetmes.has_key(meetmeroom)):
+								self._createMeetme(servername, meetme = meetmeroom)
+								
+				log.debug("Server %s :: Requesting meetme.conf..." % servername)
+				server.pushTask(server.ami.getConfig, 'meetme.conf') \
+					.addCallbacks(onGetMeetmeConfig, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting meetme.conf"))
+			
+		log.debug("Server %s :: Checking if server has meetme..." % servername)
+		server.pushTask(server.ami.command, "core show help meetme") \
+			.addCallbacks(onGetHelpMeetme, self._onAmiCommandFailure, errbackArgs = (servername, "Error checking meetme"))
+			
+		# Confbridge
+		def onGetHelpConfbridge(result):
+			log.debug("Server %s :: Processing core show help confbridge..." % servername)
+			result = "\n".join(result)
+			if not "no such command" in result.lower():
+				server.meetmeType = "confbridge"
+				
+		log.debug("Server %s :: Checking if server has confbridge..." % servername)
+		server.pushTask(server.ami.command, "core show help confbridge") \
+			.addCallbacks(onGetHelpConfbridge, self._onAmiCommandFailure, errbackArgs = (servername, "Error checking confbridge"))
+				
 		# Queues
 		def onQueueStatus(events):
 			log.debug("Server %s :: Processing Queues..." % servername)
@@ -1886,6 +1911,9 @@ class Monast:
 		if type == "meetmeInviteUser":
 			application = "Meetme"
 			data        = "%s%sd" % (destination, [",", "|"][server.version == 1.4])
+			if server.meetmeType == "confbridge":
+				application = "Confbridge"
+				data        = destination
 			originates.append((channel, context, exten, priority, timeout, callerid, account, application, data, variable, async))
 			logs.append("Invite from %s to %s(%s)" % (channel, application, data))
 		
@@ -1893,6 +1921,9 @@ class Monast:
 			dynamic     = not server.status.meetmes.has_key(destination)
 			application = "Meetme"
 			data        = "%s%sd" % (destination, [",", "|"][server.version == 1.4])
+			if server.meetmeType == "confbridge":
+				application = "Confbridge"
+				data        = destination
 			numbers     = source.replace('\r', '').split('\n')
 			for number in [i.strip() for i in numbers if i.strip()]:
 				channel     = "Local/%s@%s" % (number, context)
@@ -2054,12 +2085,20 @@ class Monast:
 		servername = action['server'][0]
 		meetme     = action['meetme'][0]
 		usernum    = action['usernum'][0]
+		channel    = action['channel'][0]
 		
-		log.info("Server %s :: Executting Client Action Meetme Kick: %s -> %s..." % (servername, meetme, usernum))
 		server = self.servers.get(servername)
-		server.pushTask(server.ami.command, "meetme kick %s %s" % (meetme, usernum)) \
-			.addErrback(self._onAmiCommandFailure, servername, "Error Executting Client Action Meetme Kick: %s -> %s..." % (meetme, usernum))
-			
+		
+		if server.meetmeType == "meetme":
+			log.info("Server %s :: Executting Client Action Meetme Kick: %s -> %s..." % (servername, meetme, usernum))
+			server.pushTask(server.ami.command, "meetme kick %s %s" % (meetme, usernum)) \
+				.addErrback(self._onAmiCommandFailure, servername, "Error Executting Client Action Meetme Kick: %s -> %s..." % (meetme, usernum))
+				
+		if server.meetmeType == "confbridge":
+			log.info("Server %s :: Executting Client Action Confbridge Kick: %s -> %s..." % (servername, meetme, channel))
+			server.pushTask(server.ami.command, "confbridge kick %s %s" % (meetme, channel)) \
+				.addErrback(self._onAmiCommandFailure, servername, "Error Executting Client Action Confbridge Kick: %s -> %s..." % (meetme, channel))
+				
 	def clientAction_SpyChannel(self, session, action):
 		servername = action['server'][0]
 		server     = self.servers.get(servername)
@@ -2579,7 +2618,6 @@ class Monast:
 			}  
 		)
 		
-	# Meetme Events
 	def handlerEventMeetmeLeave(self, ami, event):
 		log.debug("Server %s :: Processing Event MeetmeLeave..." % ami.servername)
 		meetme = event.get("meetme")
@@ -2595,6 +2633,42 @@ class Monast:
 				'calleridname' : event.get("calleridname"),
 			}  
 		)
+		
+	# Confbridge Events
+	def handlerEventConfbridgeJoin(self, ami, event):
+		log.debug("Server %s :: Processing Event ConfbridgeJoin..." % ami.servername)
+		server     = self.servers.get(ami.servername)
+		conference = event.get("conference")
+		usernum    = 1
+		
+		conferenceRoom = server.status.meetmes.get(conference)
+		if conferenceRoom:
+			listNums = conferenceRoom.users.keys()
+			listNums.sort()
+			usernum = listNums[-1] + 1
+
+		event["meetme"]  = conference
+		event["usernum"] = usernum
+		
+		self.handlerEventMeetmeJoin(ami, event)
+		
+	def handlerEventConfbridgeLeave(self, ami, event):
+		log.debug("Server %s :: Processing Event ConfbridgeLeave..." % ami.servername)
+		server     = self.servers.get(ami.servername)
+		conference = event.get("conference")
+		usernum    = None
+		
+		conferenceRoom = server.status.meetmes.get(conference)
+		if conferenceRoom:
+			for usernum, user in conferenceRoom.users.items():
+				if user.get("uniqueid") == event.get("uniqueid"):
+					break
+				usernum = None
+		
+		if usernum:
+			event["meetme"]  = conference
+			event["usernum"] = usernum
+			self.handlerEventMeetmeLeave(ami, event)
 		
 	# Parked Calls Events
 	def handlerEventParkedCall(self, ami, event):
