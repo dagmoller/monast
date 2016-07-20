@@ -563,9 +563,16 @@ class Monast:
 			'NewCallerid'         : self.handlerEventNewcallerid,
 			'Hangup'              : self.handlerEventHangup,
 			'Dial'                : self.handlerEventDial,
+			'DialBegin'           : self.handlerEventDialBegin, # Asterisk 13
 			'Link'                : self.handlerEventLink,
 			'Unlink'              : self.handlerEventUnlink,
 			'Bridge'              : self.handlerEventBridge,
+			
+			'BridgeCreate'        : self.handlerEventBridgeCreate,
+			'BridgeEnter'         : self.handlerEventBridgeEnter,
+			'BridgeLeave'         : self.handlerEventBridgeLeave,
+			'BridgeDestroy'       : self.handlerEventBridgeDestroy,
+			
 			'MeetmeJoin'          : self.handlerEventMeetmeJoin,
 			'MeetmeLeave'         : self.handlerEventMeetmeLeave,
 			'ParkedCall'          : self.handlerEventParkedCall,
@@ -622,7 +629,7 @@ class Monast:
 		
 		## Request Server Version
 		def _onCoreShowVersion(result):
-			versions = [1.4, 1.6, 1.8]
+			versions = [1.4, 1.6, 1.8, 13]
 			log.info("Server %s :: %s" %(servername, result[0]))
 			for version in versions:
 				if "Asterisk %s" % version in result[0]:
@@ -2361,7 +2368,7 @@ class Monast:
 				uniqueid        = event.get('uniqueid', event.get('srcuniqueid')),
 				channel         = event.get('channel', event.get('source')),
 				bridgeduniqueid = event.get('destuniqueid'),
-				bridgedchannel  = event.get('destination'),
+				bridgedchannel  = event.get('destination', event.get('destchannel')),
 				status          = 'Dial',
 				dialtime        = time.time(),
 				_log            = '-- Dial Begin'
@@ -2384,16 +2391,24 @@ class Monast:
 						log.debug("Object Dump:%s", queueCall)
 		else:
 			log.warning("Server %s :: Unhandled Dial SubEvent %s", ami.servername, subevent)
-	
+			
+	def handlerEventDialBegin(self, ami, event):
+		log.debug("Server %s :: Processing Event DialBegin..." % ami.servername)
+		server = self.servers.get(ami.servername)
+		if not event.get("subevent"):
+			event["subevent"] = "begin"
+		log.debug("Server %s :: Redirecting Event DialBegin to Dial..." % ami.servername)
+		self.handlerEventDial(ami, event)
+		
 	def handlerEventLink(self, ami, event):
 		log.debug("Server %s :: Processing Event Link..." % ami.servername)
 		server          = self.servers.get(ami.servername)
-		uniqueid        = event.get('uniqueid1')
-		channel         = event.get('channel1')
-		bridgeduniqueid = event.get('uniqueid2')
-		bridgedchannel  = event.get('channel2')
-		callerid        = event.get('callerid1')
-		bridgedcallerid = event.get('callerid2')
+		uniqueid        = event.get('uniqueid1', event.get('srcuniqueid'))
+		channel         = event.get('channel1', event.get('srcchannel'))
+		bridgeduniqueid = event.get('uniqueid2', event.get('dstuniqueid'))
+		bridgedchannel  = event.get('channel2', event.get('dstchannel'))
+		callerid        = event.get('callerid1', event.get('srccallerid'))
+		bridgedcallerid = event.get('callerid2', event.get('dstcallerid'))
 		
 		bridgekey = self._locateBridge(ami.servername, uniqueid = uniqueid, bridgeduniqueid = bridgeduniqueid)
 		if bridgekey:
@@ -2439,10 +2454,10 @@ class Monast:
 	def handlerEventUnlink(self, ami, event):
 		log.debug("Server %s :: Processing Event Unlink..." % ami.servername)
 		server          = self.servers.get(ami.servername)
-		uniqueid        = event.get('uniqueid1')
-		channel         = event.get('channel1')
-		bridgeduniqueid = event.get('uniqueid2')
-		bridgedchannel  = event.get('channel2')
+		uniqueid        = event.get('uniqueid1', event.get('srcuniqueid'))
+		channel         = event.get('channel1', event.get('srcchannel'))
+		bridgeduniqueid = event.get('uniqueid2', event.get('dstuniqueid'))
+		bridgedchannel  = event.get('channel2', event.get('dstchannel'))
 		self._updateBridge(
 			ami.servername, 
 			uniqueid        = uniqueid, 
@@ -2466,6 +2481,56 @@ class Monast:
 	def handlerEventBridge(self, ami, event):
 		log.debug("Server %s :: Processing Event Bridge..." % ami.servername)
 		self.handlerEventLink(ami, event)
+	
+	# Bridge events (asterisk 13)
+	__bridgeHelper = {}
+	def handlerEventBridgeCreate(self, ami, event):
+		log.debug("Server %s :: Processing Event BridgeCreate..." % ami.servername)
+		bridgeuniqueid = event.get("bridgeuniqueid")
+		if not self.__bridgeHelper.has_key(bridgeuniqueid):
+			self.__bridgeHelper[bridgeuniqueid] = {
+				"bridgeuniqueid" : bridgeuniqueid,
+				"srcuniqueid"    : None,
+				"srcchannel"     : None,
+				"srccallerid"    : None,
+				"dstuniqueid"    : None,
+				"dstchannel"     : None,
+				"dstcallerid"    : None
+			}
+		
+	def handlerEventBridgeEnter(self, ami, event):
+		log.debug("Server %s :: Processing Event BridgeEnter..." % ami.servername)
+		bridgeuniqueid = event.get("bridgeuniqueid")
+		if self.__bridgeHelper.has_key(bridgeuniqueid):
+			if event.get("uniqueid") == event.get("linkedid"):
+				self.__bridgeHelper[bridgeuniqueid]["srcuniqueid"] = event.get("uniqueid")
+				self.__bridgeHelper[bridgeuniqueid]["srcchannel"]  = event.get("channel")
+				self.__bridgeHelper[bridgeuniqueid]["srccallerid"] = "%s <%s>" % (event.get("calleridname"), event.get("calleridnum"))
+			else:
+				self.__bridgeHelper[bridgeuniqueid]["dstuniqueid"] = event.get("uniqueid")
+				self.__bridgeHelper[bridgeuniqueid]["dstchannel"]  = event.get("channel")
+				self.__bridgeHelper[bridgeuniqueid]["dstcallerid"] = "%s <%s>" % (event.get("calleridname"), event.get("calleridnum"))
+				
+			if self.__bridgeHelper[bridgeuniqueid]["srcuniqueid"] and self.__bridgeHelper[bridgeuniqueid]["dstuniqueid"]:
+				self.handlerEventLink(ami, self.__bridgeHelper[bridgeuniqueid])
+		else:
+			log.warning("Server %s :: Bridge %s not found..." % (ami.servername, bridgeuniqueid))
+		
+	def handlerEventBridgeLeave(self, ami, event):
+		log.debug("Server %s :: Processing Event BridgeLeave..." % ami.servername)
+		bridgeuniqueid = event.get("bridgeuniqueid")
+		if self.__bridgeHelper.has_key(bridgeuniqueid):
+			self.handlerEventUnlink(ami, self.__bridgeHelper[bridgeuniqueid])
+		else:
+			log.warning("Server %s :: Bridge %s not found..." % (ami.servername, bridgeuniqueid))
+		
+	def handlerEventBridgeDestroy(self, ami, event):
+		log.debug("Server %s :: Processing Event BridgeDestroy..." % ami.servername)
+		bridgeuniqueid = event.get("bridgeuniqueid")
+		if self.__bridgeHelper.has_key(bridgeuniqueid):
+			del self.__bridgeHelper[bridgeuniqueid]
+		else:
+			log.warning("Server %s :: Bridge %s not found..." % (ami.servername, bridgeuniqueid))
 	
 	# Meetme Events
 	def handlerEventMeetmeJoin(self, ami, event):
