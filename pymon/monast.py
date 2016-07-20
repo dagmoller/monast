@@ -511,6 +511,14 @@ class MonastAMIProtocol(manager.AMIProtocol):
 		if stateinterface is not None:
 			message['stateinterface'] = stateinterface
 		return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
+	
+	def bridgelist(self, bridgetype=None):
+		message = {
+			'action': 'BridgeList'
+		}
+		if bridgetype:
+			message['bridgetype'] = bridgetype
+		return self.collectDeferred(message, 'BridgeListComplete')
 
 
 class MonastAMIFactory(manager.AMIFactory):
@@ -581,8 +589,13 @@ class Monast:
 			'ParkedCallGiveUp'    : self.handlerEventParkedCallGiveUp,
 			'QueueMemberAdded'    : self.handlerEventQueueMemberAdded,
 			'QueueMemberRemoved'  : self.handlerEventQueueMemberRemoved,
+			
 			'Join'                : self.handlerEventJoin, # Queue Join
 			'Leave'               : self.handlerEventLeave, # Queue Leave
+			
+			'QueueCallerJoin'     : self.handlerEventJoin,
+			'QueueCallerLeave'    : self.handlerEventLeave,
+			
 			'QueueCallerAbandon'  : self.handlerEventQueueCallerAbandon,
 			'QueueMemberStatus'   : self.handlerEventQueueMemberStatus,
 			'QueueMemberPaused'   : self.handlerEventQueueMemberPaused,
@@ -775,17 +788,18 @@ class Monast:
 		_log          = kw.get('_log', '')
 		
 		if not server.status.channels.has_key(uniqueid):
-			chan              = GenericObject("Channel")
-			chan.uniqueid     = uniqueid
-			chan.channel      = channel
-			chan.dahdispan    = None
-			chan.dahdichannel = None
-			chan.state        = kw.get('state', 'Unknown')
-			chan.calleridnum  = kw.get('calleridnum', '')
-			chan.calleridname = kw.get('calleridname', '')
-			chan.monitor      = kw.get('monitor', False)
-			chan.spy          = kw.get('spy', False)
-			chan.starttime    = time.time()
+			chan                = GenericObject("Channel")
+			chan.uniqueid       = uniqueid
+			chan.channel        = channel
+			chan.dahdispan      = None
+			chan.dahdichannel   = None
+			chan.state          = kw.get('state', 'Unknown')
+			chan.calleridnum    = kw.get('calleridnum', '')
+			chan.calleridname   = kw.get('calleridname', '')
+			chan.monitor        = kw.get('monitor', False)
+			chan.spy            = kw.get('spy', False)
+			chan.starttime      = time.time()
+			chan.bridgeuniqueid = kw.get("bridgeuniqueid", kw.get("bridgeid"))
 			
 			log.debug("Server %s :: Channel create: %s (%s) %s", servername, uniqueid, channel, _log)
 			server.status.channels[uniqueid] = chan
@@ -1148,7 +1162,7 @@ class Monast:
 					return
 				
 				if event in ("QueueMember", "QueueMemberAdded", "QueueMemberStatus", "QueueMemberPaused"):
-					location   = kw.get('location')
+					location   = kw.get('location', kw.get('interface'))
 					membername = kw.get('name', kw.get('membername'))
 					if server.queueMapMember.has_key(location):
 						membername = server.queueMapMember[location]
@@ -1190,7 +1204,7 @@ class Monast:
 					return
 				
 				if event == "QueueMemberRemoved":
-					location = kw.get('location')
+					location   = kw.get('location', kw.get('interface'))
 					memberid = (queuename, location)
 					member   = server.status.queueMembers.get(memberid)
 					if member:
@@ -1203,7 +1217,7 @@ class Monast:
 						log.warning("Server %s :: Queue Member does not exists: %s -> %s", servername, queuename, location)
 					return
 				
-				if event in ("QueueEntry", "Join"):
+				if event in ("QueueEntry", "Join", "QueueCallerJoin"):
 					uniqueid = kw.get('uniqueid', None)
 					if not uniqueid:
 						# try to found uniqueid based on channel name
@@ -1262,7 +1276,7 @@ class Monast:
 						log.warning("Server %s :: Queue Client does not exists: %s -> %s", servername, queuename, uniqueid)
 					return
 				
-				if event == "Leave":
+				if event in ("Leave", "QueueCallerLeave"):
 					uniqueid = kw.get('uniqueid', None)
 					if not uniqueid:
 						# try to found uniqueid based on channel name
@@ -1692,6 +1706,14 @@ class Monast:
 		log.info("Server %s :: Requesting asterisk status..." % servername)
 		server = self.servers.get(servername)
 		
+		## Bridges Status
+		def onBridgeListComplete(events):
+			for event in events:
+				self.handlerEventBridgeCreate(server.ami, event)
+		if server.version >= 13:
+			server.pushTask(server.ami.bridgelist) \
+				.addCallbacks(onBridgeListComplete, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Bridge List"))
+		
 		## Channels Status
 		def onStatusComplete(events):
 			log.debug("Server %s :: Processing channels status..." % servername)
@@ -1702,9 +1724,10 @@ class Monast:
 			for event in events:
 				uniqueid        = event.get('uniqueid')
 				channel         = event.get('channel')
+				bridgeuniqueid  = event.get("bridgeid")
 				bridgedchannel  = event.get('bridgedchannel', event.get('link'))
 				seconds         = int(event.get('seconds', 0))
-				
+
 				tech, chan = channel.rsplit('-', 1)[0].split('/', 1)
 				try:
 					callsCounter[(tech, chan)] += 1
@@ -1719,9 +1742,16 @@ class Monast:
 					state          = event.get('channelstatedesc', event.get('state')),
 					calleridnum    = event.get('calleridnum'),
 					calleridname   = event.get('calleridname'),
+					bridgeuniqueid = bridgeuniqueid,
 					_isCheckStatus = True,
 					_log           = "-- By Status Request"
 				)
+				
+				if bridgeuniqueid:
+					self.handlerEventBridgeEnter(server.ami, event)
+					for unid, c in server.status.channels.items():
+						if c.channel != channel and c.bridgeuniqueid == bridgeuniqueid:
+							bridgedchannel = c.channel
 				
 				## Create bridge if not exists
 				if channelCreated and bridgedchannel:
@@ -2500,7 +2530,7 @@ class Monast:
 		
 	def handlerEventBridgeEnter(self, ami, event):
 		log.debug("Server %s :: Processing Event BridgeEnter..." % ami.servername)
-		bridgeuniqueid = event.get("bridgeuniqueid")
+		bridgeuniqueid = event.get("bridgeuniqueid", event.get("bridgeid"))
 		if self.__bridgeHelper.has_key(bridgeuniqueid):
 			if event.get("uniqueid") == event.get("linkedid"):
 				self.__bridgeHelper[bridgeuniqueid]["srcuniqueid"] = event.get("uniqueid")
