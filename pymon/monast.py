@@ -1060,23 +1060,23 @@ class Monast:
 	## Parked Calls
 	def _createParkedCall(self, servername, **kw):
 		server     = self.servers.get(servername)
-		channel    = kw.get('channel')
+		channel    = kw.get('channel', kw.get('parkeechannel'))
 		parked     = server.status.parkedCalls.get(channel)
 		_log       = kw.get('_log', '')
 		
 		if not parked:
 			parked = GenericObject('ParkedCall')
 			parked.channel      = channel
-			parked.parkedFrom   = kw.get('from')
-			parked.calleridname = kw.get('calleridname')
-			parked.calleridnum  = kw.get('calleridnum')
-			parked.exten        = kw.get('exten')
-			parked.timeout      = int(kw.get('timeout'))
+			parked.parkedFrom   = kw.get('from', kw.get('parkerdialstring'))
+			parked.calleridname = kw.get('calleridname', kw.get('parkeecalleridname'))
+			parked.calleridnum  = kw.get('calleridnum', kw.get('parkeecalleridnum'))
+			parked.exten        = kw.get('exten', kw.get('parkingspace'))
+			parked.timeout      = int(kw.get('timeout', kw.get('parkingtimeout')))
 			
 			# locate "from" channel
 			fromChannel = None
 			for uniqueid, fromChannel in server.status.channels.items():
-				if parked.parkedFrom == fromChannel.channel:
+				if parked.parkedFrom == fromChannel.channel or parked.parkedFrom in fromChannel.channel:
 					parked.calleridnameFrom = fromChannel.calleridname
 					parked.calleridnumFrom = fromChannel.calleridnum
 					break
@@ -1091,7 +1091,7 @@ class Monast:
 				log.warning("Server %s :: ParkedCall already exists: %s at %s", servername, parked.channel, parked.exten)
 				
 	def _removeParkedCall(self, servername, **kw):
-		channel    = kw.get('channel')
+		channel    = kw.get('channel', kw.get('parkeechannel'))
 		_log       = kw.get('_log', '')
 		
 		try:
