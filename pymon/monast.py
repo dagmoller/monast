@@ -802,6 +802,7 @@ class Monast:
 			chan.calleridname   = kw.get('calleridname', '')
 			chan.monitor        = kw.get('monitor', False)
 			chan.spy            = kw.get('spy', False)
+			chan.spyer          = None
 			chan.starttime      = time.time()
 			chan.bridgeuniqueid = kw.get("bridgeuniqueid", kw.get("bridgeid"))
 			
@@ -822,11 +823,10 @@ class Monast:
 	
 	def _lookupChannel(self, servername, chan):
 		server  = self.servers.get(servername)
-		channel = None
 		for uniqueid, channel in server.status.channels.items():
 			if channel.channel == chan:
-				break
-		return channel
+				return channel
+		return None
 	
 	def _updateChannel(self, servername, **kw):
 		uniqueid = kw.get('uniqueid')
@@ -2766,7 +2766,7 @@ class Monast:
 		channel      = self._lookupChannel(ami.servername, spyeechannel)
 		
 		if channel:
-			self._updateChannel(ami.servername, uniqueid = channel.uniqueid, spy = True)
+			self._updateChannel(ami.servername, uniqueid = channel.uniqueid, spy = True, spyer = spyerchannel)
 		
 	def handlerEventChanSpyStop(self, ami, event):
 		log.debug("Server %s :: Processing Event ChanSpyStop..." % ami.servername)
@@ -2774,8 +2774,19 @@ class Monast:
 		channel      = self._lookupChannel(ami.servername, spyeechannel)
 		
 		if channel:
-			self._updateChannel(ami.servername, uniqueid = channel.uniqueid, spy = False)
-		
+			self._updateChannel(ami.servername, uniqueid = channel.uniqueid, spy = False, spyer = None)
+		else:
+			## search spyee by spyer...
+			server       = self.servers.get(ami.servername)
+			spyerchannel = event.get('spyerchannel')
+			channel      = None
+			
+			for uniqueid, channel in server.status.channels.items():
+				if channel.spy and channel.spyer == spyerchannel:
+					self._updateChannel(ami.servername, uniqueid = channel.uniqueid, spy = False, spyer = None)
+					break
+			
+					
 ##
 ## Daemonizer
 ##
