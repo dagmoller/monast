@@ -919,6 +919,7 @@ class Monast:
 			return True
 		else:
 			log.warning("Server %s :: Bridge already exists: %s (%s) with %s (%s)", servername, uniqueid, channel, bridgeduniqueid, bridgedchannel)
+			self._updateBridge(servername, **kw)
 		return False
 	
 	def _updateBridge(self, servername, **kw):
