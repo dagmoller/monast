@@ -646,7 +646,7 @@ class Monast:
 		
 		## Request Server Version
 		def _onCoreShowVersion(result):
-			versions = [1.4, 1.6, 1.8, 13]
+			versions = [1.4, 1.6, 1.8, 13, 14]
 			log.info("Server %s :: %s" %(servername, result[0]))
 			for version in versions:
 				if "Asterisk %s" % version in result[0]:
