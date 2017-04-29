@@ -1,6 +1,6 @@
 
 var Language = {
-	informarion: "Informa&ccedil;&atilde;o",
+	information: "Informa&ccedil;&atilde;o",
 	error: "Erro",
 	warning: "Aten&ccedil;&atilde;o",
 	confirmation: "Confirma&ccedil;&atilde;o",

@@ -1,6 +1,6 @@
 
 var Language = {
-	informarion: "Информация",
+	information: "Информация",
 	error: "Ошибка",
 	warning: "Предупреждение",
 	confirmation: "Подтверждение",
