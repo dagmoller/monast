@@ -1,6 +1,6 @@
 
 var Language = {
-	informarion: "Informa&ccedil;&atilde;o",
+	information: "Informa&ccedil;&atilde;o",
 	error: "Erro",
 	warning: "Aten&ccedil;&atilde;o",
 	confirmation: "Confirma&ccedil;&atilde;o",
@@ -47,7 +47,6 @@ var Language = {
 	peersUsers: "Usu&aacute;rios/Ramais",
 	peerUser: "Usu&aacute;rio/Ramal",
 	meetmeRooms: "Confer&ecirc;ncias",
-	meetme: "Confer&ecirc;ncia",
 	parkedCallAt: "Estacionamento",
 	parkedCalls: "Estacionamento",
 	parkedCalls2: "Chamadas Estacionadas",
@@ -69,7 +68,6 @@ var Language = {
 	turnMemberOf: "Adicionar Membro a Fila",
 	turnMemberOfQueue: "Adicionar este Usu&aacute;rio como membro da Fila \"#{QUEUENAME}\"?",
 	removeMemberFrom: "Remover Membro da Fila",
-	removeMemberFromQueue: "Remover este Usu&aacute;rio/Membro da Fila \"#{QUEUENAME}\"?",
 	meetmeInvite: "Convite para Confer&ecirc;ncia",
 	inviteTo: "Convidar para",
 	inviteToMeetme: "Convidar este Usu&aacute;rio para a Confer&ecirc;ncia \"#{MEETME}\"?",
