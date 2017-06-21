@@ -6,8 +6,8 @@ var Language = {
 	confirmation: "Confirmation",
 	yes: "Yes",
 	no: "No",
-	start: "Iniciar",
-	stop: "Parar",
+	start: "Start",
+	stop: "Stop",
 	server: "Server",
 	reload: "Reload",
 	initializing: "Initializing",
@@ -43,7 +43,7 @@ var Language = {
 	changingServer: "Changing Server...",
 	cannotChangeServerOfflineReload: "Can not change server, Monast is offline...<br>Please reload...",
 	
-	mixedPannels: "Mixed Pannels",
+	mixedPannels: "Mixed Panels",
 	peersUsers: "Peers/Users",
 	peerUser: "Peer/User",
 	meetmeRooms: "Conference Rooms",
@@ -53,7 +53,7 @@ var Language = {
 	queues: "Queues",
 	asteriskCli: "Asterisk CLI",
 	debug: "Debug",
-	pannelsToShow: "Pannels to Show",
+	pannelsToShow: "Panels to Show",
 	
 	from: "From",
 	to: "To",
