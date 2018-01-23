@@ -433,36 +433,39 @@ class MonastHTTP(resource.Resource):
 ## Monast AMI
 ##
 class MonastAMIProtocol(manager.AMIProtocol):
-	"""Class Extended to solve some issues on original methods"""
 	
 	MAX_LENGTH = 1024 * 1024 * 8
 	
 	def connectionLost(self, reason):
 		"""Connection lost, clean up callbacks"""
-		for key,callable in self.actionIDCallbacks.items():
+		for key, callable in self.actionIDCallbacks.items():
 			try:
 				callable(tw_error.ConnectionDone("""AMI connection terminated"""))
 			except Exception, err:
 				log.error("""Failure during connectionLost for callable %s: %s""", callable, err)
 		self.actionIDCallbacks.clear()
 		self.eventTypeCallbacks.clear()
-		
+	
 	def collectDeferred(self, message, stopEvent):
 		"""Collect all responses to this message until stopEvent or error
-		   returns deferred returning sequence of events/responses
+
+		returns deferred returning sequence of events/responses
 		"""
 		df = defer.Deferred()
 		cache = []
+
 		def onEvent(event):
 			if type(event) == type(dict()):
 				if event.get('response') == 'Error':
 					df.errback(AMICommandFailure(event))
-				elif event['event'] == stopEvent:
-					df.callback(cache)
+				elif event.get('event') == stopEvent:
+					cache.append(event)
+					df.callback([e for e in cache if e.get("eventlist", "").lower() not in ("start", "complete")])
 				else:
 					cache.append(event)
 			else:
 				df.errback(AMICommandFailure(event))
+
 		actionid = self.sendMessage(message, onEvent)
 		df.addCallbacks(
 			self.cleanup, self.cleanup,
@@ -471,12 +474,46 @@ class MonastAMIProtocol(manager.AMIProtocol):
 		return df
 	
 	def errorUnlessResponse(self, message, expected='Success'):
-		"""Raise a AMICommandFailure error unless message['response'] == expected
+		"""Raise AMICommandFailure error unless message['response'] == expected
+
 		If == expected, returns the message
 		"""
-		if type(message) == type(dict()) and message['response'] != expected or type(message) != type(dict()):
+		
+		if type(expected) == type(str()):
+			expected = [expected]
+		if not 'Follows' in expected:
+			expected.append("Follows")
+		if not 'Success' in expected:
+			expected.append("Success")
+
+		if type(message) == type(dict()) and message['response'] not in expected:
 			raise AMICommandFailure(message)
 		return message
+	
+	def command(self, command):
+		"""Run asterisk CLI command, return deferred result for list of lines
+
+		returns deferred returning list of lines (strings) of the command
+		output.
+
+		See listCommands to see available commands
+		"""
+		message = {
+			'action': 'command',
+			'command': command
+		}
+		df = self.sendDeferred(message)
+		df.addCallback(self.errorUnlessResponse, expected=['Follows', 'Success'])
+
+		def onResult(message):
+			if not isinstance(message, dict):
+				return message
+			try:
+				return message[' ']
+			except:
+				return message
+
+		return df.addCallback(onResult)
 	
 	def redirect(self, channel, context, exten, priority, extraChannel = None, extraContext = None, extraExten = None, extraPriority = None):
 		"""Transfer channel(s) to given context/exten/priority"""
@@ -525,12 +562,13 @@ class MonastAMIFactory(manager.AMIFactory):
 	amiWorker  = None
 	servername = None
 	protocol   = MonastAMIProtocol
+	
 	def __init__(self, servername, username, password, amiWorker):
 		log.info('Server %s :: Initializing Monast AMI Factory...' % servername)
 		self.servername = servername
 		self.amiWorker  = amiWorker
 		manager.AMIFactory.__init__(self, username, password)
-		
+	
 	def clientConnectionLost(self, connector, reason):
 		log.warning("Server %s :: Lost connection to AMI: %s" % (self.servername, reason.value))
 		self.amiWorker.__disconnected__(self.servername)
@@ -540,7 +578,8 @@ class MonastAMIFactory(manager.AMIFactory):
 		log.error("Server %s :: Failed to connected to AMI: %s" % (self.servername, reason.value))
 		self.amiWorker.__disconnected__(self.servername)
 		reactor.callLater(AMI_RECONNECT_INTERVAL, self.amiWorker.connect, self.servername)
-		
+	
+			
 class Monast:
 
 	configFile         = None
@@ -647,9 +686,9 @@ class Monast:
 		## Request Server Version
 		def _onCoreShowVersion(result):
 			versions = [1.4, 1.6, 1.8, 13, 14]
-			log.info("Server %s :: %s" %(servername, result[0]))
+			log.info("Server %s :: %s" % (servername, result['output']))
 			for version in versions:
-				if "Asterisk %s" % version in result[0]:
+				if "Asterisk %s" % version in result['output']:
 					server.version = version
 					break
 			for event, handler in self.eventHandlers.items():
@@ -1544,7 +1583,7 @@ class Monast:
 		
 		errorMessage = reason.getErrorMessage()
 		if type(reason.value) == AMICommandFailure and type(reason.value.args[0]) == type(dict()) and reason.value.args[0].has_key('message'):
-			errorMessage = reason.value.args[0].get('message')
+			errorMessage = reason.value.args[0].get('output', reason.value.args[0].get('message'))
 		
 		log.error("Server %s :: %s, reason: %s" % (servername, message, errorMessage))
 		
@@ -1624,9 +1663,10 @@ class Monast:
 			.addCallbacks(onDahdiShowChannels, onDahdiShowChannelsFailure, errbackArgs = (servername, "Error Requesting DAHDI Channels"))
 		
 		# Khomp
+		"""
 		def onKhompChannelsShow(result):
 			log.debug("Server %s :: Processing Khomp Channels..." % servername)
-			if not 'no such command' in result[0].lower():
+			if not 'no such command' in result['output'].lower():
 				reChannelGSM = re.compile("\|\s+([0-9,]+)\s+\|.*\|\s+([0-9%]+)\s+\|")
 				reChannel    = re.compile("\|\s+([0-9,]+)\s+\|")
 				for line in result:
@@ -1656,7 +1696,7 @@ class Monast:
 		log.debug("Server %s :: Requesting Khomp Channels..." % servername)
 		server.pushTask(server.ami.command, 'khomp channels show') \
 			.addCallbacks(onKhompChannelsShow, self._onAmiCommandFailure, errbackArgs = (servername, "Error Requesting Khomp Channels"))
-		
+		"""
 		# Meetme
 		def onGetHelpMeetme(result):
 			log.debug("Server %s :: Processing core show help meetme..." % servername)
