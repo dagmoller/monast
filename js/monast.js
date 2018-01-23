@@ -1815,7 +1815,7 @@ var Monast = {
 	// Alerts & Messages
 	doAlert: function (message)
 	{
-		Monast.alertDialog.setHeader(Language.informarion);
+		Monast.alertDialog.setHeader(Language.information);
 		Monast.alertDialog.setBody("<table><tr><td valign='top'><span class='yui-icon infoicon'></span></td><td>" + message + "</td></tr></table>");
 		Monast.alertDialog.cfg.setProperty("fixedcenter", true);
 		Monast.alertDialog.cfg.setProperty("constraintoviewport", true);
