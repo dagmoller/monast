@@ -446,6 +446,50 @@ class MonastAMIProtocol(manager.AMIProtocol):
 		self.actionIDCallbacks.clear()
 		self.eventTypeCallbacks.clear()
 	
+	def dispatchIncoming(self):
+		"""Dispatch any finished incoming events/messages"""
+		log.debug('Dispatch Incoming')
+		message = {}
+		while self.messageCache:
+			line = self.messageCache.pop(0)
+			line = line.strip()
+			if line:
+				if line.endswith(self.END_DATA):
+					# multi-line command results...
+					line = line[0:-len(self.END_DATA)]
+					message['output'] = '\r\n'.join(line.split('\n'))
+				else:
+					# regular line...
+					if line.startswith(self.VERSION_PREFIX):
+						self.amiVersion = line[len(self.VERSION_PREFIX) + 1:].strip()
+					else:
+						try:
+							key, value = line.split(':', 1)
+						except ValueError, err:
+							# XXX data-safety issues, what prevents the
+							# VERSION_PREFIX from showing up in a data-set?
+							log.warn("Improperly formatted line received and "
+									"ignored: %r", line)
+						else:
+							key = key.lower().strip()
+							if key in message:
+								message[key] += '\r\n' + value.strip()
+							else:
+								message[key] = value.strip();
+		log.debug('Incoming Message: %s', message)
+		if 'actionid' in message:
+			key = message['actionid']
+			callback = self.actionIDCallbacks.get(key)
+			if callback:
+				try:
+					callback(message)
+				except Exception, err:
+					# XXX log failure here...
+					pass
+		# otherwise is a monitor message or something we didn't send...
+		if 'event' in message:
+			self.dispatchEvent(message)
+	
 	def collectDeferred(self, message, stopEvent):
 		"""Collect all responses to this message until stopEvent or error
 
@@ -478,7 +522,6 @@ class MonastAMIProtocol(manager.AMIProtocol):
 
 		If == expected, returns the message
 		"""
-		
 		if type(expected) == type(str()):
 			expected = [expected]
 		if not 'Follows' in expected:
@@ -503,7 +546,12 @@ class MonastAMIProtocol(manager.AMIProtocol):
 			'command': command
 		}
 		df = self.sendDeferred(message)
-		df.addCallback(self.errorUnlessResponse, expected=['Follows', 'Success'])
+		#df.addCallback(self.errorUnlessResponse, expected=['Follows', 'Success'])
+		from distutils.version import LooseVersion
+		if LooseVersion(self.amiVersion) > LooseVersion('2.7.0'):
+			df.addCallback(self.errorUnlessResponse)
+		else:
+			df.addCallback(self.errorUnlessResponse, expected='Follows')
 
 		def onResult(message):
 			if not isinstance(message, dict):
@@ -511,7 +559,7 @@ class MonastAMIProtocol(manager.AMIProtocol):
 			try:
 				return message[' ']
 			except:
-				return message
+				return message['output'].split ('\r\n')
 
 		return df.addCallback(onResult)
 	
@@ -687,9 +735,9 @@ class Monast:
 		## Request Server Version
 		def _onCoreShowVersion(result):
 			versions = [1.4, 1.6, 1.8, 13, 14]
-			log.info("Server %s :: %s" % (servername, result['output']))
+			log.info("Server %s :: %s" % (servername, result[0]))
 			for version in versions:
-				if "Asterisk %s" % version in result['output']:
+				if "Asterisk %s" % version in result[0]:
 					server.version = version
 					break
 			for event, handler in self.eventHandlers.items():
