@@ -642,6 +642,7 @@ class Monast:
 			'QueueCallerAbandon'  : self.handlerEventQueueCallerAbandon,
 			'QueueMemberStatus'   : self.handlerEventQueueMemberStatus,
 			'QueueMemberPaused'   : self.handlerEventQueueMemberPaused,
+			'QueueMemberPause'    : self.handlerEventQueueMemberPaused, # Asterisk 14
 			'MonitorStart'        : self.handlerEventMonitorStart,
 			'MonitorStop'         : self.handlerEventMonitorStop,
 			'AntennaLevel'        : self.handlerEventAntennaLevel,
@@ -2758,11 +2759,12 @@ class Monast:
 		
 		server   = self.servers.get(ami.servername)
 		queue    = event.get('queue')
-		location = event.get('location')
+		location = event.get('location', event.get("interface"))
 		memberid = (queue, location)
 		member   = server.status.queueMembers.get(memberid)
 		
 		if member:
+			event['event']      = "QueueMemberPaused" ## Asterisk 14 (devs removed 'd' at end of event name... AFF)
 			event['callstaken'] = member.callstaken
 			event['lastcall']   = member.lastcall
 			event['penalty']    = member.penalty
