@@ -648,6 +648,7 @@ class Monast:
 			'AlarmClear'          : self.handlerEventAlarmClear,
 			'DNDState'            : self.handlerEventDNDState,
 			'PeerEntry'           : self.handlerEventPeerEntry,
+			'EndpointList'        : self.handlerEventEndpointEntry,
 			'PeerStatus'          : self.handlerEventPeerStatus,
 			'Newchannel'          : self.handlerEventNewchannel,
 			'DAHDIChannel'        : self.handlerEventDAHDIChannel,
@@ -1459,6 +1460,7 @@ class Monast:
 			self.servers[servername].status.bridges      = {}
 			self.servers[servername].status.peers        = {
 				'SIP': {},
+				'PJSIP': {},
 				'IAX2': {},
 				'DAHDI': {},
 				'Khomp': {},
@@ -1671,6 +1673,11 @@ class Monast:
 		server.pushTask(server.ami.sendDeferred, {'action': 'sippeers'}) \
 			.addCallback(server.ami.errorUnlessResponse) \
 			.addErrback(self._onAmiCommandFailure, servername, "Error Requesting SIP Peers")
+
+		log.debug("Server %s :: Requesting PJSIP Peers..." % servername)
+		server.pushTask(server.ami.sendDeferred, {'action': 'pjsipshowendpoints'}) \
+			.addCallback(server.ami.errorUnlessResponse) \
+			.addErrback(self._onAmiCommandFailure, servername, "Error Requesting PJSIP Peers")
 
 		## Peers IAX different behavior in asterisk 1.4
 		if server.version == 1.4:
@@ -2289,6 +2296,11 @@ class Monast:
 		tech, chan = channel.split('/', 1)
 		self._updatePeer(ami.servername, channeltype = tech, peername = chan, dnd = dnd, _log = "DND (%s)" % status)
 		
+	def handlerEventEndpointEntry(self, ami, event):
+		event['channeltype'] = 'PJSIP'
+		event['status'] = event.get('devicestate')
+		self.handlerEventPeerEntry(ami, event)
+
 	def handlerEventPeerEntry(self, ami, event):
 		log.debug("Server %s :: Processing Event PeerEntry..." % ami.servername)
 		server      = self.servers.get(ami.servername)
@@ -2322,7 +2334,10 @@ class Monast:
 			
 		if user:
 			type    = ['peer', 'user'][channeltype == 'Skype']
-			command = '%s show %s %s' % (channeltype.lower(), type, objectname)
+			if channeltype == 'PJSIP':
+				command = '%s show endpoint %s' % (channeltype.lower(), objectname)
+			else:
+				command = '%s show %s %s' % (channeltype.lower(), type, objectname)
 			
 			def onShowPeer(response):
 				log.debug("Server %s :: Processing %s..." % (ami.servername, command))
@@ -2332,14 +2347,16 @@ class Monast:
 				variables = []
 				
 				try:
-					callerid = re.compile("['\"]").sub("", re.search('Callerid[\s]+:[\s](.*)\n', result).group(1))
+					callerid = re.compile("['\"]").sub("", re.search('[c|C]allerid[\s]+:[\s](.*)\n', result).group(1))
 					if callerid == ' <>':
 						callerid = '--'
 				except:
 					callerid = '--'
 				
+				callerid = callerid.replace("<", "&lt;").replace(">", "&gt;")
+
 				try:
-					context = re.search('Context[\s]+:[\s](.*)\n', result).group(1)
+					context = re.search('[c|C]ontext[\s]+:[\s](.*)\n', result).group(1)
 				except:
 					context = server.default_context
 				
