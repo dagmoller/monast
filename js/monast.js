@@ -379,6 +379,11 @@ var Monast = {
 				addQueue = true;
 				break;
 				
+			case 'PJSIP':
+				m[0].push({text: Language.execute + " 'pjsip show endpoint " + u.peername + "'", onclick: {fn: Monast.requestInfo, obj: "pjsip show endpoint " + u.peername}});
+				addQueue = true;
+				break;
+
 			case 'IAX2':
 				m[0].push({text: Language.execute + " 'iax2 show peer " + u.peername + "'", onclick: {fn: Monast.requestInfo, obj: "iax2 show peer " + u.peername}});
 				addQueue = true;
