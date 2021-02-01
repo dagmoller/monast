@@ -2400,7 +2400,7 @@ class Monast:
 			user = None
 
 		if user:
-			type    = ['endpoint']
+			type    = 'endpoint'
 			command = '%s show %s %s' % (channeltype.lower(), type, objectname)
 
 			def onShowPeer(response):
